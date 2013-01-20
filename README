@@ -1,7 +1,7 @@
 Telos - README
 
 --- ABOUT ---
-Telos is (non-reentrant) preemptive multitasking kernel.
+Telos is a (non-reentrant) preemptive multitasking kernel.
 
 --- COMPILING ---
 Running `make' in this directory should build the kernel and make a bootable
