@@ -1,0 +1,138 @@
+/* inthandlers.c : ISRs for CPU exceptions
+ */
+
+/*  Copyright 2013 Drew T.
+ *
+ *  This file is part of Telos.
+ *  
+ *  Telos is free software: you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  Telos is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ *  details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <kernel/common.h>
+#include <kernel/i386.h>
+#include <kernel/dispatch.h>
+
+/* names of some exceptions */
+static char *exns[20] = {
+    "Divide Error Exception",
+    "Debug Exception",
+    "NMI Interrupt",
+    "Breakpoint Exception",
+    "Overflow Exception",
+    "BOUND Range Exceeded Exception",
+    "Invalid Opcode Exception",
+    "Device Not Available Exception",
+    "Double Fault Exception",
+    "Coprocessor Segment Overrun",
+    "Invalid TSS Exception",
+    "Segment Not Present",
+    "Stack Fault Exception",
+    "General Protection Exception",
+    "Page Fault Exception",
+    "",
+    "x87 FPU Floating-Point Error",
+    "Alignment Check Exception",
+    "Machine-Check Exception",
+    "SIMD Floating-Point Exception" //19
+};
+
+/* prints a nice message when something goes wrong */
+void exn_err (unsigned int num, struct gp_regs reg) {
+
+    kprintf ("\ntrap!\nException %d: %s\n", num,
+            (num < 20) ? exns[num] : "Unknown");
+    kprintf ("Error code might be %x\n", reg.stack[1]);
+    kprintf ("Current process is %d\n", current->pid);
+
+    kprintf ("Dumping registers...\n");
+    kprintf ("\t%%eax=%x\n", reg.eax);
+    kprintf ("\t%%ecx=%x\n", reg.ecx);
+    kprintf ("\t%%edx=%x\n", reg.edx);
+    kprintf ("\t%%ebx=%x\n", reg.ebx);
+    kprintf ("\t%%esi=%x\n", reg.esi);
+    kprintf ("\t%%edi=%x\n", reg.edi);
+    kprintf ("\t%%esp=%x\n", reg.esp);
+    kprintf ("\t%%ebp=%x\n", reg.ebp);
+
+    asm ("_exnstall: hlt\njmp _exnstall\n");
+}
+
+#define MAKE_HANDLER(name,x)   \
+    static void name (void) {  \
+        asm volatile (         \
+            "pusha         \n" \
+            "pushl $"x"    \n" \
+            "call  exn_err \n" \
+        );                     \
+    }                          \
+
+MAKE_HANDLER (int0, "0")
+MAKE_HANDLER (int1, "1")
+MAKE_HANDLER (int2, "2")
+MAKE_HANDLER (int3, "3")
+MAKE_HANDLER (int4, "4")
+MAKE_HANDLER (int5, "5")
+MAKE_HANDLER (int6, "6")
+MAKE_HANDLER (int7, "7")
+MAKE_HANDLER (int8, "8")
+MAKE_HANDLER (int9, "9")
+MAKE_HANDLER (int10, "10")
+MAKE_HANDLER (int11, "11")
+MAKE_HANDLER (int12, "12")
+MAKE_HANDLER (int13, "13")
+MAKE_HANDLER (int14, "14")
+MAKE_HANDLER (int15, "15")
+MAKE_HANDLER (int16, "16")
+MAKE_HANDLER (int17, "17")
+MAKE_HANDLER (int18, "18")
+MAKE_HANDLER (int19, "19")
+MAKE_HANDLER (int20, "20")
+MAKE_HANDLER (int21, "21")
+MAKE_HANDLER (int22, "22")
+MAKE_HANDLER (int23, "23")
+MAKE_HANDLER (int24, "24")
+MAKE_HANDLER (int25, "25")
+MAKE_HANDLER (int26, "26")
+MAKE_HANDLER (int27, "27")
+MAKE_HANDLER (int28, "28")
+MAKE_HANDLER (int29, "29")
+MAKE_HANDLER (int30, "30")
+MAKE_HANDLER (int31, "31")
+MAKE_HANDLER (int32, "32")
+MAKE_HANDLER (int33, "33")
+MAKE_HANDLER (int34, "34")
+MAKE_HANDLER (int35, "35")
+MAKE_HANDLER (int36, "36")
+MAKE_HANDLER (int37, "37")
+MAKE_HANDLER (int38, "38")
+MAKE_HANDLER (int39, "39")
+MAKE_HANDLER (int40, "40")
+MAKE_HANDLER (int41, "41")
+MAKE_HANDLER (int42, "42")
+MAKE_HANDLER (int43, "43")
+MAKE_HANDLER (int44, "44")
+MAKE_HANDLER (int45, "45")
+MAKE_HANDLER (int46, "46")
+MAKE_HANDLER (int47, "47")
+
+typedef void(*isr_t)(void);
+
+/* put them all in an array, why not */
+void(*int_errs[48])(void) = {
+    int0,  int1,  int2,  int3,  int4,  int5,  int6,  int7,  int8,  int9,
+    int10, int11, int12, int13, int14, int15, int16, int17, int18, int19,
+    int20, int21, int22, int23, int24, int25, int26, int27, int28, int29,
+    int30, int31, int32, int33, int34, int35, int36, int37, int38, int39,
+    int40, int41, int42, int43, int44, int45, int46, int47
+};

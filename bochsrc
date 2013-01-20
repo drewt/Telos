@@ -1,0 +1,4 @@
+megs: 4
+boot: floppy
+floppya: 1_44="bin/kernel.img", status=inserted
+#clock: sync=realtime
