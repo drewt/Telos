@@ -71,7 +71,7 @@ void sys_read (int fd, void *buf, int nbyte) {
         return;
     }
 
-    current->rc = devtab[current->fds[fd]].dvread (buf, nbyte);
+    current->rc = devtab[current->fds[fd]].dvread (fd, buf, nbyte);
 }
 
 /*-----------------------------------------------------------------------------
@@ -84,5 +84,5 @@ void sys_write (int fd, void *buf, int nbyte) {
         return;
     }
 
-    current->rc = devtab[current->fds[fd]].dvread (buf, nbyte);
+    current->rc = devtab[current->fds[fd]].dvread (fd, buf, nbyte);
 }

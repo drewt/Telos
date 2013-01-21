@@ -40,8 +40,8 @@ struct device {
     char *dvname;
     int (*dvopen)(enum dev_id devno);
     int (*dvclose)(enum dev_id devno);
-    int (*dvread)(void *buf, int nbytes);
-    int (*dvwrite)(void *buf, int nbytes);
+    int (*dvread)(int fd, void *buf, int nbytes);
+    int (*dvwrite)(int fd, void *buf, int nbytes);
     int (*dvioctl)(unsigned long request, va_list vargs);
     void (*dviint)(void);
     void (*dvoint)(void);

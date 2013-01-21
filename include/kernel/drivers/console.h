@@ -23,7 +23,7 @@ enum console_ioctl {
     CONSOLE_IOCTL_SWITCH
 };
 
-int console_write (void *buf, int buf_len);
+int console_write (int fd, void *buf, int buf_len);
 int console_open (enum dev_id devno);
 int console_close (enum dev_id devno);
 int console_ioctl (unsigned long command, va_list vargs);

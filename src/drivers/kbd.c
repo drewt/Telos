@@ -134,7 +134,7 @@ bool kbd_common_read (void) {
  * Initiate a read from the noecho keyboard device
  *-----------------------------------------------------------------------------
  */
-int kbd_read (void *buf, int buf_len) {
+int kbd_read (int fd, void *buf, int buf_len) {
     echo = false;
     cpy_buf = buf;
     cpy_buf_len = buf_len;
@@ -150,7 +150,7 @@ int kbd_read (void *buf, int buf_len) {
  * Initiate a read from the echo keyboard device
  *-----------------------------------------------------------------------------
  */
-int kbd_read_echo (void *buf, int buf_len) {
+int kbd_read_echo (int fd, void *buf, int buf_len) {
     echo    = true;
     cpy_buf = buf;
     cpy_buf_len = buf_len;
