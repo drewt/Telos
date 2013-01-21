@@ -65,7 +65,7 @@ static void devtab_init (void) {
     d->dvname = "Keyboard (echo)";
     d->dvopen = kbd_open;
     d->dvclose = kbd_close;
-    d->dvread = kbd_read_echo;
+    d->dvread = kbd_read;
     d->dvwrite = rw_error;
     d->dvioctl = kbd_ioctl;
     d->dviint = kbd_interrupt;

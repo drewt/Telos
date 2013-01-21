@@ -135,7 +135,8 @@ bool kbd_common_read (void) {
  *-----------------------------------------------------------------------------
  */
 int kbd_read (int fd, void *buf, int buf_len) {
-    echo = false;
+    //echo = false;
+    echo = (current->fds[fd] == DEV_KBD_ECHO);
     cpy_buf = buf;
     cpy_buf_len = buf_len;
     if (kbd_common_read ())
@@ -149,9 +150,9 @@ int kbd_read (int fd, void *buf, int buf_len) {
 /*-----------------------------------------------------------------------------
  * Initiate a read from the echo keyboard device
  *-----------------------------------------------------------------------------
- */
+ *
 int kbd_read_echo (int fd, void *buf, int buf_len) {
-    echo    = true;
+    echo = (current->fds[fd] == DEV_KBD_ECHO);
     cpy_buf = buf;
     cpy_buf_len = buf_len;
     if (kbd_common_read ())
@@ -160,7 +161,7 @@ int kbd_read_echo (int fd, void *buf, int buf_len) {
     reading = true;
     new_process ();
     return 0;
-}
+}*/
 
 /*-----------------------------------------------------------------------------
  * Opens a keyboard device
