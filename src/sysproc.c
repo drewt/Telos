@@ -21,10 +21,10 @@
 
 #include <kernel/common.h>
 #include <kernel/device.h>
+#include <telos/io.h>
 
 #include <telos/process.h>
 #include <telos/print.h>
-#include <telos/io.h>
 #include <signal.h>
 
 void tsh (void *arg);
@@ -42,11 +42,10 @@ void root (void *arg) {
     close (DEV_CONSOLE_0);*/
 
     int sig;
-    pid_t tsh_pid;
 
     signal (SIGCHLD, sigchld_handler);
     
-    tsh_pid = syscreate (tsh, NULL);
+    syscreate (tsh, NULL);
     for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
     kprintf ("Goodbye!");
 

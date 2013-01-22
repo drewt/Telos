@@ -22,8 +22,9 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
-#include <kernel/device.h>
 #include <kernel/drivers/console.h>
+
+#include <telos/devices.h>
 
 #include <klib.h>
 
@@ -80,7 +81,7 @@ int console_close (enum dev_id devno) {
 
 int console_init (void) {
     // TODO: probe for colour/monochrome display
-    constab[0].pos = (volatile unsigned char *) CLR_BUF;
+    unsigned char *buf = (unsigned char*) CLR_BUF;
 
     // get cursor position
     uint32_t cpos;
@@ -88,11 +89,9 @@ int console_init (void) {
     cpos = inb (CLR_BASE+1) << 8;
     outb (CLR_BASE, 15);
     cpos |= inb (CLR_BASE+1);
-    if (cpos <= COL * ROW)
-        constab[0].pos = (unsigned char*) CLR_BUF + cpos*2;
-    else
-        constab[0].pos = (unsigned char*) CLR_BUF;;
 
+    // set initial cursor positions
+    constab[0].pos = (cpos > COL * ROW) ? buf : buf + cpos*2;
     for (int i = 1; i < N_CONSOLES; i++)
         constab[i].pos  = constab[i].mem;
 

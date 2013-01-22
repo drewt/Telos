@@ -22,8 +22,7 @@
 #ifndef __TELOS_IO_H_
 #define __TELOS_IO_H_
 
-#define DEV_KBD      0
-#define DEV_KBD_ECHO 1
+#include <telos/devices.h>
 
 int open (int devno);
 int close (int fd);

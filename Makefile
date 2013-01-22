@@ -21,17 +21,22 @@ USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
 
 OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
 
-KINC = include/kernel
-DRIVERS = $(KINC)/drivers
+# directories
+KERNEL = include/kernel
+DRIVERS = $(KERNEL)/drivers
 TELOS = include/telos
 
-COMMON = $(KINC)/common.h
-ARCH_H = $(KINC)/i386.h
-DISP_H = $(KINC)/dispatch.h $(KINC)/process.h
+COMMON = $(KERNEL)/common.h
+ARCH_H = $(KERNEL)/i386.h
+DISP_H = $(KERNEL)/dispatch.h $(KERNEL)/process.h
 LIB_H = include/klib.h
 
+DEVICE_H = $(KERNEL)/device.h $(TELOS)/devices.h
 CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
 KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
+
+USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/io.h \
+	 $(TELOS)/devices.h $(TELOS)/process.h
 
 all: bin/kernel.img
 
@@ -53,49 +58,43 @@ bin/loader.o: boot/loader.s
 	$(AS) -o bin/loader.o boot/loader.s
 
 # ROOTFILES: core kernel files
-bin/kernel.o: src/kernel.c $(COMMON) $(ARCH_H) $(DISP_H) $(KINC)/multiboot.h \
-    $(KINC)/kernel.h
+bin/kernel.o: src/kernel.c $(COMMON) $(ARCH_H) $(DISP_H) $(KERNEL)/multiboot.h \
+    $(KERNEL)/kernel.h $(CONSOLE_H)
 bin/mem.o: src/mem.c $(COMMON) include/mem.h
 bin/gdt.o: src/gdt.c $(COMMON) $(ARCH_H) $(LIB_H)
 bin/intr.o: src/intr.c $(COMMON) $(COMMON) $(LIB_H) $(ARCH_H)
 bin/inthandlers.o: src/inthandlers.c $(COMMON) $(ARCH_H)
-bin/ctsw.o: src/ctsw.c $(COMMON) $(ARCH_H) $(DISP_H) $(KINC)/interrupt.h  \
-    $(KINC)/process.h
+bin/ctsw.o: src/ctsw.c $(COMMON) $(ARCH_H) $(DISP_H) $(KERNEL)/interrupt.h  \
+    $(KERNEL)/process.h
 bin/syscall.o: src/syscall.c include/telos/process.h
 bin/pic.o: src/pic.c $(COMMON) $(ARCH_H)
-bin/sysproc.o: src/sysproc.c $(COMMON) include/telos/process.h \
-    include/telos/print.h
-bin/procqueue.o: src/procqueue.c $(COMMON) $(KINC)/process.h
-bin/devinit.o: src/devinit.c $(COMMON) $(KINC)/device.h \
-    $(KEYBOARD_H) $(CONSOLE_H)
+bin/sysproc.o: src/sysproc.c $(COMMON) $(USER_H)
+bin/procqueue.o: src/procqueue.c $(COMMON) $(KERNEL)/process.h
+bin/devinit.o: src/devinit.c $(COMMON) $(DEVICE_H) $(KEYBOARD_H) $(CONSOLE_H)
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: src/dispatch/dispatch.c $(COMMON) $(DISP_H) \
-    include/syscall.h $(KINC)/device.h $(KINC)/interrupt.h
+    include/syscall.h $(DEVICE_H) $(KERNEL)/interrupt.h
 bin/dispatch/process.o: src/dispatch/process.c $(COMMON) $(ARCH_H) $(DISP_H) \
-    $(KINC)/time.h include/mem.h
+    $(KERNEL)/time.h include/mem.h
 bin/dispatch/time.o: src/dispatch/time.c $(COMMON) $(ARCH_H) $(DISP_H)
-bin/dispatch/io.o: src/dispatch/io.c $(COMMON) $(DISP_H) $(KINC)/device.h
+bin/dispatch/io.o: src/dispatch/io.c $(COMMON) $(DISP_H) $(DEVICE_H)
 bin/dispatch/sysprint.o: src/dispatch/sysprint.c $(COMMON) $(DISP_H)
 bin/dispatch/signal.o: src/dispatch/signal.c $(COMMON) $(ARCH_H) $(DISP_H) \
     include/syscall.h include/signal.h
 
 # DRVRFILES: drivers
 bin/drivers/kbd.o: src/drivers/kbd.c $(COMMON) $(ARCH_H) $(DISP_H) \
-    include/kernel/device.h $(KEYBOARD_H)
+    $(DEVICE_H) $(KEYBOARD_H)
 bin/drivers/console.o: src/drivers/console.c $(COMMON) $(ARCH_H) $(DISP_H) \
-    include/kernel/device.h $(CONSOLE_H)
+    $(DEVICE_H) $(CONSOLE_H)
 
 # USERFILES: user programs
-bin/usr/kbdtest.o: src/usr/kbdtest.c include/telos/print.h include/telos/io.h \
-    include/telos/process.h
-bin/usr/proctest.o: src/usr/proctest.c $(COMMON) include/telos/print.h \
-    include/telos/process.h
-bin/usr/sigtest.o: src/usr/sigtest.c include/signal.h include/telos/print.h \
-    include/telos/process.h
-bin/usr/strtest.o: src/usr/strtest.c $(COMMON) include/telos/print.h
-bin/usr/tsh.o: src/usr/tsh.c $(COMMON) include/mem.h include/signal.h \
-    include/telos/print.h include/telos/process.h include/telos/io.h
+bin/usr/kbdtest.o: src/usr/kbdtest.c $(USER_H)
+bin/usr/proctest.o: src/usr/proctest.c $(COMMON) $(USER_H)
+bin/usr/sigtest.o: src/usr/sigtest.c $(USER_H)
+bin/usr/strtest.o: src/usr/strtest.c $(COMMON) $(USER_H)
+bin/usr/tsh.o: src/usr/tsh.c $(COMMON) $(USER_H)
 
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)

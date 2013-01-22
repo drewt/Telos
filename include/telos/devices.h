@@ -1,4 +1,4 @@
-/* process.h : process control system calls
+/* telos/devices.h : device numbers
  */
 
 /*  Copyright 2013 Drew T.
@@ -19,15 +19,14 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PROCESS_H_
-#define __PROCESS_H_
+#ifndef __TELOS_DEVICES_H_
+#define __TELOS_DEVICES_H_
 
-typedef int pid_t;
+enum dev_id {
+    DEV_KBD,
+    DEV_KBD_ECHO,
+    DEV_CONSOLE_0,
+    DEV_CONSOLE_1
+};
 
-int syscreate (void(*func)(void*), void *arg);
-void sysyield (void);
-void sysstop (void);
-int getpid (void);
-int syssleep (int milliseconds);
-
-#endif // __PROCESS_H_
+#endif // __TELOS_DEVICES_H_

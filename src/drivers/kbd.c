@@ -43,7 +43,7 @@ static char kbd_buf[4];       /* the internal keyboard buffer */
 static int  kbd_buf_next = 0; /* number of chars in the internal buffer */
 
 /* state */
-static bool open    = false; /* TRUE when keyboard is open */
+static bool is_open = false; /* TRUE when keyboard is open */
 static bool reading = false; /* TRUE when keyboard is being read */
 static bool echo    = false; /* TRUE when echo keyboard is open */
 static bool got_eof = false; /* TRUE when EOF has been read */
@@ -149,10 +149,10 @@ int kbd_read (int fd, void *buf, int buf_len) {
  *-----------------------------------------------------------------------------
  */
 int kbd_open (enum dev_id devno) {
-    if (open)
+    if (is_open)
         return SYSERR;
     enable_irq (1, 0);
-    open    = true;
+    is_open = true;
     owner   = current;
     kbd_eof = DEFAULT_EOF;
     return 0;
@@ -163,10 +163,10 @@ int kbd_open (enum dev_id devno) {
  *-----------------------------------------------------------------------------
  */
 int kbd_close (enum dev_id devno) {
-    if (!open)
+    if (!is_open)
         return SYSERR;
     enable_irq (1, 1);
-    open    = false;
+    is_open = false;
     got_eof = false;
     owner   = NULL;
     kbd_buf_next = 0;

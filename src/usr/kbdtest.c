@@ -20,6 +20,7 @@
 #include <telos/io.h>
 #include <telos/print.h>
 #include <telos/process.h>
+#include <telos/devices.h>
 
 void kbd_test (void *arg) {
     int fd;

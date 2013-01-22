@@ -34,10 +34,10 @@ struct sysaction {
     int nargs;     // number of args
 };
 
+/* table of actions to be taken for interrupts/system calls */
 static struct sysaction sysactions[100] = {
-    /* hardware interrupts */
-    [TIMER_INTR] = { (void(*)()) tick, 0 },
-    /* system calls */
+//    - INDEX -             - ACTION -            - ARGS -
+    [TIMER_INTR]    = { (void(*)()) tick,            0 },
     [SYS_CREATE]    = { (void(*)()) sys_create,      2 },
     [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
     [SYS_STOP]      = { (void(*)()) sys_stop,        0 },
@@ -55,13 +55,16 @@ static struct sysaction sysactions[100] = {
     [SYS_WRITE]     = { (void(*)()) sys_write,       3 }
 };
 
+static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
+    sysactions[vector] = (struct sysaction) { f, nargs };
+}
+
 /*-----------------------------------------------------------------------------
  * Initializes the dispatcher */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
-    // initialize sysactions that can't be initialized statically
-    sysactions[KBD_INTR].func  = (void(*)()) devtab[DEV_KBD].dviint;
-    sysactions[KBD_INTR].nargs = 0;
+    // initialize actions that can't be initialized statically
+    set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
 
     // TODO: remove, use console write instead
     sysactions[SYS_PUTS].func       = (void(*)()) sys_puts;

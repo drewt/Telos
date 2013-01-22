@@ -19,5 +19,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __TELOS_PRINT_H_
+#define __TELOS_PRINT_H_
+
 void sysputs (char *s);
 void sysreport (char *s);
+
+#endif

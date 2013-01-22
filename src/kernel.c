@@ -24,6 +24,9 @@
 #include <kernel/multiboot.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/drivers/console.h>
+
+#define BOOT_CLR 0xA
 
 pid_t idle_pid;
 pid_t root_pid;
@@ -59,23 +62,23 @@ void kmain (struct multiboot_info *mbd, uint32_t magic) {
         return;
     }
 
-    kprintf_clr (0xA, "32 bit Telos 0.2\n");
-    kprintf_clr (0xA, "Located from %x to %x\n", &kstart, &kend);
+    kprintf_clr (BOOT_CLR, "32 bit Telos 0.2\n");
+    kprintf_clr (BOOT_CLR, "Located from %x to %x\n", &kstart, &kend);
 
-    kprintf_clr (0xA, "Initializing machine state... ");
+    kprintf_clr (BOOT_CLR, "Initializing machine state... ");
     idt_install ();
     gdt_install ();
     pic_init (0x20, 0x28); // map IRQs after reserved interrupts
     pit_init (100);        // 10ms timer
 
-    kprintf_clr (0xA, "done\nInitializing kernel subsystems... ");
+    kprintf_clr (BOOT_CLR, "done\nInitializing kernel subsystems... ");
     mem_init ();
     isr_init ();
     proctab_init ();
     dev_init ();
     dispatch_init ();
 
-    kprintf_clr (0xA, "done\nStarting Telos...\n\n");
+    kprintf_clr (BOOT_CLR, "done\nStarting Telos...\n\n");
 
     idle_pid = sys_create (idle_proc, NULL);
     root_pid = sys_create (root, NULL);
