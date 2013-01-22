@@ -23,11 +23,15 @@ OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
 
 KINC = include/kernel
 DRIVERS = $(KINC)/drivers
+TELOS = include/telos
 
 COMMON = $(KINC)/common.h
 ARCH_H = $(KINC)/i386.h
 DISP_H = $(KINC)/dispatch.h $(KINC)/process.h
 LIB_H = include/klib.h
+
+CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
+KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
 
 all: bin/kernel.img
 
@@ -64,7 +68,7 @@ bin/sysproc.o: src/sysproc.c $(COMMON) include/telos/process.h \
     include/telos/print.h
 bin/procqueue.o: src/procqueue.c $(COMMON) $(KINC)/process.h
 bin/devinit.o: src/devinit.c $(COMMON) $(KINC)/device.h \
-    $(DRIVERS)/kbd.h $(DRIVERS)/console.h
+    $(KEYBOARD_H) $(CONSOLE_H)
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: src/dispatch/dispatch.c $(COMMON) $(DISP_H) \
@@ -79,9 +83,9 @@ bin/dispatch/signal.o: src/dispatch/signal.c $(COMMON) $(ARCH_H) $(DISP_H) \
 
 # DRVRFILES: drivers
 bin/drivers/kbd.o: src/drivers/kbd.c $(COMMON) $(ARCH_H) $(DISP_H) \
-    include/kernel/device.h include/kernel/drivers/kbd.h
-bin/drivers/console.o: src/drivers/console.c $(COMMON) include/kernel/device.h \
-    include/kernel/drivers/console.h
+    include/kernel/device.h $(KEYBOARD_H)
+bin/drivers/console.o: src/drivers/console.c $(COMMON) $(ARCH_H) $(DISP_H) \
+    include/kernel/device.h $(CONSOLE_H)
 
 # USERFILES: user programs
 bin/usr/kbdtest.o: src/usr/kbdtest.c include/telos/print.h include/telos/io.h \

@@ -30,8 +30,6 @@
 #define KBD_CMD 0x64
 #define KBD_DAT 0x60
 
-#define IOCTL_MOD_EOF 49 /* ioctl command to change EOF character */
-
 #define KBD_BUF_SIZE 4 /* size of the internal keyboard buffer */
 
 #define DEFAULT_EOF 4
@@ -184,7 +182,7 @@ int kbd_close (enum dev_id devno) {
  */
 int kbd_ioctl (unsigned long command, va_list vargs) {
 
-    if (command != IOCTL_MOD_EOF)
+    if (command != KBD_IOCTL_MOD_EOF)
         return SYSERR;
     
     kbd_eof = va_arg (vargs, int);

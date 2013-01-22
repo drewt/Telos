@@ -19,12 +19,15 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-enum console_ioctl {
-    CONSOLE_IOCTL_SWITCH
-};
+#ifndef __CONSOLE_H_
+#define __CONSOLE_H_
+
+#include <telos/console.h>
 
 int console_init (void);
 int console_write (int fd, void *buf, int buf_len);
 int console_open (enum dev_id devno);
 int console_close (enum dev_id devno);
 int console_ioctl (unsigned long command, va_list vargs);
+
+#endif // __CONSOLE_H_

@@ -1,4 +1,4 @@
-/* kbd.h : keyboard driver
+/* console.h : console
  */
 
 /*  Copyright 2013 Drew T.
@@ -19,17 +19,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __KBD_H_
-#define __KBD_H_
+#ifndef __TELOS_CONSOLE_H_
+#define __TELOS_CONSOLE_H_
 
-#include <telos/kbd.h>
+enum console_ioctl {
+    CONSOLE_IOCTL_SWITCH
+};
 
-void kbd_init (int dev_no);
-void kbd_interrupt (void);
-int kbd_open (enum dev_id devno);
-int kbd_close (enum dev_id devno);
-int kbd_read (int fd, void *buf, int nbytes);
-int kbd_read_echo (int fd, void *buf, int nbytes);
-int kbd_ioctl (unsigned long command, va_list vargs);
-
-#endif // __KBD_H_
+#endif // __TELOS_CONSOLE_H_
