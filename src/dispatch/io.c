@@ -66,7 +66,6 @@ void sys_close (int fd) {
 void sys_read (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        kprintf ("invalid fd: %d\n", fd);
         current->rc = SYSERR;
         return;
     }
@@ -84,5 +83,5 @@ void sys_write (int fd, void *buf, int nbyte) {
         return;
     }
 
-    current->rc = devtab[current->fds[fd]].dvread (fd, buf, nbyte);
+    current->rc = devtab[current->fds[fd]].dvwrite (fd, buf, nbyte);
 }
