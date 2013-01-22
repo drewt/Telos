@@ -22,6 +22,7 @@
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
+#include <kernel/interrupt.h>
 #include <syscall.h>
 
 struct pcb *current;    /* the running process     */
@@ -33,53 +34,40 @@ struct sysaction {
     int nargs;     // number of args
 };
 
-static struct sysaction sysactions[100]; /* ISR table */
+static struct sysaction sysactions[100] = {
+    /* hardware interrupts */
+    [TIMER_INTR] = { (void(*)()) tick, 0 },
+    /* system calls */
+    [SYS_CREATE]    = { (void(*)()) sys_create,      2 },
+    [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
+    [SYS_STOP]      = { (void(*)()) sys_stop,        0 },
+    [SYS_GETPID]    = { (void(*)()) sys_getpid,      0 },
+    [SYS_SLEEP]     = { (void(*)()) sys_sleep,       1 },
+    [SYS_SIGRETURN] = { (void(*)()) sig_restore,     1 },
+    [SYS_KILL]      = { (void(*)()) sys_kill,        2 },
+    [SYS_SIGWAIT]   = { (void(*)()) sys_sigwait,     0 },
+    [SYS_SIGACTION] = { (void(*)()) sys_sigaction,   4 },
+    [SYS_SIGNAL]    = { (void(*)()) sys_signal,      2 },
+    [SYS_SIGMASK]   = { (void(*)()) sys_sigprocmask, 3 },
+    [SYS_OPEN]      = { (void(*)()) sys_open,        1 },
+    [SYS_CLOSE]     = { (void(*)()) sys_close,       1 },
+    [SYS_READ]      = { (void(*)()) sys_read,        3 },
+    [SYS_WRITE]     = { (void(*)()) sys_write,       3 }
+};
 
 /*-----------------------------------------------------------------------------
  * Initializes the dispatcher */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
-    // hardware interrupts
-    sysactions[32].func  = (void(*)()) tick;
-    sysactions[32].nargs = 0;
-    sysactions[33].func  = (void(*)()) devtab[DEV_KBD].dviint;
-    sysactions[33].nargs = 0;
+    // initialize sysactions that can't be initialized statically
+    sysactions[KBD_INTR].func  = (void(*)()) devtab[DEV_KBD].dviint;
+    sysactions[KBD_INTR].nargs = 0;
 
-    // system calls
-    sysactions[SYS_CREATE].func     = (void(*)()) sys_create;
-    sysactions[SYS_CREATE].nargs    = 2;
-    sysactions[SYS_YIELD].func      = (void(*)()) sys_yield;
-    sysactions[SYS_YIELD].nargs     = 0;
-    sysactions[SYS_STOP].func       = (void(*)()) sys_stop;
-    sysactions[SYS_STOP].nargs      = 0;
-    sysactions[SYS_GETPID].func     = (void(*)()) sys_getpid;
-    sysactions[SYS_GETPID].nargs    = 0;
+    // TODO: remove, use console write instead
     sysactions[SYS_PUTS].func       = (void(*)()) sys_puts;
     sysactions[SYS_PUTS].nargs      = 1;
     sysactions[SYS_REPORT].func     = (void(*)()) sys_report;
     sysactions[SYS_REPORT].nargs    = 1;
-    sysactions[SYS_SLEEP].func      = (void(*)()) sys_sleep;
-    sysactions[SYS_SLEEP].nargs     = 1;
-    sysactions[SYS_SIGRETURN].func  = (void(*)()) sig_restore;
-    sysactions[SYS_SIGRETURN].nargs = 1;
-    sysactions[SYS_KILL].func       = (void(*)()) sys_kill;
-    sysactions[SYS_KILL].nargs      = 2;
-    sysactions[SYS_SIGWAIT].func    = (void(*)()) sys_sigwait;
-    sysactions[SYS_SIGWAIT].nargs   = 0;
-    sysactions[SYS_SIGACTION].func  = (void(*)()) sys_sigaction;
-    sysactions[SYS_SIGACTION].nargs = 3;
-    sysactions[SYS_SIGNAL].func     = (void(*)()) sys_signal;
-    sysactions[SYS_SIGNAL].nargs    = 2;
-    sysactions[SYS_SIGMASK].func    = (void(*)()) sys_sigprocmask;
-    sysactions[SYS_SIGMASK].nargs   = 3;
-    sysactions[SYS_OPEN].func       = (void(*)()) sys_open;
-    sysactions[SYS_OPEN].nargs      = 1;
-    sysactions[SYS_CLOSE].func      = (void(*)()) sys_close;
-    sysactions[SYS_CLOSE].nargs     = 1;
-    sysactions[SYS_READ].func       = (void(*)()) sys_read;
-    sysactions[SYS_READ].nargs      = 3;
-    sysactions[SYS_WRITE].func      = (void(*)()) sys_write;
-    sysactions[SYS_WRITE].nargs     = 3;
 }
 
 /*-----------------------------------------------------------------------------

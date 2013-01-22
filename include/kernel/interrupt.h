@@ -19,9 +19,11 @@
 #ifndef __INTERRUPT_H_
 #define __INTERRUPT_H_
 
-/* interrupt vectors */
-#define TIMER_INTR   0x20
-#define KBD_INTR     0x21
-#define SYSCALL_INTR 0x80
+/* vectors into the IDT; also serve as vectors into the sysactions table */
+enum int_vectors {
+    TIMER_INTR   = 0x20,
+    KBD_INTR     = 0x21,
+    SYSCALL_INTR = 0x80
+};
 
 #endif // __INTERRUPT_H_

@@ -72,7 +72,7 @@ bin/devinit.o: src/devinit.c $(COMMON) $(KINC)/device.h \
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: src/dispatch/dispatch.c $(COMMON) $(DISP_H) \
-    include/syscall.h $(KINC)/device.h
+    include/syscall.h $(KINC)/device.h $(KINC)/interrupt.h
 bin/dispatch/process.o: src/dispatch/process.c $(COMMON) $(ARCH_H) $(DISP_H) \
     $(KINC)/time.h include/mem.h
 bin/dispatch/time.o: src/dispatch/time.c $(COMMON) $(ARCH_H) $(DISP_H)
