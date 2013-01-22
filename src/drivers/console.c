@@ -41,10 +41,13 @@
 #define TXT_CLR   0x7
 #define TAB_WIDTH 8
 
-// TODO: use a struct for all this
-static unsigned char console_mem[N_CONSOLES][CBUF_SIZE]; /* driver memory */
-static volatile unsigned char *pos[N_CONSOLES]; /* cursor positions       */
-static unsigned int writers[N_CONSOLES];        /* number of times opened */
+struct console {
+    unsigned char mem[CBUF_SIZE];
+    volatile unsigned char *pos;
+    unsigned int opened;
+};
+
+static struct console constab[N_CONSOLES];
 
 static unsigned int visible;                    /* current console        */
 
@@ -64,19 +67,19 @@ int console_write (int fd, void *buf, int buf_len) {
 
 int console_open (enum dev_id devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
-    writers[cno]++;
+    constab[cno].opened++;
     return 0;
 }
 
 int console_close (enum dev_id devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
-    writers[cno]--;
+    constab[cno].opened--;
     return 0;
 }
 
 int console_init (void) {
     // TODO: probe for colour/monochrome display
-    pos[0]  = (volatile unsigned char*) CLR_BUF;
+    constab[0].pos = (volatile unsigned char *) CLR_BUF;
 
     // get cursor position
     uint32_t cpos;
@@ -85,12 +88,12 @@ int console_init (void) {
     outb (CLR_BASE, 15);
     cpos |= inb (CLR_BASE+1);
     if (cpos <= COL * ROW)
-        pos[0] = (unsigned char*) CLR_BUF + cpos*2;
+        constab[0].pos = (unsigned char*) CLR_BUF + cpos*2;
     else
-        pos[0] = (unsigned char*) CLR_BUF;;
+        constab[0].pos = (unsigned char*) CLR_BUF;;
 
     for (int i = 1; i < N_CONSOLES; i++)
-        pos[i]  = &console_mem[i][0];
+        constab[i].pos  = constab[i].mem;
 
     return 0;
 }
@@ -106,8 +109,8 @@ int console_ioctl (unsigned long command, va_list vargs) {
         return SYSERR;
 
     // swap current console to driver memory and load new console to vga memory
-    memcpy (&console_mem[visible][0], (void*) CLR_BUF, ROW*COL*CHR);
-    memcpy ((void*) CLR_BUF, &console_mem[to][0], ROW*COL*CHR);
+    memcpy (constab[visible].mem, (void*) CLR_BUF, ROW*COL*CHR);
+    memcpy ((void*) CLR_BUF, constab[to].mem, ROW*COL*CHR);
 
     visible = to;
     return 0;
@@ -127,38 +130,38 @@ static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno) {
 
     unsigned char *base = (cno==visible) ? (unsigned char*) CLR_BUF :
-                                           &console_mem[cno][0];
+                                           constab[cno].mem;
 
     // print the character
     switch (c) {
     case '\n':
-        pos[cno] += COL * 2; //        |
+        constab[cno].pos += COL * 2; //        |
     case '\r':               // <------'
-        pos[cno] -= ((uint32_t) pos[cno] - CLR_BUF) % (COL * 2);
+        constab[cno].pos -= ((uint32_t) constab[cno].pos - CLR_BUF) % (COL * 2);
         break;
     case '\t':
         for (int i = 0; i < TAB_WIDTH; i++)
             console_putc (' ', attr, cno);
         break;
     case '\b':
-        pos[cno] -= 2;
-        if ((void*) pos[cno] < (void*) CLR_BUF)
-            pos[cno] = (void*) CLR_BUF;
-        *pos[cno] = ' ';
+        constab[cno].pos -= 2;
+        if ((void*) constab[cno].pos < (void*) CLR_BUF)
+            constab[cno].pos = (void*) CLR_BUF;
+        *constab[cno].pos = ' ';
         break;
     default:
-        *pos[cno]++ = c;
-        *pos[cno]++ = attr & 0xF;
+        *constab[cno].pos++ = c;
+        *constab[cno].pos++ = attr & 0xF;
         break;
     }
 
     // scroll down
-    if (pos[cno] >= base + (COL*ROW*CHR)) {
+    if (constab[cno].pos >= base + (COL*ROW*CHR)) {
         memcpy (base, base + (COL*CHR), COL*(ROW-1)*CHR);
         for (unsigned char *i = base + (COL*(ROW-1)*CHR);
                 i < base + (COL*ROW*CHR); i += CHR)
             i[0] = ' ';
-        pos[cno] -= COL*CHR;
+        constab[cno].pos -= COL*CHR;
     }
-    cursor ((pos[cno] - base) / 2);
+    cursor ((constab[cno].pos - base) / 2);
 }
