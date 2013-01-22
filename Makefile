@@ -9,7 +9,7 @@ LIB      = lib
 
 ROOTFILES = bin/kernel.o bin/kprintf.o bin/mem.o bin/gdt.o bin/intr.o \
 	    bin/ctsw.o bin/syscall.o bin/pic.o bin/sysproc.o \
-	    bin/inthandlers.o bin/procqueue.o
+	    bin/inthandlers.o bin/procqueue.o bin/devinit.o
 
 DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
 	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o
@@ -22,6 +22,7 @@ USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
 OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
 
 KINC = include/kernel
+DRIVERS = $(KINC)/drivers
 
 COMMON = $(KINC)/common.h
 ARCH_H = $(KINC)/i386.h
@@ -48,8 +49,8 @@ bin/loader.o: boot/loader.s
 	$(AS) -o bin/loader.o boot/loader.s
 
 # ROOTFILES: core kernel files
-bin/kernel.o: src/kernel.c $(COMMON) $(ARCH_H) $(KINC)/multiboot.h \
-    $(KINC)/kernel.h $(KINC)/dispatch.h $(KINC)/device.h
+bin/kernel.o: src/kernel.c $(COMMON) $(ARCH_H) $(DISP_H) $(KINC)/multiboot.h \
+    $(KINC)/kernel.h
 bin/kprintf.o: src/kprintf.c $(COMMON) $(LIB_H) $(ARCH_H)
 bin/mem.o: src/mem.c $(COMMON) include/mem.h
 bin/gdt.o: src/gdt.c $(COMMON) $(ARCH_H) $(LIB_H)
@@ -62,6 +63,8 @@ bin/pic.o: src/pic.c $(COMMON) $(ARCH_H)
 bin/sysproc.o: src/sysproc.c $(COMMON) include/telos/process.h \
     include/telos/print.h
 bin/procqueue.o: src/procqueue.c $(COMMON) $(KINC)/process.h
+bin/devinit.o: src/devinit.c $(COMMON) $(KINC)/device.h \
+    $(DRIVERS)/kbd.h $(DRIVERS)/console.h
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: src/dispatch/dispatch.c $(COMMON) $(DISP_H) \

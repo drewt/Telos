@@ -29,8 +29,8 @@
 enum dev_id {
     DEV_KBD,
     DEV_KBD_ECHO,
-    CONSOLE_0,
-    CONSOLE_1
+    DEV_CONSOLE_0,
+    DEV_CONSOLE_1
 };
 
 #define IO_INCOMPLETE (-1)
@@ -38,6 +38,7 @@ enum dev_id {
 struct device {
     int dvnum;
     char *dvname;
+    int (*dvinit)(void);
     int (*dvopen)(enum dev_id devno);
     int (*dvclose)(enum dev_id devno);
     int (*dvread)(int fd, void *buf, int nbytes);

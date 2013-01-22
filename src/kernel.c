@@ -25,14 +25,10 @@
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 
-#include <kernel/device.h>
-#include <kernel/drivers/kbd.h>
-
 pid_t idle_pid;
 pid_t root_pid;
 
 struct pcb proctab[PT_SIZE];
-struct device devtab[DT_SIZE];
 
 static void proctab_init (void) {
     for (int i = 0; i < PT_SIZE; i++) {
@@ -41,34 +37,6 @@ static void proctab_init (void) {
         proctab[i].next  = NULL;
     }
     proctab[0].pid = 0; // 0 is a reserved pid
-}
-
-static int rw_error () {
-    return SYSERR;
-}
-
-static void devtab_init (void) {
-    struct device *d;
-    
-    d = &devtab[DEV_KBD];
-    d->dvnum = DEV_KBD;
-    d->dvname = "Keyboard (no echo)";
-    d->dvopen = kbd_open;
-    d->dvclose = kbd_close;
-    d->dvread = kbd_read;
-    d->dvwrite = rw_error;
-    d->dvioctl = kbd_ioctl;
-    d->dviint = kbd_interrupt;
-    
-    d = &devtab[DEV_KBD_ECHO];
-    d->dvnum = DEV_KBD_ECHO;
-    d->dvname = "Keyboard (echo)";
-    d->dvopen = kbd_open;
-    d->dvclose = kbd_close;
-    d->dvread = kbd_read;
-    d->dvwrite = rw_error;
-    d->dvioctl = kbd_ioctl;
-    d->dviint = kbd_interrupt;
 }
 
 extern void tsh (void *arg);
@@ -100,7 +68,7 @@ void kmain (struct multiboot_info *mbd, uint32_t magic) {
     mem_init ();
     isr_init ();
     proctab_init ();
-    devtab_init ();
+    dev_init ();
     dispatch_init ();
 
     kprintf_clr (0xA, "done\nStarting Telos...\n\n");

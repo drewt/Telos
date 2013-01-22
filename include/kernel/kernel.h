@@ -26,6 +26,7 @@ extern unsigned int kend;
 extern void(*dfl_sighandlers[])(int);
 
 /* initialization procedures */
+extern void dev_init (void); /* devinit.c */
 extern void mem_init (void); /* mem.c */
 extern void isr_init (void); /* ctsw.c */
 extern void paging_init (void);
