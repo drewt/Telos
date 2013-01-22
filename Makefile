@@ -7,7 +7,7 @@ AS       = $(CCPREFIX)as #--32
 
 LIB      = lib
 
-ROOTFILES = bin/kernel.o bin/kprintf.o bin/mem.o bin/gdt.o bin/intr.o \
+ROOTFILES = bin/kernel.o bin/mem.o bin/gdt.o bin/intr.o \
 	    bin/ctsw.o bin/syscall.o bin/pic.o bin/sysproc.o \
 	    bin/inthandlers.o bin/procqueue.o bin/devinit.o
 
@@ -55,7 +55,6 @@ bin/loader.o: boot/loader.s
 # ROOTFILES: core kernel files
 bin/kernel.o: src/kernel.c $(COMMON) $(ARCH_H) $(DISP_H) $(KINC)/multiboot.h \
     $(KINC)/kernel.h
-bin/kprintf.o: src/kprintf.c $(COMMON) $(LIB_H) $(ARCH_H)
 bin/mem.o: src/mem.c $(COMMON) include/mem.h
 bin/gdt.o: src/gdt.c $(COMMON) $(ARCH_H) $(LIB_H)
 bin/intr.o: src/intr.c $(COMMON) $(COMMON) $(LIB_H) $(ARCH_H)

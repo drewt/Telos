@@ -23,7 +23,7 @@
 #include <kernel/dispatch.h>
 
 void sys_puts (char *s) {
-    kputs (s);
+    kprintf ("%s", s);
 }
 
 void sys_report (char *s) {

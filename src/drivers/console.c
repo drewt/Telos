@@ -39,6 +39,7 @@
 #define CLR_BUF  0xB8000
 
 #define TXT_CLR   0x7
+#define NUM_CLR   0xF
 #define TAB_WIDTH 8
 
 struct console {
@@ -49,7 +50,7 @@ struct console {
 
 static struct console constab[N_CONSOLES];
 
-static unsigned int visible;                    /* current console        */
+static unsigned int visible = 0; /* currently visible console */
 
 static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno);
@@ -126,6 +127,9 @@ static void cursor (int pos) {
     outb (CLR_BASE+1, pos & 0xFF);
 }
 
+/*-----------------------------------------------------------------------------
+ * Prints a character to the given console */
+//-----------------------------------------------------------------------------
 static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno) {
 
@@ -164,4 +168,94 @@ static void console_putc (unsigned char c, unsigned char attr,
         constab[cno].pos -= COL*CHR;
     }
     cursor ((constab[cno].pos - base) / 2);
+}
+
+/* KERNEL INTERFACE */
+
+/*-----------------------------------------------------------------------------
+ * Prints a string to the visible console */
+//-----------------------------------------------------------------------------
+static inline void kputs (char *s, unsigned char attr) {
+    for (; *s != '\0'; s++)
+        console_putc (*s, attr, visible);
+}
+
+/*-----------------------------------------------------------------------------
+ * Prints a formatted string to the visible console */
+//-----------------------------------------------------------------------------
+int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
+    int i;
+    char buf[33];
+
+    for (i = 0; fmt[i] != '\0'; i++) {
+        if (fmt[i] == '%') {
+            i++;
+            switch (fmt[i]) {
+            // numbers
+            case 'b':
+                kputs (itoa (va_arg (ap, int), buf, 2), NUM_CLR);
+            case 'd':
+            case 'i':
+                kputs (itoa (va_arg (ap, int), buf, 10), NUM_CLR);
+                break;
+            case 'o':
+                kputs (itoa (va_arg (ap, int), buf, 8), NUM_CLR);
+            case 'x':
+                kputs ("0x", NUM_CLR);
+                kputs (itoa (va_arg (ap, int), buf, 16), NUM_CLR);
+                break;
+            // strings n chars
+            case 'c':
+                console_putc (va_arg (ap, int), clr, visible);
+                break;
+            case 's':
+                kputs (va_arg (ap, char*), TXT_CLR);
+                break;
+            case '%':
+                console_putc ('%', clr, visible);
+                break;
+            default:
+                // bad/unsupported format string; abort
+                goto end;
+                break;
+            }
+        } else {
+            console_putc (fmt[i], clr, visible);
+        }
+    }
+end:
+    return i;
+}
+
+
+/*-----------------------------------------------------------------------------
+ * Variadic wrapper for kvprintf */
+//-----------------------------------------------------------------------------
+int kprintf_clr (unsigned char clr, const char *fmt, ...) {
+    va_list ap;
+    va_start (ap, fmt);
+    int ret = kvprintf (clr, fmt, ap);
+    va_end (ap);
+    return ret;
+}
+
+/*-----------------------------------------------------------------------------
+ * Variadic wrapper for kvprintf which prints in the default text colour */
+//-----------------------------------------------------------------------------
+int kprintf (const char *fmt, ...) {
+    va_list ap;
+    va_start (ap, fmt);
+    int ret = kvprintf (TXT_CLR, fmt, ap);
+    va_end (ap);
+    return ret;
+}
+
+/*-----------------------------------------------------------------------------
+ * Clears the visible console and sets the cursor position to 0 */
+//-----------------------------------------------------------------------------
+void clear_console (void) {
+    for (int i = 0; i < ROW; i++)
+        console_putc ('\n', TXT_CLR, visible);
+    cursor (0);
+    constab[visible].pos = (unsigned char*) CLR_BUF;
 }

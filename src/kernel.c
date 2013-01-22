@@ -28,6 +28,7 @@
 pid_t idle_pid;
 pid_t root_pid;
 
+// TODO: find a more appropriate place for this
 struct pcb proctab[PT_SIZE];
 
 static void proctab_init (void) {
@@ -41,19 +42,22 @@ static void proctab_init (void) {
 
 extern void tsh (void *arg);
 extern void root (void *arg);
+extern int console_init (void);
 
 /*-----------------------------------------------------------------------------
  * Kernel entry point, where it all begins... */
 //-----------------------------------------------------------------------------
 void kmain (struct multiboot_info *mbd, uint32_t magic) {
 
+    // initialize console so we can print boot status
+    console_init ();
+    clear_console ();
+
     // check multiboot magic number
     if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
         kprintf ("Invalid Multiboot magic number\n");
         return;
     }
-
-    clear_console ();
 
     kprintf_clr (0xA, "32 bit Telos 0.2\n");
     kprintf_clr (0xA, "Located from %x to %x\n", &kstart, &kend);
@@ -74,6 +78,6 @@ void kmain (struct multiboot_info *mbd, uint32_t magic) {
     kprintf_clr (0xA, "done\nStarting Telos...\n\n");
 
     idle_pid = sys_create (idle_proc, NULL);
-    root_pid = sys_create (tsh, NULL);
+    root_pid = sys_create (root, NULL);
     dispatch ();
 }

@@ -20,25 +20,35 @@
  */
 
 #include <kernel/common.h>
+#include <kernel/device.h>
 
 #include <telos/process.h>
 #include <telos/print.h>
+#include <telos/io.h>
 #include <signal.h>
+
+void tsh (void *arg);
 
 void idle_proc (void *arg) {
     for(;;);
 }
 
-static void void_handler (int signo) {}
+static void sigchld_handler(int signo) {}
 
 void root (void *arg) {
+
+    /*cfd = open (DEV_CONSOLE_0);
+    write (cfd, "Hello, console!", 15);
+    close (DEV_CONSOLE_0);*/
+
     int sig;
-    void(*f)(void*) = (void(*)(void*)) arg;
+    pid_t tsh_pid;
 
-    signal (SIGCHLD, void_handler);
+    signal (SIGCHLD, sigchld_handler);
+    
+    tsh_pid = syscreate (tsh, NULL);
+    for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
+    kprintf ("Goodbye!");
 
-    for (;;) {
-        syscreate (f, NULL);
-        for (sig = 0; sig != SIGCHLD; sig = sigwait ());
-    }
+    for(;;);
 }

@@ -29,7 +29,6 @@
 
 extern int kprintf (const char *fmt, ...);
 extern int kprintf_clr (unsigned char clr, const char *fmt, ...);
-extern void kputs (char *s);
 extern void clear_console (void);
 
 #endif // __COMMON_H_

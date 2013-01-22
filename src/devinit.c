@@ -84,5 +84,5 @@ struct device devtab[DT_SIZE] = {
 };
 
 void dev_init (void) {
-    devtab[DEV_CONSOLE_0].dvinit ();
+
 }
