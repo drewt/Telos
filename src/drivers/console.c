@@ -57,7 +57,7 @@ int console_write (int fd, void *buf, int buf_len) {
         for (int i = 0; i < buf_len; i++)
             console_putc (((unsigned char*) buf)[i], TXT_CLR, cno);
     } else {
-        
+
     }
     return 0;
 }
@@ -65,13 +65,13 @@ int console_write (int fd, void *buf, int buf_len) {
 int console_open (enum dev_id devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     writers[cno]++;
-    return SYSERR;
+    return 0;
 }
 
 int console_close (enum dev_id devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     writers[cno]--;
-    return SYSERR;
+    return 0;
 }
 
 int console_init (void) {
