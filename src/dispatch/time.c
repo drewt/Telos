@@ -24,10 +24,21 @@
 #include <kernel/dispatch.h>
 #include <signal.h>
 
+static int delta_list_rm (struct pcb **head, int evno, struct pcb *p);
+static void delta_list_tick (struct pcb **head, int evno);
+static void delta_list_insert (struct pcb **head, unsigned int evno,
+        struct pcb *p, unsigned int ms, void (*act)(struct pcb*));
+
 /* the sleeping queue is a delta list */
 static struct pcb *sq_head; // the head of the sleeping queue
 
 unsigned int tick_count = 0;
+
+static void wake_action (struct pcb *p) {
+    p->rc = (p->events[EVENT_WAKE].delta > 0) ? p->events[EVENT_WAKE].delta :
+                                                0;
+    ready (p);
+}
 
 /*-----------------------------------------------------------------------------
  * Puts a process p on the queue of sleeping processes, to sleep for a given
@@ -36,44 +47,7 @@ unsigned int tick_count = 0;
  */
 void sys_sleep (unsigned int milliseconds) {
 
-    // compute the number of timer intervals to sleep
-    int ticks = (milliseconds%10)? milliseconds/10 + 1 : milliseconds/10;
-
-    // if the head of the sleeping queue is NULL, p becomes the head
-    if (!sq_head) {
-        sq_head        = current;
-        sq_head->next  = NULL;
-        sq_head->prev  = NULL;
-        current->sleep_delta = ticks;
-        new_process ();
-        return;
-    }
-    
-    // find p's place in the queue, updating delta along the way
-    struct pcb *it, *last = 0;
-    for (it = sq_head; it; it = it->next) {
-        if ( ticks > it->sleep_delta )
-            ticks -= it->sleep_delta;
-        else break;
-        last = it;
-    }
-
-    // if last is NULL, p goes at the head of the queue;
-    // otherwise p goes between last and it
-    if (!last) {
-        current->next = sq_head;
-        sq_head = current;
-    } else {
-        last->next = current;
-        current->next = it;
-    }
-    current->prev = last;
-
-    if (it) 
-        it->sleep_delta -= ticks;
-    current->sleep_delta = ticks;
-    current->state = STATE_SLEEPING;
-
+    delta_list_insert (&sq_head, EVENT_WAKE, current, milliseconds, wake_action);
     new_process ();
 }
 
@@ -82,17 +56,82 @@ void sys_sleep (unsigned int milliseconds) {
  * ticks left to sleep */
 //-----------------------------------------------------------------------------
 int sq_rm (struct pcb *p) {
+    return delta_list_rm (&sq_head, EVENT_WAKE, p);
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+static void delta_list_insert (struct pcb **head, unsigned int evno,
+        struct pcb *p, unsigned int ms, void (*act)(struct pcb*)) {
+
+    int ticks;
+    struct pcb *it, *last;
+
+    // convert milliseconds to timer intervals
+    ticks = (ms % 10) ? ms/10 + 1 : ms/10;
+    p->events[evno].action = act;
+
+    // empty list; p becomes the head
+    if (!(*head)) {
+        *head = p;
+        p->events[evno].next = NULL;
+        p->events[evno].prev = NULL;
+        p->events[evno].delta = ticks;
+    } else {
+        // find p's place in the list, updating deltas along the way
+        for (it = *head; it; it = it->events[evno].next) {
+            if (ticks > it->events[evno].delta)
+                ticks -= it->events[evno].delta;
+            else
+                break;
+            last = it;
+        }
+
+        // if last is NULL, p goes at the head of the queue;
+        // otherwise p goes between last and it
+        if (!last) {
+            p->events[evno].next = *head;
+            *head = p;
+        } else {
+            last->events[evno].next = p;
+            p->events[evno].next = it;
+        }
+        p->events[evno].prev = last;
+        if (it)
+            it->events[evno].delta -= ticks;
+        p->events[evno].delta = ticks;
+    }
+}
+
+static int delta_list_rm (struct pcb **head, int evno, struct pcb *p) {
     int ticks = 0;
     struct pcb *it;
-    for (it = sq_head; it != p; it = it->next)
-        ticks += it->sleep_delta;
-    if (it == sq_head)
-        sq_head = it->next;
+    for (it = *head; it != p; it = it->events[evno].next)
+        ticks += it->events[evno].delta;
+    if (it == *head)
+        *head = it->events[evno].next;
     else
-        it->prev->next = it->next;
-    for (it = it->next; it; it = it->next)
-        it->sleep_delta += p->sleep_delta;
-    return ticks + p->sleep_delta;
+        it->events[evno].prev->events[evno].next = it->events[evno].next;
+    for (it = it->events[evno].next; it; it = it->events[evno].next)
+        it->events[evno].delta += p->events[evno].delta;
+    return ticks + p->events[evno].delta;
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+static void delta_list_tick (struct pcb **head, int evno) {
+    if (!(*head))
+        return;
+
+    struct pcb *tmp;
+    (*head)->events[evno].delta--;
+    while (*head && (*head)->events[evno].delta <= 0) {
+        tmp   = *head;
+        *head = (*head)->events[evno].next;
+        tmp->events[evno].action (tmp);
+    }
 }
 
 /*-----------------------------------------------------------------------------
@@ -103,19 +142,9 @@ void tick (void) {
 
     tick_count++;
 
-    if (sq_head) {
-        struct pcb *tmp;
-        sq_head->sleep_delta--;
+    delta_list_tick (&sq_head, EVENT_WAKE);
 
-        // wake all processes that are ready to resume
-        while (sq_head && sq_head->sleep_delta <= 0) {
-            tmp      = sq_head;
-            sq_head  = sq_head->next;
-            tmp->rc = 0;
-            ready (tmp);
-        }
-    }
-
+    // choose new process to run
     ready (current);
     new_process ();
     pic_eoi ();
