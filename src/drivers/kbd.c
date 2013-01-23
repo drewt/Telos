@@ -39,8 +39,8 @@
 static char kbd_eof;
 
 /* internal buffer */
-static char kbd_buf[4];       /* the internal keyboard buffer */
-static int  kbd_buf_next = 0; /* number of chars in the internal buffer */
+static char kbd_buf[KBD_BUF_SIZE]; /* the internal keyboard buffer */
+static int  kbd_buf_next = 0;      /* number of chars in the internal buffer */
 
 /* state */
 static bool is_open = false; /* TRUE when keyboard is open */

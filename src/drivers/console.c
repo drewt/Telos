@@ -57,14 +57,11 @@ static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno);
 
 int console_write (int fd, void *buf, int buf_len) {
+    int i;
     unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
-    if (cno == visible) {
-        for (int i = 0; i < buf_len; i++)
-            console_putc (((unsigned char*) buf)[i], TXT_CLR, cno);
-    } else {
-
-    }
-    return 0;
+    for (i = 0; i != '\0' && i < buf_len; i++)
+        console_putc (((unsigned char*) buf)[i], TXT_CLR, cno);
+    return i;
 }
 
 int console_open (enum dev_id devno) {
