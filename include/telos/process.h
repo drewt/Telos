@@ -29,5 +29,6 @@ void sysyield (void);
 void sysstop (void);
 int getpid (void);
 int syssleep (int milliseconds);
+int alarm (int seconds);
 
 #endif // __PROCESS_H_

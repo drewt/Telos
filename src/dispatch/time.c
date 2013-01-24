@@ -48,19 +48,35 @@ static struct event *dl_head = NULL;
 
 unsigned int tick_count = 0;
 
+/*-----------------------------------------------------------------------------
+ * Wakes a sleeping process */
+//-----------------------------------------------------------------------------
 static void wake_action (struct pcb *p, int delta) {
     p->rc = (delta > 0) ? delta : 0;
     ready (p);
 }
 
 /*-----------------------------------------------------------------------------
- * Puts a process p on the queue of sleeping processes, to sleep for a given
- * number of milliseconds.
- *-----------------------------------------------------------------------------
- */
+ * Sends SIGALRM to the process */
+//-----------------------------------------------------------------------------
+static void alrm_action (struct pcb *p, int delta) {
+    sys_kill (p->pid, SIGALRM);
+}
+
+/*-----------------------------------------------------------------------------
+ * Puts the current process to sleep for a given number of milliseconds */
+//-----------------------------------------------------------------------------
 void sys_sleep (unsigned int milliseconds) {
     delta_list_insert (EVENT_WAKE, current, milliseconds, wake_action);
     new_process ();
+}
+
+/*-----------------------------------------------------------------------------
+ * Registers an alarm for the current process to go off in a given number of
+ * seconds */
+//-----------------------------------------------------------------------------
+void sys_alarm (unsigned int seconds) {
+    delta_list_insert (EVENT_ALRM, current, seconds * 100, alrm_action);
 }
 
 /*-----------------------------------------------------------------------------
@@ -120,17 +136,18 @@ static void delta_list_insert (unsigned int evno, struct pcb *p,
 
 static int delta_list_rm (int evno, struct pcb *p) {
     int ticks = 0;
-    struct event *pev, *it;
-    for (it = dl_head; it->proc != p; it = it->next)
+    struct event *it;
+    struct event *del = &events[PT_INDEX(p->pid)][evno];
+
+    for (it = dl_head; it != del; it = it->next)
         ticks += it->delta;
     if (it == dl_head)
         dl_head = it->next;
     else
         it->prev->next = it->next;
-    pev = it;
     for (it = it->next; it; it = it->next)
-        it->delta += pev->delta;
-    return ticks + pev->delta;
+        it->delta += del->delta;
+    return ticks + del->delta;
 }
 
 /*-----------------------------------------------------------------------------

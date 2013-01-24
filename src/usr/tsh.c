@@ -52,15 +52,15 @@ struct tprog {
 /* program table */
 struct tprog tsh_progs[TSH_N_CMDS] =
 {
-    { TSH_EXIT,  "exit"     },
-    { help,      "help"     },
-    { hello_tsh, "hello"    },
-    { proc_test, "proctest" },
-    { sig_test,  "sigtest"  },
-    { kbd_test,  "kbdtest"  },
-    { str_test,  "strtest"  },
-    { slp_test,  "slptest"  },
-    { tsh,       "tsh"      }
+    { TSH_EXIT,   "exit"      },
+    { help,       "help"      },
+    { hello_tsh,  "hello"     },
+    { proc_test,  "proctest"  },
+    { sig_test,   "sigtest"   },
+    { kbd_test,   "kbdtest"   },
+    { str_test,   "strtest"   },
+    { event_test, "eventtest" },
+    { tsh,        "tsh"       }
 };
 
 static funcptr tsh_lookup (char *in) {

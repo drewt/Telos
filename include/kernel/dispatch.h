@@ -56,6 +56,7 @@ void sys_getpid (void);
 void sys_puts (char *s);
 void sys_report (char *s);
 void sys_sleep (unsigned int milliseconds);
+void sys_alarm (unsigned int seconds);
 void sig_restore (void *osp);
 void sys_sigaction (int sig, struct sigaction *act,
         struct sigaction *oact);

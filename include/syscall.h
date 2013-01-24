@@ -25,32 +25,8 @@
 #define SYSCALL_INTR 0x80
 #endif
 
-/* system call IDs; start at 48 because 0->47 80 used for interrupts
-#define SYS_CREATE     48
-#define SYS_YIELD      49
-#define SYS_STOP       50
-#define SYS_GETPID     51
-#define SYS_PUTS       52
-#define SYS_REPORT     53
-#define SYS_SLEEP      54
-#define SYS_SIGRETURN  55
-#define SYS_KILL       56
-#define SYS_SIGWAIT    57
-#define SYS_SIGACTION  58
-#define SYS_SIGNAL     59
-#define SYS_SIGMASK    60
-#define SYS_SEND       61
-#define SYS_RECV       62
-#define SYS_OPEN       63
-#define SYS_CLOSE      64
-#define SYS_READ       65
-#define SYS_WRITE      66
-#define SYS_SEND0      67
-#define SYS_RECV0      68
-#define SYS_REPLY      69*/
-
 enum syscall_id {
-    SYS_CREATE = 48,
+    SYS_CREATE = 48, // 0-47 reserved for hardware interrupts
     SYS_YIELD,
     SYS_STOP,
     SYS_GETPID,
@@ -68,7 +44,8 @@ enum syscall_id {
     SYS_OPEN,
     SYS_CLOSE,
     SYS_READ,
-    SYS_WRITE
+    SYS_WRITE,
+    SYS_ALARM
 };
 
 /* structure of arguments on the stack during a system call */
