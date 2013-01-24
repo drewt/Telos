@@ -53,7 +53,10 @@ static struct sysaction sysactions[100] = {
     [SYS_CLOSE]     = { (void(*)()) sys_close,       1 },
     [SYS_READ]      = { (void(*)()) sys_read,        3 },
     [SYS_WRITE]     = { (void(*)()) sys_write,       3 },
-    [SYS_ALARM]     = { (void(*)()) sys_alarm,       1 }
+    [SYS_ALARM]     = { (void(*)()) sys_alarm,       1 },
+    [SYS_SEND]      = { (void(*)()) sys_send,        5 },
+    [SYS_RECV]      = { (void(*)()) sys_recv,        3 },
+    [SYS_REPLY]     = { (void(*)()) sys_reply,       3 }
 };
 
 static inline void set_action (unsigned int vector, void(*f)(), int nargs) {

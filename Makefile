@@ -12,7 +12,8 @@ ROOTFILES = bin/kernel.o bin/mem.o bin/gdt.o bin/intr.o \
 	    bin/inthandlers.o bin/procqueue.o bin/devinit.o
 
 DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
-	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o
+	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o \
+	    bin/dispatch/msg.o
 
 DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o
 
@@ -82,6 +83,7 @@ bin/dispatch/io.o: src/dispatch/io.c $(COMMON) $(DISP_H) $(DEVICE_H)
 bin/dispatch/sysprint.o: src/dispatch/sysprint.c $(COMMON) $(DISP_H)
 bin/dispatch/signal.o: src/dispatch/signal.c $(COMMON) $(ARCH_H) $(DISP_H) \
     include/syscall.h include/signal.h
+bin/dispatch/msg.o: src/dispatch/msg.c $(COMMON) $(DISP_H)
 
 # DRVRFILES: drivers
 bin/drivers/kbd.o: src/drivers/kbd.c $(COMMON) $(ARCH_H) $(DISP_H) \

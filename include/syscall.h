@@ -41,6 +41,7 @@ enum syscall_id {
     SYS_SIGMASK,
     SYS_SEND,
     SYS_RECV,
+    SYS_REPLY,
     SYS_OPEN,
     SYS_CLOSE,
     SYS_READ,

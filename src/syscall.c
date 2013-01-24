@@ -88,40 +88,26 @@ void sysreport (char *s) {
 /* MSG.H */
 
 /*-----------------------------------------------------------------------------
- *
+ * */ 
 //-----------------------------------------------------------------------------
-int send (pid_t pid, void *buffer, int length) {
-    return syscall3 (SYS_SEND, (void*) pid, buffer, (void*) length);
+int send (pid_t pid, void *obuf, int olen, void *ibuf, int ilen) {
+    return syscall5 (SYS_SEND, (void*) pid, obuf, (void*) olen, ibuf,
+            (void*) ilen);
 }
 
------------------------------------------------------------------------------
- * 
+/*-----------------------------------------------------------------------------
+ * */
 //-----------------------------------------------------------------------------
 int recv (pid_t pid, void *buffer, int length) {
     return syscall3 (SYS_RECV, (void*) pid, buffer, (void*) length);
 }
 
------------------------------------------------------------------------------
- * 
-//-----------------------------------------------------------------------------
-int send0 (pid_t pid, void *obuf, int olen, void *ibuf, int ilen) {
-    return syscall5 (SYS_SEND0, (void*) pid, obuf, (void*) olen, ibuf,
-            (void*) ilen);
-}
-
------------------------------------------------------------------------------
- * 
-//-----------------------------------------------------------------------------
-int recv0 (pid_t pid, void *buffer, int length) {
-    return syscall3 (SYS_RECV0, (void*) pid, buffer, (void*) length);
-}
-
------------------------------------------------------------------------------
- * 
+/*-----------------------------------------------------------------------------
+ * */
 //-----------------------------------------------------------------------------
 int reply (pid_t pid, void *buffer, int length) {
     return syscall3 (SYS_REPLY, (void*) pid, buffer, (void*) length);
-}*/
+}
 
 /* SIGNAL.H */
 
