@@ -46,7 +46,6 @@ static void wake_action (struct pcb *p) {
  *-----------------------------------------------------------------------------
  */
 void sys_sleep (unsigned int milliseconds) {
-
     delta_list_insert (&sq_head, EVENT_WAKE, current, milliseconds, wake_action);
     new_process ();
 }
@@ -66,7 +65,7 @@ static void delta_list_insert (struct pcb **head, unsigned int evno,
         struct pcb *p, unsigned int ms, void (*act)(struct pcb*)) {
 
     int ticks;
-    struct pcb *it, *last;
+    struct pcb *it, *last = NULL;
 
     // convert milliseconds to timer intervals
     ticks = (ms % 10) ? ms/10 + 1 : ms/10;

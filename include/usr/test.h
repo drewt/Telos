@@ -24,5 +24,6 @@ void sig_test (void *arg);
 void kbd_test (void *arg);
 void str_test (void *arg);
 void proc_test (void *arg);
+void slp_test (void *arg);
 
 #endif // __USR_TEST_H_
