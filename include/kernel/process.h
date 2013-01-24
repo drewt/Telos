@@ -58,18 +58,6 @@ typedef struct {
     int        size;
 } procqueue_t;
 
-typedef struct {
-    void (*action)(struct pcb *p);
-    int  delta;
-    struct pcb *next;
-    struct pcb *prev;
-} event_t;
-
-enum event_types {
-    EVENT_WAKE,
-    EVENT_ALRM
-};
-
 /* process control block */
 struct pcb {
     /* metadata */
@@ -85,7 +73,6 @@ struct pcb {
     /* time */
     unsigned int timestamp;          // creation time
     int          sleep_delta;        // delta for sleeping queue
-    event_t      events[16];         // events
     /* signals */
     struct sigaction sigactions[32]; // signal handlers
     struct siginfo   siginfos[32];   // signal information
