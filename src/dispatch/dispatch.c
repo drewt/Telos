@@ -25,6 +25,13 @@
 #include <kernel/interrupt.h>
 #include <syscall.h>
 
+#define DISPTAB_SIZE 100
+
+/* routines defined in other files */
+extern unsigned int context_switch (struct pcb *p);
+extern int send_signal (int pid, int sig_no);
+extern void tick (void);
+
 struct pcb *current    = NULL; /* the running process     */
 struct pcb *ready_head = NULL; /* head of the ready queue */
 struct pcb *ready_tail = NULL; /* tail of the ready queue */
@@ -35,13 +42,15 @@ struct sysaction {
 };
 
 /* table of actions to be taken for interrupts/system calls */
-static struct sysaction sysactions[100] = {
+static struct sysaction sysactions[DISPTAB_SIZE] = {
 //    - INDEX -             - ACTION -            - ARGS -
     [TIMER_INTR]    = { (void(*)()) tick,            0 },
     [SYS_CREATE]    = { (void(*)()) sys_create,      2 },
     [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
     [SYS_STOP]      = { (void(*)()) sys_stop,        0 },
     [SYS_GETPID]    = { (void(*)()) sys_getpid,      0 },
+    [SYS_PUTS]      = { (void(*)()) sys_puts,        1 },
+    [SYS_REPORT]    = { (void(*)()) sys_report,      1 },
     [SYS_SLEEP]     = { (void(*)()) sys_sleep,       1 },
     [SYS_SIGRETURN] = { (void(*)()) sig_restore,     1 },
     [SYS_KILL]      = { (void(*)()) sys_kill,        2 },
@@ -64,32 +73,28 @@ static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
 }
 
 /*-----------------------------------------------------------------------------
- * Initializes the dispatcher */
+ * Initializes the dispatcher.  Must be called *after* the device table is
+ * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
     // initialize actions that can't be initialized statically
     set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
-
-    // TODO: remove, use console write instead
-    sysactions[SYS_PUTS].func       = (void(*)()) sys_puts;
-    sysactions[SYS_PUTS].nargs      = 1;
-    sysactions[SYS_REPORT].func     = (void(*)()) sys_report;
-    sysactions[SYS_REPORT].nargs    = 1;
 }
 
 /*-----------------------------------------------------------------------------
- *  */
-//*-----------------------------------------------------------------------------
+ * The dispatcher.  Passes control to the appropriate routines to handle 
+ * interrupts, system calls, and other events */
+//*----------------------------------------------------------------------------
 void dispatch (void) {
     
-    unsigned int req;
+    unsigned int req, sig_no;
     struct sys_args *args;
 
     current = next ();
     for (;;) {
 
         if (current->sig_pending & current->sig_ignore) {
-            unsigned int sig_no = 31;
+            sig_no = 31;
             while (sig_no && !(current->sig_pending >> sig_no))
                 sig_no--;
             send_signal (current->pid, sig_no);
@@ -98,7 +103,7 @@ void dispatch (void) {
         req  = context_switch (current);
         args = current->esp;
 
-        if (req < 100 && sysactions[req].func != NULL) {
+        if (req < DISPTAB_SIZE && sysactions[req].func != NULL) {
             switch (sysactions[req].nargs) {
             case 0:
                 sysactions[req].func ();
@@ -165,12 +170,4 @@ void new_process (void) {
         ready (current);
         current = next ();
     }
-}
-
-void print_ready_queue (void) {
-    struct pcb *it;
-    for (it = ready_head; it->next; it = it->next) {
-        kprintf ("%d->", it->pid);
-    }
-    kprintf ("%d\n", it->pid);
 }

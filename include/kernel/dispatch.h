@@ -25,30 +25,21 @@
 #include <kernel/common.h>
 #include <kernel/process.h>
 
-struct pcb;
 struct sigaction;
 
 extern struct pcb *current;
-extern struct pcb *ready_head;
-extern struct pcb *ready_tail;
 
 extern int idle_pid;
 extern int root_pid;
 
-void print_ready_queue (void);
-
 void dispatch_init (void);
 void dispatch (void);
-unsigned int context_switch (struct pcb *p);
 struct pcb *next (void);
 void ready (struct pcb *p);
 void new_process (void);
 int sq_rm (struct pcb *p);
 
-int send_signal (int pid, int sig_no);
-
-void tick (void);
-
+/* service routines */
 int sys_create (void (*func)(void*), void *arg);
 void sys_yield (void);
 void sys_stop (void);
