@@ -23,6 +23,10 @@
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
+
+#include <telos/devices.h>
+#include <telos/filedes.h>
+
 #include <signal.h>
 #include <mem.h>
 
@@ -33,6 +37,7 @@ extern void sysstop (void);
 //-----------------------------------------------------------------------------
 int sys_create (void (*func)(void*), void *arg) {
     int i;
+    struct pcb *p;
 
     // find a free PCB
     for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++);
@@ -41,9 +46,10 @@ int sys_create (void (*func)(void*), void *arg) {
         return SYSERR;
     }
 
-    struct pcb *p = &proctab[i];
+    p = &proctab[i];
 
-    // assign a new pid
+    p->timestamp  = tick_count;
+
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
 
@@ -51,15 +57,16 @@ int sys_create (void (*func)(void*), void *arg) {
     proc_initq (&p->recv_q);
     proc_initq (&p->repl_q);
 
-    // set signal bitmasks
     p->sig_pending = 0;
     p->sig_accept  = 0;
     p->sig_ignore  = ~0;
 
-    for (int j = 0; j < FDT_SIZE; j++)
+    // initialize file descriptor table
+    p->fds[STDIN_FILENO]  = FD_NONE+1; // TODO
+    p->fds[STDOUT_FILENO] = DEV_CONSOLE_0;
+    p->fds[STDERR_FILENO] = DEV_CONSOLE_0;
+    for (int j = 3; j < FDT_SIZE; j++)
         p->fds[j] = FD_NONE;
-
-    p->timestamp  = tick_count;
 
     // allocate a stack
     void *pstack = kmalloc (STACK_SIZE);

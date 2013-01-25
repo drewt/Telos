@@ -1,4 +1,4 @@
-/* telos/devices.h : device numbers
+/* filedes.h : file descriptor stuff
  */
 
 /*  Copyright 2013 Drew T.
@@ -19,14 +19,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_DEVICES_H_
-#define __TELOS_DEVICES_H_
+#ifndef __TELOS_FILEDES_H_
+#define __TELOS_FILEDES_H_
 
-enum dev_id {
-    DEV_KBD,
-    DEV_KBD_ECHO,
-    DEV_CONSOLE_0,
-    DEV_CONSOLE_1,
+enum std_fds {
+    STDIN_FILENO,
+    STDOUT_FILENO,
+    STDERR_FILENO,
 };
 
-#endif // __TELOS_DEVICES_H_
+#endif // __TELOS_FILEDES_H_
