@@ -58,9 +58,11 @@ static void console_putc (unsigned char c, unsigned char attr,
 
 int console_write (int fd, void *buf, int buf_len) {
     int i;
+    unsigned char *s = buf;
     unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
-    for (i = 0; i != '\0' && i < buf_len; i++)
-        console_putc (((unsigned char*) buf)[i], TXT_CLR, cno);
+    for (i = 0; s[i] != '\0' && i < buf_len; i++) {
+        console_putc (s[i], TXT_CLR, cno);
+    }
     return i;
 }
 
