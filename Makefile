@@ -18,7 +18,8 @@ DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
 DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o
 
 USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
-	    bin/usr/kbdtest.o bin/usr/eventtest.o bin/usr/tsh.o
+	    bin/usr/kbdtest.o bin/usr/eventtest.o bin/usr/msgtest.o \
+	    bin/usr/tsh.o
 
 OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
 
@@ -97,6 +98,7 @@ bin/usr/proctest.o: src/usr/proctest.c $(COMMON) $(USER_H)
 bin/usr/sigtest.o: src/usr/sigtest.c $(USER_H)
 bin/usr/strtest.o: src/usr/strtest.c $(COMMON) $(USER_H)
 bin/usr/eventtest.o: src/usr/eventtest.c $(USER_H)
+bin/usr/msgtest.o: src/usr/msgtest.c $(USER_H)
 bin/usr/tsh.o: src/usr/tsh.c $(COMMON) $(USER_H)
 
 $(LIB)/klib.a: $(LIB)/klib/string.c

@@ -25,5 +25,6 @@ void kbd_test (void *arg);
 void str_test (void *arg);
 void proc_test (void *arg);
 void event_test (void *arg);
+void msg_test (void *arg);
 
 #endif // __USR_TEST_H_

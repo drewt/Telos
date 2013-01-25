@@ -32,7 +32,7 @@
 /* user programs */
 #include <usr/test.h>
 
-#define TSH_N_CMDS  9
+#define TSH_N_CMDS  10
 #define TSH_IN_SIZE 512
 #define TSH_EXIT ((void*) -1)
 
@@ -60,6 +60,7 @@ struct tprog tsh_progs[TSH_N_CMDS] =
     { kbd_test,   "kbdtest"   },
     { str_test,   "strtest"   },
     { event_test, "eventtest" },
+    { msg_test,   "msgtest"   },
     { tsh,        "tsh"       }
 };
 

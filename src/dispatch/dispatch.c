@@ -25,9 +25,9 @@
 #include <kernel/interrupt.h>
 #include <syscall.h>
 
-struct pcb *current;    /* the running process     */
-struct pcb *ready_head; /* head of the ready queue */
-struct pcb *ready_tail; /* tail of the ready queue */
+struct pcb *current    = NULL; /* the running process     */
+struct pcb *ready_head = NULL; /* head of the ready queue */
+struct pcb *ready_tail = NULL; /* tail of the ready queue */
 
 struct sysaction {
     void(*func)(); // service routine
