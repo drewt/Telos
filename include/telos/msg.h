@@ -19,6 +19,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __TELOS_MSG_H_
+#define __TELOS_MSG_H_
+
 int send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 int recv (int src_pid, void *buffer, int length);
 int reply (int src_pid, void *buffer, int length);
+
+#endif // __TELOS_MSG_H_
