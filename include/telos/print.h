@@ -22,6 +22,12 @@
 #ifndef __TELOS_PRINT_H_
 #define __TELOS_PRINT_H_
 
+#include <stdarg.h>
+
+int printf (const char *fmt, ...);
+int vprintf (const char *fmt, va_list ap);
+int puts (const char *s);
+
 void sysputs (char *s);
 void sysreport (char *s);
 

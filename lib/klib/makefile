@@ -7,7 +7,7 @@ LIB      = ..
 .c.o:
 	$(CC) $(CFLAGS) $<
 
-OBJFILES = itoa.o mem.o kbtoa.o string.o
+OBJFILES = itoa.o mem.o kbtoa.o string.o print.o
 
 all: klib.a
 

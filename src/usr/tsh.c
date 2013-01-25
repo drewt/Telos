@@ -119,7 +119,7 @@ void tsh (void *arg) {
     // loop until exit command or error
     for (;;) {
         if ((kbd_fd = open (DEV_KBD_ECHO)) == -1) {
-            sysputs ("tsh: error opening keyboard device\n");
+            puts ("tsh: error opening keyboard device");
             return;
         }
 
@@ -127,12 +127,12 @@ void tsh (void *arg) {
         for (;;) {
             sysputs (TSH_PROMPT);
             if ((in_len = read (kbd_fd, in, TSH_IN_SIZE)) == -1) {
-                sysputs ("tsh: error reading keyboard device\n");
+                puts ("tsh: error reading keyboard device");
                 p = TSH_EXIT;
                 break;
             }
             if (!in_len) {
-                sysputs ("\n");
+                puts ("");
                 p = TSH_EXIT;
                 break;
             }
@@ -145,15 +145,13 @@ void tsh (void *arg) {
             op  = strtok (NULL, " ");
             if (*op == '&') bg = true;
             if (!(p = tsh_lookup (cmd))) {
-                sysputs ("tsh: '");
-                sysputs (in);
-                sysputs ("' not found\n");
+                printf ("tsh: '%s' not found\n", in);
             } else {
                 break;
             }
         }
         if (close (kbd_fd)) {
-            sysputs ("tsh: error closing keyboard device\n");
+            puts ("tsh: error closing keyboard device");
             return;
         }
         if (p == TSH_EXIT)
@@ -165,12 +163,9 @@ void tsh (void *arg) {
 }
 
 static void help (void *arg) {
-    sysputs ("valid commands are:\n");
-    for (int i = 0; i < TSH_N_CMDS; i++) {
-        sysputs ("\t");
-        sysputs (tsh_progs[i].name);
-        sysputs ("\n");
-    }
+    puts ("valid commands are:");
+    for (int i = 0; i < TSH_N_CMDS; i++)
+        printf ("\t%s\n", tsh_progs[i].name);
 }
 
 static void hello_tsh (void *arg) {
