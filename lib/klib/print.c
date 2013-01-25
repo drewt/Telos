@@ -21,12 +21,55 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-#include <string.h>
 #include <telos/io.h>
 #include <telos/filedes.h>
 #include <telos/print.h>
 
 #include <klib.h>
+
+#define WRITE_SIZE 200
+
+static int fmt_print (const char *fmt, va_list ap, int *count) {
+    char c;
+    char *s;
+    char buf[33];
+    int rv = 0, tmp;
+
+    for (int i = 0; fmt[i] != '\0'; i++) {
+        switch (fmt[i]) {
+        case '%':
+            write (STDOUT_FILENO, "%", 1);
+            (*count)++;
+            return 1;
+        case 'c':
+            c = va_arg (ap, int);
+            write (STDOUT_FILENO, &c, 1);
+            (*count)++;
+            return 1;
+        case 'd':
+        case 'i':
+            itoa (va_arg (ap, int), buf, 10);
+            rv = write (STDOUT_FILENO, buf, 33);
+            (*count)++;
+            return rv;
+        case 's':
+            s = va_arg (ap, char*);
+            while ((tmp = write (STDOUT_FILENO, s, WRITE_SIZE)) != 0) {
+                s += tmp;
+                rv += tmp;
+            }
+            (*count)++;
+            return rv;
+        case '.':
+        case '*':
+            (*count)++;
+            break; // TODO
+        default:
+            return rv;
+        }
+    }
+    return rv;
+}
 
 int printf (const char *fmt, ...) {
     int rv;
@@ -38,41 +81,26 @@ int printf (const char *fmt, ...) {
 }
 
 int vprintf (const char *fmt, va_list ap) {
-    char *s;
-    char buf[33];
-    int rv = 0;
+    int rv = 0, tmp;
     const char *pos = fmt;
 
     for (int i = 0; fmt[i] != '\0'; i++) {
         if (fmt[i] == '%') {
             rv += write (STDOUT_FILENO, pos, &fmt[i] - pos);
-
-            switch (fmt[++i]) {
-            case '%':
-                rv += write (STDOUT_FILENO, "%", 1);
-                break;
-            case 's':
-                s = va_arg (ap, char*);
-                rv += write (STDOUT_FILENO, s, strlen (s));
-                break;
-            case 'd':
-            case 'i':
-                itoa (va_arg (ap, int), buf, 10);
-                rv += write (STDOUT_FILENO, buf, 33);
-                break;
-            default:
-                return -1;
-            }
+            rv += fmt_print (&fmt[i+1], ap, &i);
             pos = &fmt[i+1];
         }
     }
-    rv += write (STDOUT_FILENO, pos, strlen (pos));
+    while ((tmp = write (STDOUT_FILENO, pos, WRITE_SIZE)) != 0) {
+        rv += tmp;
+        pos += tmp;
+    }
     return rv;
 }
 
 int puts (const char *s) {
     int rv;
-    while ((rv = write (STDOUT_FILENO, s, 200)) != 0)
+    while ((rv = write (STDOUT_FILENO, s, WRITE_SIZE)) != 0)
         s += rv;
     write (STDOUT_FILENO, "\n", 1);
     return 1;
