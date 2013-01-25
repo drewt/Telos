@@ -29,7 +29,7 @@
 
 #define WRITE_SIZE 200
 
-static int fmt_print (const char *fmt, va_list ap, int *count) {
+static int fmt_print (const char *fmt, va_list *ap, int *count) {
     char c;
     char *s;
     char buf[33];
@@ -42,18 +42,18 @@ static int fmt_print (const char *fmt, va_list ap, int *count) {
             (*count)++;
             return 1;
         case 'c':
-            c = va_arg (ap, int);
+            c = va_arg (*ap, int);
             write (STDOUT_FILENO, &c, 1);
             (*count)++;
             return 1;
         case 'd':
         case 'i':
-            itoa (va_arg (ap, int), buf, 10);
+            itoa (va_arg (*ap, int), buf, 10);
             rv = write (STDOUT_FILENO, buf, 33);
             (*count)++;
             return rv;
         case 's':
-            s = va_arg (ap, char*);
+            s = va_arg (*ap, char*);
             while ((tmp = write (STDOUT_FILENO, s, WRITE_SIZE)) != 0) {
                 s += tmp;
                 rv += tmp;
@@ -87,7 +87,7 @@ int vprintf (const char *fmt, va_list ap) {
     for (int i = 0; fmt[i] != '\0'; i++) {
         if (fmt[i] == '%') {
             rv += write (STDOUT_FILENO, pos, &fmt[i] - pos);
-            rv += fmt_print (&fmt[i+1], ap, &i);
+            rv += fmt_print (&fmt[i+1], &ap, &i);
             pos = &fmt[i+1];
         }
     }
