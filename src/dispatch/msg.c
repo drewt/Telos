@@ -23,11 +23,10 @@
 
 #include <klib.h>
 
-static inline void msg_block (struct pcb *p, int pid, void *buf, int len) {
-    p->state = STATE_BLOCKED;
-    p->msg = (struct msg) { .buf = buf, .len = len, .pid = pid };
-}
-
+/*-----------------------------------------------------------------------------
+ * Sends a message to another process.  If ibuf is not NULL, then the sending
+ * process will block until it receives a reply from the receiving process */
+//-----------------------------------------------------------------------------
 void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 
     int tmp;
@@ -79,6 +78,9 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Receives a message from another process */
+//-----------------------------------------------------------------------------
 void sys_recv (int src_pid, void *buffer, int length) {
 
     int tmp;
@@ -119,6 +121,9 @@ void sys_recv (int src_pid, void *buffer, int length) {
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Sends a reply to another process */
+//-----------------------------------------------------------------------------
 void sys_reply (int src_pid, void *buffer, int length) {
 
     int tmp;
