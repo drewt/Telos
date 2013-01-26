@@ -85,9 +85,9 @@ void kbd_interrupt (void) {
                 ready (reader);
 
                 if ((reader = proc_dequeue (&work_q))) {
-                    echo = (reader->fds[reader->msg.pid] == DEV_KBD_ECHO);
-                    cpy_buf = reader->msg.buf;
-                    cpy_buf_len = reader->msg.len;
+                    echo = (reader->fds[reader->pbuf.id] == DEV_KBD_ECHO);
+                    cpy_buf = reader->pbuf.buf;
+                    cpy_buf_len = reader->pbuf.len;
                     cpy_buf_next = 0;
                 } else {
                     reading = false;
@@ -141,8 +141,8 @@ bool kbd_common_read (void) {
  */
 int kbd_read (int fd, void *buf, int buf_len) {
     if (reading) {
-        current->msg = (struct msg)
-            { .buf = buf, .len = buf_len, .pid = fd };
+        current->pbuf = (struct pbuf)
+            { .buf = buf, .len = buf_len, .id = fd };
         proc_enqueue (&work_q, current);
         new_process ();
         return 0;

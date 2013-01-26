@@ -44,10 +44,10 @@ enum proc_state {
     STATE_SLEEPING   = 1 << 6
 };
 
-struct msg {
-    void *buf; // data buffer
+struct pbuf {
+    void *buf; // buffer
     int  len;  // length of buffer
-    int  pid;  // pid of sender/recipient
+    int  id;   // id (context dependent)
 };
 
 struct pcb;
@@ -80,8 +80,8 @@ struct pcb {
     uint32_t     sig_accept;         // bitmask for accepted signals
     uint32_t     sig_ignore;         // bitmask for ignored signals
     /* message passing IPC */
-    struct msg   msg;                // saved message
-    struct msg   reply_blk;
+    struct pbuf  pbuf;               // saved buffer
+    struct pbuf  reply_blk;
     procqueue_t  send_q;             // processes waiting to send
     procqueue_t  recv_q;             // processes waiting to receive
     procqueue_t  repl_q;             // processes waiting for a reply

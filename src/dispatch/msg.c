@@ -46,15 +46,15 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
     dest = &proctab[tmp];
 
     if (ibuf) {
-        current->reply_blk = (struct msg)
-            { .buf = ibuf, .len = ilen, .pid = dest_pid };
+        current->reply_blk = (struct pbuf)
+            { .buf = ibuf, .len = ilen, .id = dest_pid };
     }
 
     // if dest is ready to receive from sending process...
     if (dest->state == STATE_BLOCKED &&
-            (!dest->msg.pid || dest->msg.pid == current->pid)) {
+            (!dest->pbuf.id || dest->pbuf.id == current->pid)) {
 
-        if (!dest->msg.pid)
+        if (!dest->pbuf.id)
             *((int*) dest->parg) = current->pid;
 
         // unblock receiver
@@ -62,8 +62,8 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
         ready (dest);
 
         // send message
-        tmp = (olen < dest->msg.len) ? olen : dest->msg.len;
-        memcpy (dest->msg.buf, obuf, tmp);
+        tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
+        memcpy (dest->pbuf.buf, obuf, tmp);
 
         // if sender expects reply, block in receiver's reply queue
         if (ibuf) {
@@ -73,8 +73,8 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
         }
     } else {
         // block sender on receiver's recv queue
-        current->msg = (struct msg)
-            { .buf = obuf, .len = olen, .pid = dest_pid };
+        current->pbuf = (struct pbuf)
+            { .buf = obuf, .len = olen, .id = dest_pid };
         proc_enqueue (&dest->send_q, current);
         current->state = STATE_BLOCKED;
         new_process ();
@@ -96,8 +96,8 @@ void sys_recv (int *src_pid, void *buffer, int length) {
 
     // block if recvall and no processes waiting to send
     if (!(*src_pid) && !(src = proc_peek (&current->send_q))) {
-        current->msg = (struct msg)
-            { .buf = buffer, .len = length, .pid = 0 };
+        current->pbuf = (struct pbuf)
+            { .buf = buffer, .len = length, .id = 0 };
         current->state = STATE_BLOCKED;
         current->parg = src_pid;
         new_process ();
@@ -115,23 +115,23 @@ void sys_recv (int *src_pid, void *buffer, int length) {
     src = &proctab[tmp];
 
     // block receiver if src isn't ready to send
-    if (src->state != STATE_BLOCKED || src->msg.pid != current->pid) {
-        current->msg = (struct msg)
-            { .buf = buffer, .len = length, .pid = src->pid };
+    if (src->state != STATE_BLOCKED || src->pbuf.id != current->pid) {
+        current->pbuf = (struct pbuf)
+            { .buf = buffer, .len = length, .id = src->pid };
         current->state = STATE_BLOCKED;
         proc_enqueue (&src->recv_q, current);
         new_process ();
     } else {
         // unblock sender if no-reply send, otherwise move to reply queue
         proc_rm (&current->send_q, src);
-        if (!src->reply_blk.pid)
+        if (!src->reply_blk.id)
             ready (src);
         else
             proc_enqueue (&current->repl_q, src);
 
         // receive message
-        tmp = (length < src->msg.len) ? length : src->msg.len;
-        memcpy (buffer, src->msg.buf, tmp);
+        tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
+        memcpy (buffer, src->pbuf.buf, tmp);
         current->rc = tmp;
     }
 }
@@ -158,7 +158,7 @@ void sys_reply (int src_pid, void *buffer, int length) {
     src = &proctab[tmp];
 
     // it is an error to reply before a corresponding send
-    if (src->state != STATE_BLOCKED || src->reply_blk.pid != current->pid) {
+    if (src->state != STATE_BLOCKED || src->reply_blk.id != current->pid) {
         current->rc = SYSERR;
         return;
     }
@@ -170,7 +170,7 @@ void sys_reply (int src_pid, void *buffer, int length) {
     src->rc = tmp;
 
     // unblock sender
-    src->reply_blk.pid = 0;
+    src->reply_blk.id = 0;
     proc_rm (&current->repl_q, src);
     ready (src);
 }
