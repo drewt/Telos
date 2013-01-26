@@ -1,6 +1,3 @@
-/* tsh.c : Telos shell
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,155 +16,144 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/common.h>
-#include <mem.h>
-
+#include <stdbool.h>
+#include <stddef.h>
 #include <string.h>
 #include <signal.h>
 
-#include <telos/print.h>
 #include <telos/process.h>
+#include <telos/print.h>
 #include <telos/io.h>
 
-/* user programs */
 #include <usr/test.h>
 
-#define TSH_N_CMDS  10
-#define TSH_IN_SIZE 512
-#define TSH_EXIT ((void*) -1)
+#define N_CMDS   11
+#define IN_LEN   512
+#define MAX_ARGS 100
+#define SHELL_EXIT ((void*) -1)
 
-#define TSH_PROMPT "TELOS> "
+static const char const *prompt = "TELOS> ";
 
 typedef void(*funcptr)(void*);
 
 void tsh (void *arg);
-static void hello_tsh (void *arg);
-static void help (void *arg);
 
-struct tprog {
-    void (*func)(void*);
+static void help (void *arg);
+extern void printserver (void *arg);
+extern void printclient (void *arg);
+
+struct program {
+    funcptr f;
     char *name;
 };
 
-/* program table */
-struct tprog tsh_progs[TSH_N_CMDS] =
-{
-    { TSH_EXIT,   "exit"      },
-    { help,       "help"      },
-    { hello_tsh,  "hello"     },
-    { proc_test,  "proctest"  },
-    { sig_test,   "sigtest"   },
-    { kbd_test,   "kbdtest"   },
-    { str_test,   "strtest"   },
-    { event_test, "eventtest" },
-    { msg_test,   "msgtest"   },
-    { tsh,        "tsh"       }
+static struct program progtab[N_CMDS] = {
+    { SHELL_EXIT,  "exit"        },
+    { help,        "help"        },
+    { proc_test,   "proctest"    },
+    { sig_test,    "sigtest"     },
+    { kbd_test,    "kbdtest"     },
+    { str_test,    "strtest"     },
+    { event_test,  "eventtest"   },
+    { msg_test,    "msgtest"     },
+    { printserver, "printserver" },
+    { printclient, "printclient" },
+    { tsh,         "tsh"         }
 };
 
-static funcptr tsh_lookup (char *in) {
-    int i;
-    for (i = 0; i < TSH_N_CMDS; i++) {
-        if (!strcmp (in, tsh_progs[i].name))
-            break;
-    }
-    return (i == TSH_N_CMDS) ? NULL : tsh_progs[i].func;
+enum shellrc {
+    RC_ARGS,
+    RC_LEN,
+    RC_EOF,
+    RC_FG,
+    RC_BG,
+};
+
+static void sigchld_handler (int signo) {}
+
+static void help (void *arg) {
+    puts ("Valid commands are:");
+    for (int i = 0; i < N_CMDS; i++)
+        printf ("\t%s\n", progtab[i].name);
 }
 
-int process_input (char *in, int in_len) {
-    int wpos, rpos;
+static funcptr lookup (char *in) {
+    int i;
+    for (i = 0; i < N_CMDS; i++)
+        if (!strcmp (in, progtab[i].name))
+            return progtab[i].f;
+    return NULL;
+}
 
-    bool inws = false;
-    for (wpos = 0, rpos = 0; rpos < in_len; rpos++) {
-        switch (in[rpos]) {
+static enum shellrc get_cmd (char *in, int in_len, char *(*args)[], int nargs) {
+    int i, c, arg = 0;
+    enum shellrc rc = RC_LEN;
+    bool in_space = false, bg = false;
+    for (i = 0; i < in_len-1; i++) {
+        c = getchar ();
+        switch (c) {
         case '\b':
-            if (wpos) wpos--;
+            if (i > 0)
+                i -= 2;
             break;
-        case ' ':
         case '\t':
-            if (!inws) {
-                inws = true;
-                in[wpos++] = ' ';
+        case ' ':
+            if (in_space) {
+                i--;
+            } else {
+                in[i] = '\0';
+                in_space = true;
             }
             break;
-        case '\0':
-            rpos = in_len;
-            break;
         case '&':
-        case '|':
-        case '$':
+            i--;
+            bg = true;
+            break;
+        case '\n':
+            rc = bg ? RC_BG : RC_FG;
+            goto end;
+        case EOF:
+            rc = RC_EOF;
+            goto end;
         default:
-            in[wpos++] = in[rpos];
-            inws = false;
+            if (in_space) {
+                if (arg >= nargs - 1) {
+                    rc = RC_ARGS;
+                    goto end;
+                }
+                in_space = false;
+                (*args)[arg] = &in[i];
+                arg++;
+            }
+            in[i] = (char) c;
             break;
         }
     }
-    in[wpos] = '\0';
-    return wpos;
+end:
+    in[i] = '\0';
+    (*args)[arg] = NULL;
+    return rc;
 }
 
-void sigchld_handler (int signo) {}
-
 void tsh (void *arg) {
-    int in_len, kbd_fd, sig;
-    char in[TSH_IN_SIZE+1];
-    char *cmd, *op;
-    void (*p)(void*);
-    bool bg;
+    int sig;
+    char in[IN_LEN];
+    char *args[MAX_ARGS];
+    enum shellrc rc;
+    funcptr p;
 
     signal (SIGCHLD, sigchld_handler);
 
-    // loop until exit command or error
     for (;;) {
-        if ((kbd_fd = open (DEV_KBD_ECHO)) == -1) {
-            puts ("tsh: error opening keyboard device");
-            return;
+        printf ("%s", prompt);
+        rc = get_cmd (in, IN_LEN, &args, MAX_ARGS);
+        if (!(p = lookup (in))) {
+            printf ("tsh: '%s' not found\n", in);
+            continue;
         }
 
-        bg = false;
-        for (;;) {
-            printf ("%s", TSH_PROMPT);
-            if ((in_len = read (kbd_fd, in, TSH_IN_SIZE)) == -1) {
-                puts ("tsh: error reading keyboard device");
-                p = TSH_EXIT;
-                break;
-            }
-            if (!in_len) {
-                puts ("");
-                p = TSH_EXIT;
-                break;
-            }
-            if (in_len < 2)
-                continue;
-
-            in[in_len-1] = '\0';
-            in_len = process_input (in, in_len);
-            cmd = strtok (in, " ");
-            op  = strtok (NULL, " ");
-            if (*op == '&') bg = true;
-            if (!(p = tsh_lookup (cmd))) {
-                printf ("tsh: '%s' not found\n", in);
-            } else {
-                break;
-            }
-        }
-        if (close (kbd_fd)) {
-            puts ("tsh: error closing keyboard device");
-            return;
-        }
-        if (p == TSH_EXIT)
-            return;
-        syscreate (p, NULL);
-        if (!bg)
+        syscreate (p, args);
+        if (rc != RC_BG)
             for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     }
-}
-
-static void help (void *arg) {
-    puts ("valid commands are:");
-    for (int i = 0; i < TSH_N_CMDS; i++)
-        printf ("\t%s\n", tsh_progs[i].name);
-}
-
-static void hello_tsh (void *arg) {
-    sysreport ("Hello, tsh!\n");
 }

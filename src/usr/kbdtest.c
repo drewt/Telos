@@ -27,12 +27,13 @@
 #include <telos/filedes.h>
 
 static void read_proc (void *arg) {
-    char in[5] = "oops";
+    char in[5];
     
     puts ("Reading: ");
-    gets (in, 4);
-    puts ("");
-
+    if (gets (in, 5))
+        printf (" : %s\n", in);
+    else
+        puts (" : ERROR");
 }
 
 static void sigchld_handler (int signo) {}
@@ -48,6 +49,7 @@ void kbd_test (void *arg) {
 
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
+
     printf ("Enter any key to exit: ");
     getchar (); puts ("");
 }
