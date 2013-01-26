@@ -40,13 +40,13 @@ static void strcmp_test (void) {
     else if (strcmp (a, d) >= 0)
         error = 4;
 
-    sysputs ("strcmp: ");
+    printf ("strcmp: ");
     if (error) {
-        kprintf ("error %d\n", error);
+        printf ("error %d\n", error);
         for (;;);
     }
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 static void strcat_test (void) {
@@ -54,16 +54,11 @@ static void strcat_test (void) {
     char d[7] = "ori";
     char s[4] = "gin";
     strcat (d, s);
-    sysputs ("strcat: ");
-    if (strcmp (d, o)) {
-        sysputs ("error\n");
-        sysputs (d);
-        sysputs (" : ");
-        sysputs (o);
-        for(;;);
-    }
+    printf ("strcat: ");
+    if (strcmp (d, o))
+        printf ("error: %s != %s\n", d, o);
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 static void strncat_test (void) {
@@ -79,13 +74,11 @@ static void strncat_test (void) {
     strncat (d, s, 4);
     if (strcmp (d, o))
         error = 2;
-    sysputs ("strncat: ");
-    if (error) {
-        kprintf ("error %d\n", error);
-        for(;;);
-    }
+    printf ("strncat: ");
+    if (error)
+        printf ("error %d\n", error);
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 static void strchr_test (void) {
@@ -98,13 +91,11 @@ static void strchr_test (void) {
         error = 2;
     else if (strchr (o, 'x'))
         error = 3;
-    sysputs ("strchr: ");
-    if (error) {
-        kprintf ("error: %d\n", error);
-        for(;;);
-    }
+    printf ("strchr: ");
+    if (error)
+        printf ("error: %d\n", error);
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 static void strrchr_test (void) {
@@ -117,13 +108,11 @@ static void strrchr_test (void) {
         error = 2;
     else if (strrchr (o, 'x'))
         error = 3;
-    sysputs ("strrchr: ");
-    if (error) {
-        kprintf ("error %d\n", error);
-        for(;;);
-    }
+    printf ("strrchr: ");
+    if (error)
+        printf ("error %d\n", error);
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 static void strtok_test (void) {
@@ -137,11 +126,11 @@ static void strtok_test (void) {
         if (strcmp (tok, toks[i]))
             error = i+1;
     }
-    sysputs ("strtok: ");
+    printf ("strtok: ");
     if (error)
-        kprintf ("error %d\n", error);
+        printf ("error %d\n", error);
     else
-        sysputs ("OK\n");
+        puts ("OK");
 }
 
 void str_test (void *arg) {

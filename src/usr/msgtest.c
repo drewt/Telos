@@ -30,11 +30,11 @@ void recv_proc (void *arg) {
     char msg[40];
 
     if (recv (main_pid, msg, 40) == -1) {
-        sysputs ("recv error: returned -1\n");
+        puts ("recv error: returned -1");
         return;
     }
     if (strcmp (msg, arg)) {
-        sysputs ("recv error: msg != arg\n");
+        puts ("recv error: msg != arg");
         return;
     }
 }
@@ -43,16 +43,12 @@ void send_proc (void *arg) {
     char msg[40] = "msg";
     char reply[40];
 
-    /*if (send (main_pid, msg, 4, NULL, 0) == -1) {
-        sysputs ("send error: returned -1\n");
-        return;
-    }*/
     if (send (main_pid, msg, 4, reply, 40) == -1) {
-        sysputs ("send error: returned -1\n");
+        puts ("send error: returned -1");
         return;
     }
     if (strcmp (msg, reply)) {
-        sysputs ("reply error: msg != reply\n");
+        puts ("reply error: msg != reply");
         return;
     }
 }
@@ -64,33 +60,33 @@ void msg_test (void *arg) {
 
     main_pid = getpid ();
 
-    sysputs ("Testing block-on-recv...\n");
+    puts ("Testing block-on-recv...");
     for (int i = 0; i < 10; i++)
         pids[i] = syscreate (recv_proc, msg);
     syssleep (100);
     for (int i = 0; i < 10; i++)
         send (pids[i], msg, 4, NULL, 0);
 
-    sysputs ("Testing block-on-send...\n");
+    puts ("Testing block-on-send...");
     for (int i = 0; i < 10; i++)
         pids[i] = syscreate (send_proc, NULL);
     syssleep (100);
     for (int i = 0; i < 10; i++) {
         if (recv (pids[i], buf, 40) == -1) {
-            sysputs ("recv error: returned -1\n");
+            puts ("recv error: returned -1");
             return;
         }
         if (strcmp (buf, msg)) {
-            sysputs ("recv error: buf != msg\n");
+            puts ("recv error: buf != msg");
             return;
         }
         buf[0] = '\0';
     }
 
-    sysputs ("Testing block-on-reply...\n");
+    puts ("Testing block-on-reply...");
     for (int i = 0; i < 10; i++) {
         if (reply (pids[i], msg, 4) == -1) {
-            sysputs ("reply error: returned -1\n");
+            puts ("reply error: returned -1");
             return;
         }
     }

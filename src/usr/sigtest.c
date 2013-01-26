@@ -30,25 +30,25 @@ static pid_t sigtest_pid;
 static void void_handler (int signo) {}
 
 static void sigusr2_action (int signo, siginfo_t *info, void *data) {
-    sysputs ("asdf\n");
+    puts ("asdf");
     if (info->si_signo != SIGUSR2)
-        sysputs ("FAIL: info.si_signo incorrect\n");
+        puts ("FAIL: info.si_signo incorrect");
     if (info->si_pid != sigtest_pid)
-        sysputs ("FAIL: info.si_pid incorrect\n");
+        puts ("FAIL: info.si_pid incorrect");
 }
 
 static void sigusr2_handler (int signo) {
-    sysputs ("b");
+    printf ("b");
 }
 
 static void sigusr1_handler (int signo) {
     int sig;
-    sysputs ("a");
+    printf ("a");
     sig = sigwait ();
     if (sig != SIGUSR2)
         sysreport ("SIGUSR1 handler: bad signal\n");
     else
-        sysputs ("c\n");
+        puts ("c");
 }
 
 static void sig_proc (void *arg) {
@@ -59,41 +59,41 @@ static void sig_proc (void *arg) {
 }
 
 static void kill_test (void) {
-    sysputs ("Testing kill... b ?= ");
+    printf ("Testing kill... b ?= ");
     signal (SIGUSR2, sigusr2_handler);
     kill (sigtest_pid, SIGUSR2);
-    sysputs ("\n");
+    puts ("");
 }
 
 static void sigprocmask_test (void) {
     sigset_t mask0, mask1;
 
-    sysputs ("Testing sigprocmask...\n");
+    puts ("Testing sigprocmask...");
     signal (SIGUSR2, void_handler);
     sigprocmask (0, NULL, &mask0);
     kill (sigtest_pid, SIGUSR2);
     sigprocmask (0, NULL, &mask1);
     if (mask0 != mask1)
-        sysputs ("FAIL: mask altered\n");
+        puts ("FAIL: mask altered");
     // TODO: finish
 }
 
 static void priority_test (void) {
     int sig;
-    sysputs ("Testing signal priority... abc ?= ");
+    printf ("Testing signal priority... abc ?= ");
     signal (SIGUSR1, sigusr1_handler);
     signal (SIGUSR2, sigusr2_handler);
     syscreate (sig_proc, NULL);
     sig = sigwait ();
     if (sig != SIGUSR1)
-        sysputs ("sig_test: bad signal\n");
+        puts ("sig_test: bad signal");
 }
 
 static void sigaction_test (void) {
     sigset_t mask;
     sigprocmask (0, NULL, &mask);
 
-    sysputs ("Testing sigaction... ");
+    printf ("Testing sigaction... ");
     struct sigaction act = {
         sigusr2_handler,
         sigusr2_action,
@@ -104,25 +104,25 @@ static void sigaction_test (void) {
     sigaction (SIGUSR2, &act, NULL);
 
     // verify that sa_sigaction is called (and not sa_handler)
-    sysputs ("asdf ?= ");
+    printf ("asdf ?= ");
     kill (sigtest_pid, SIGUSR2);
 
     // verify that old sigactions can be retrieved
     sigaction (SIGUSR2, &act, &oact);
     if (oact.sa_handler != act.sa_handler)
-        sysputs ("FAIL: sa_handler not equal\n");
+        puts ("FAIL: sa_handler not equal");
     if (oact.sa_sigaction != act.sa_sigaction)
-        sysputs ("FAIL: sa_sigaction not equal\n");
+        puts ("FAIL: sa_sigaction not equal");
     if (oact.sa_mask != act.sa_mask)
-        sysputs ("FAIL: sa_mask not equal\n");
+        puts ("FAIL: sa_mask not equal");
     if (oact.sa_flags != act.sa_flags)
-        sysputs ("FAIL: sa_flags not equal\n");
+        puts ("FAIL: sa_flags not equal");
 
     // verify that error returned for invalid input
     if (!sigaction (-1, NULL, NULL) || !sigaction (32, NULL, NULL))
-        sysputs ("FAIL: accepted invalid signo\n");
+        puts ("FAIL: accepted invalid signo");
     if (sigaction (0, NULL, NULL) || sigaction (31, NULL, NULL))
-        sysputs ("FAIL: rejected valid signo\n");
+        puts ("FAIL: rejected valid signo");
 }
 
 void sig_test (void *arg) {
@@ -133,5 +133,3 @@ void sig_test (void *arg) {
     priority_test ();
     sigaction_test ();
 }
-
-

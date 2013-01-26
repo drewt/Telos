@@ -28,7 +28,6 @@ int printf (const char *fmt, ...);
 int vprintf (const char *fmt, va_list ap);
 int puts (const char *s);
 
-void sysputs (char *s);
 void sysreport (char *s);
 
 #endif

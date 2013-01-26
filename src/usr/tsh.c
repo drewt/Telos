@@ -125,7 +125,7 @@ void tsh (void *arg) {
 
         bg = false;
         for (;;) {
-            sysputs (TSH_PROMPT);
+            printf ("%s", TSH_PROMPT);
             if ((in_len = read (kbd_fd, in, TSH_IN_SIZE)) == -1) {
                 puts ("tsh: error reading keyboard device");
                 p = TSH_EXIT;

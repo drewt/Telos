@@ -49,7 +49,6 @@ static struct sysaction sysactions[DISPTAB_SIZE] = {
     [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
     [SYS_STOP]      = { (void(*)()) sys_stop,        0 },
     [SYS_GETPID]    = { (void(*)()) sys_getpid,      0 },
-    [SYS_PUTS]      = { (void(*)()) sys_puts,        1 },
     [SYS_REPORT]    = { (void(*)()) sys_report,      1 },
     [SYS_SLEEP]     = { (void(*)()) sys_sleep,       1 },
     [SYS_SIGRETURN] = { (void(*)()) sig_restore,     1 },

@@ -25,16 +25,16 @@
 #include <telos/print.h>
 
 static void print_proc (void *str) {
-    sysputs ((char*) str);
+    printf ("%s", (char*) str);
 }
 
 static void stop_proc () {
     sysstop ();
-    sysputs ("FAIL");
+    printf ("FAIL");
 }
 
 void proc_test (void *arg) {
-    sysputs ("Testing syscreate... asdf ?= ");
+    printf ("Testing syscreate... asdf ?= ");
     syscreate (print_proc, "a");
     syssleep (50);
     syscreate (print_proc, "s");
@@ -43,10 +43,10 @@ void proc_test (void *arg) {
     syssleep (50);
     syscreate (print_proc, "f");
     syssleep (50);
-    sysputs ("\n");
+    puts ("");
 
-    sysputs ("Testing sysstop...");
+    printf ("Testing sysstop...");
     syscreate (stop_proc, NULL);
     syssleep (50);
-    sysputs ("\n");
+    puts ("");
 }

@@ -30,7 +30,6 @@ enum syscall_id {
     SYS_YIELD,
     SYS_STOP,
     SYS_GETPID,
-    SYS_PUTS,
     SYS_REPORT,
     SYS_SLEEP,
     SYS_SIGRETURN,

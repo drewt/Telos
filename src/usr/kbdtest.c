@@ -28,12 +28,12 @@ void kbd_test (void *arg) {
     in[2] = '\0';
 
     fd = open (DEV_KBD);
-    sysputs ("Enter 'asdf': ");
+    printf ("Enter 'asdf': ");
     read (fd, &in, 2);
-    sysputs (in);
+    printf ("%s", in);
     syssleep (10000);
     read (fd, &in, 2);
-    sysputs (in);
-    sysputs (" ?= asdf\n");
+    printf ("%s", in);
+    puts (" ?= asdf");
     close (fd);
 }
