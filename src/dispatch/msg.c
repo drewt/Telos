@@ -54,6 +54,9 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
     if (dest->state == STATE_BLOCKED &&
             (!dest->msg.pid || dest->msg.pid == current->pid)) {
 
+        if (!dest->msg.pid)
+            *((int*) dest->parg) = current->pid;
+
         // unblock receiver
         proc_rm (&current->recv_q, dest);
         ready (dest);
@@ -81,18 +84,30 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 /*-----------------------------------------------------------------------------
  * Receives a message from another process */
 //-----------------------------------------------------------------------------
-void sys_recv (int src_pid, void *buffer, int length) {
+void sys_recv (int *src_pid, void *buffer, int length) {
 
     int tmp;
-    struct pcb *src;
+    struct pcb *src = NULL;
 
-    if (length <= 0 || src_pid <= 0) {
+    if (length <= 0 || *src_pid < 0) {
         current->rc = SYSERR;
         return;
     }
 
-    tmp = PT_INDEX (src_pid);
-    if (proctab[tmp].pid != src_pid) {
+    // block if recvall and no processes waiting to send
+    if (!(*src_pid) && !(src = proc_peek (&current->send_q))) {
+        current->msg = (struct msg)
+            { .buf = buffer, .len = length, .pid = 0 };
+        current->state = STATE_BLOCKED;
+        current->parg = src_pid;
+        new_process ();
+        return;
+    } else if (src) {
+        *src_pid = src->pid; // just set src_pid and proceed as usual
+    }
+
+    tmp = PT_INDEX (*src_pid);
+    if (proctab[tmp].pid != *src_pid) {
         current->rc = SYSERR;
         return;
     }
@@ -102,7 +117,7 @@ void sys_recv (int src_pid, void *buffer, int length) {
     // block receiver if src isn't ready to send
     if (src->state != STATE_BLOCKED || src->msg.pid != current->pid) {
         current->msg = (struct msg)
-            { .buf = buffer, .len = length, .pid = src_pid };
+            { .buf = buffer, .len = length, .pid = src->pid };
         current->state = STATE_BLOCKED;
         proc_enqueue (&src->recv_q, current);
         new_process ();
@@ -129,7 +144,7 @@ void sys_reply (int src_pid, void *buffer, int length) {
     int tmp;
     struct pcb *src;
 
-    if (length <= 0 || src_pid <= 0) {
+    if (length < 0 || src_pid <= 0) {
         current->rc = SYSERR;
         return;
     }

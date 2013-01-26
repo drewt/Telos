@@ -56,7 +56,7 @@ void sys_sigprocmask (int how, uint32_t *set, uint32_t *oset);
 void sys_kill (int pid, int sig_no);
 void sys_sigwait (void);
 void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-void sys_recv (int src_pid, void *buffer, int length);
+void sys_recv (int *src_pid, void *buffer, int length);
 void sys_reply (int src_pid, void *buffer, int length);
 void sys_open (enum dev_id devno);
 void sys_close (int fd);

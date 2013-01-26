@@ -91,7 +91,7 @@ int send (pid_t pid, void *obuf, int olen, void *ibuf, int ilen) {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int recv (pid_t pid, void *buffer, int length) {
+int recv (pid_t *pid, void *buffer, int length) {
     return syscall3 (SYS_RECV, (void*) pid, buffer, (void*) length);
 }
 

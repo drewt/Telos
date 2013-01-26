@@ -86,6 +86,7 @@ struct pcb {
     procqueue_t  recv_q;             // processes waiting to receive
     procqueue_t  repl_q;             // processes waiting for a reply
     /* */
+    void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
     struct pcb   *next;              // pointers for linked lists
     struct pcb   *prev;              // ...

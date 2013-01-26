@@ -23,7 +23,7 @@
 #define __TELOS_MSG_H_
 
 int send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-int recv (int src_pid, void *buffer, int length);
+int recv (int *src_pid, void *buffer, int length);
 int reply (int src_pid, void *buffer, int length);
 
 #endif // __TELOS_MSG_H_

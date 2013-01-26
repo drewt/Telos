@@ -29,7 +29,7 @@ pid_t main_pid;
 void recv_proc (void *arg) {
     char msg[40];
 
-    if (recv (main_pid, msg, 40) == -1) {
+    if (recv (&main_pid, msg, 40) == -1) {
         puts ("recv error: returned -1");
         return;
     }
@@ -72,7 +72,7 @@ void msg_test (void *arg) {
         pids[i] = syscreate (send_proc, NULL);
     syssleep (100);
     for (int i = 0; i < 10; i++) {
-        if (recv (pids[i], buf, 40) == -1) {
+        if (recv (&pids[i], buf, 40) == -1) {
             puts ("recv error: returned -1");
             return;
         }
