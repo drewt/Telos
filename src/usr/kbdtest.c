@@ -17,13 +17,40 @@
  */
 
 #include <stddef.h>
+
+#include <signal.h>
+
 #include <telos/io.h>
 #include <telos/print.h>
 #include <telos/process.h>
 #include <telos/devices.h>
 
-void kbd_test (void *arg) {
+static void read_proc (void *arg) {
     int fd;
+    char in[5] = "oops";
+    
+    fd = open (DEV_KBD);
+    puts ("Reading: ");
+    read (fd, &in, 4);
+    puts (in);
+    close (fd);
+}
+
+static void sigchld_handler (int signo) {}
+
+void kbd_test (void *arg) {
+
+    int sig;
+
+    signal (SIGCHLD, sigchld_handler);
+
+    syscreate (read_proc, NULL);
+    syscreate (read_proc, NULL);
+
+    for (sig = 0; sig != SIGCHLD; sig = sigwait ());
+    for (sig = 0; sig != SIGCHLD; sig = sigwait ());
+
+    /*int fd;
     char in[3];
     in[2] = '\0';
 
@@ -35,5 +62,5 @@ void kbd_test (void *arg) {
     read (fd, &in, 2);
     printf ("%s", in);
     puts (" ?= asdf");
-    close (fd);
+    close (fd);*/
 }

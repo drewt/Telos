@@ -36,6 +36,8 @@
 
 #define NOCHAR 256
 
+static procqueue_t work_q;
+
 static char kbd_eof;
 
 /* internal buffer */
@@ -43,16 +45,16 @@ static char kbd_buf[KBD_BUF_SIZE]; /* the internal keyboard buffer */
 static int  kbd_buf_next = 0;      /* number of chars in the internal buffer */
 
 /* state */
-static bool is_open = false; /* TRUE when keyboard is open */
 static bool reading = false; /* TRUE when keyboard is being read */
 static bool echo    = false; /* TRUE when echo keyboard is open */
 static bool got_eof = false; /* TRUE when EOF has been read */
+static int  opened  = 0;
 
 /* data from user process */
 static char *cpy_buf;         /* user read buffer */
 static int  cpy_buf_len;      /* total length of read buffer */
 static int  cpy_buf_next = 0; /* number of chars in read buffer */
-static struct pcb *owner;
+static struct pcb *reader;
 
 /*-----------------------------------------------------------------------------
  * Puts a character in the read buffer, echoing if the echo keyboard is open.
@@ -76,15 +78,20 @@ static inline bool put_char (char c) {
 void kbd_interrupt (void) {
     unsigned int c;
 
-    if (!(inb (KBD_CMD) & 1)) {
-        kprintf ("keyboard interrupt with no data\n");
-    }
-    else if ((c = kbtoa (inb (KBD_DAT))) != NOCHAR) {
+    if ((c = kbtoa (inb (KBD_DAT))) != NOCHAR) {
         if (reading) {
             if (put_char (c)) {
-                reading = false;
-                owner->rc = cpy_buf_next;
-                ready (owner);
+                reader->rc = cpy_buf_next;
+                ready (reader);
+
+                if ((reader = proc_dequeue (&work_q))) {
+                    echo = (reader->fds[reader->msg.pid] == DEV_KBD_ECHO);
+                    cpy_buf = reader->msg.buf;
+                    cpy_buf_len = reader->msg.len;
+                    cpy_buf_next = 0;
+                } else {
+                    reading = false;
+                }
             }
         }
         else if (kbd_buf_next != KBD_BUF_SIZE) {
@@ -133,9 +140,18 @@ bool kbd_common_read (void) {
  *-----------------------------------------------------------------------------
  */
 int kbd_read (int fd, void *buf, int buf_len) {
+    if (reading) {
+        current->msg = (struct msg)
+            { .buf = buf, .len = buf_len, .pid = fd };
+        proc_enqueue (&work_q, current);
+        new_process ();
+        return 0;
+    }
+
     echo = (current->fds[fd] == DEV_KBD_ECHO);
     cpy_buf = buf;
     cpy_buf_len = buf_len;
+    reader = current;
     if (kbd_common_read ())
         return cpy_buf_next;
     
@@ -149,12 +165,9 @@ int kbd_read (int fd, void *buf, int buf_len) {
  *-----------------------------------------------------------------------------
  */
 int kbd_open (enum dev_id devno) {
-    if (is_open)
-        return SYSERR;
-    enable_irq (1, 0);
-    is_open = true;
-    owner   = current;
-    kbd_eof = DEFAULT_EOF;
+    if (!opened)
+        enable_irq (1, 0);
+    opened++;
     return 0;
 }
 
@@ -163,13 +176,9 @@ int kbd_open (enum dev_id devno) {
  *-----------------------------------------------------------------------------
  */
 int kbd_close (enum dev_id devno) {
-    if (!is_open)
-        return SYSERR;
-    enable_irq (1, 1);
-    is_open = false;
-    got_eof = false;
-    owner   = NULL;
-    kbd_buf_next = 0;
+    opened--;
+    if (!opened)
+        enable_irq (1, 1);
     return 0;
 }
 
