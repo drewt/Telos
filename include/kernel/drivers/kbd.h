@@ -24,7 +24,7 @@
 
 #include <telos/kbd.h>
 
-void kbd_init (int dev_no);
+int kbd_init (void);
 void kbd_interrupt (void);
 int kbd_open (enum dev_id devno);
 int kbd_close (enum dev_id devno);

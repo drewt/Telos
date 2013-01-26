@@ -24,16 +24,13 @@
 #include <telos/print.h>
 #include <telos/process.h>
 #include <telos/devices.h>
+#include <telos/filedes.h>
 
 static void read_proc (void *arg) {
-    int fd;
     char in[5] = "oops";
     
-    fd = open (DEV_KBD);
     puts ("Reading: ");
-    read (fd, &in, 4);
-    puts (in);
-    close (fd);
+    read (STDIN_FILENO, &in, 4);
 }
 
 static void sigchld_handler (int signo) {}
@@ -49,18 +46,4 @@ void kbd_test (void *arg) {
 
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
-
-    /*int fd;
-    char in[3];
-    in[2] = '\0';
-
-    fd = open (DEV_KBD);
-    printf ("Enter 'asdf': ");
-    read (fd, &in, 2);
-    printf ("%s", in);
-    syssleep (10000);
-    read (fd, &in, 2);
-    printf ("%s", in);
-    puts (" ?= asdf");
-    close (fd);*/
 }

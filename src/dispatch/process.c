@@ -62,7 +62,7 @@ int sys_create (void (*func)(void*), void *arg) {
     p->sig_ignore  = ~0;
 
     // initialize file descriptor table
-    p->fds[STDIN_FILENO]  = FD_NONE+1; // TODO
+    p->fds[STDIN_FILENO]  = DEV_KBD_ECHO;
     p->fds[STDOUT_FILENO] = DEV_CONSOLE_0;
     p->fds[STDERR_FILENO] = DEV_CONSOLE_0;
     for (int j = 3; j < FDT_SIZE; j++)

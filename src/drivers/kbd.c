@@ -48,7 +48,6 @@ static int  kbd_buf_next = 0;      /* number of chars in the internal buffer */
 static bool reading = false; /* TRUE when keyboard is being read */
 static bool echo    = false; /* TRUE when echo keyboard is open */
 static bool got_eof = false; /* TRUE when EOF has been read */
-static int  opened  = 0;
 
 /* data from user process */
 static char *cpy_buf;         /* user read buffer */
@@ -103,9 +102,8 @@ void kbd_interrupt (void) {
 }
 
 /*-----------------------------------------------------------------------------
- * Code shared between echo and noecho keyboard reads.
- *-----------------------------------------------------------------------------
- */
+ * Code shared between echo and noecho keyboard reads */
+//-----------------------------------------------------------------------------
 bool kbd_common_read (void) {
 
     cpy_buf_next = 0;
@@ -136,9 +134,8 @@ bool kbd_common_read (void) {
 }
 
 /*-----------------------------------------------------------------------------
- * Initiate a read from the noecho keyboard device
- *-----------------------------------------------------------------------------
- */
+ * Initiate a read from the noecho keyboard device */
+//-----------------------------------------------------------------------------
 int kbd_read (int fd, void *buf, int buf_len) {
     if (reading) {
         current->pbuf = (struct pbuf)
@@ -161,24 +158,24 @@ int kbd_read (int fd, void *buf, int buf_len) {
 }
 
 /*-----------------------------------------------------------------------------
- * Opens a keyboard device
- *-----------------------------------------------------------------------------
- */
+ * Opens a keyboard device */
+//-----------------------------------------------------------------------------
 int kbd_open (enum dev_id devno) {
-    if (!opened)
-        enable_irq (1, 0);
-    opened++;
     return 0;
 }
 
 /*-----------------------------------------------------------------------------
- * Closes a keyboard device
- *-----------------------------------------------------------------------------
- */
+ * Closes a keyboard device */
+//-----------------------------------------------------------------------------
 int kbd_close (enum dev_id devno) {
-    opened--;
-    if (!opened)
-        enable_irq (1, 1);
+    return 0;
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+int kbd_init (void) {
+    enable_irq (1, 0);
     return 0;
 }
 
@@ -186,9 +183,8 @@ int kbd_close (enum dev_id devno) {
  * Keyboard ioctl routine.  The only supported command is to change the
  * EOF character.  The command number to request this operation is 49, and the
  * parameter is the integer value of the character that is to become the new
- * EOF indicator
- *-----------------------------------------------------------------------------
- */
+ * EOF indicator */
+//-----------------------------------------------------------------------------
 int kbd_ioctl (unsigned long command, va_list vargs) {
 
     if (command != KBD_IOCTL_MOD_EOF)

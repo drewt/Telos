@@ -32,7 +32,7 @@ struct device devtab[DT_SIZE] = {
     [DEV_KBD] = {
         .dvnum   = DEV_KBD,
         .dvname  = "Keyboard (no echo)",
-        .dvinit  = NULL,
+        .dvinit  = kbd_init,
         .dvopen  = kbd_open,
         .dvclose = kbd_close,
         .dvread  = kbd_read,
@@ -45,7 +45,7 @@ struct device devtab[DT_SIZE] = {
     [DEV_KBD_ECHO] = {
         .dvnum   = DEV_KBD_ECHO,
         .dvname  = "Keyboard (echo)",
-        .dvinit  = NULL,
+        .dvinit  = kbd_init,
         .dvopen  = kbd_open,
         .dvclose = kbd_close,
         .dvread  = kbd_read,
@@ -84,5 +84,5 @@ struct device devtab[DT_SIZE] = {
 };
 
 void dev_init (void) {
-
+    devtab[DEV_KBD].dvinit ();
 }
