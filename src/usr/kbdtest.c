@@ -30,7 +30,9 @@ static void read_proc (void *arg) {
     char in[5] = "oops";
     
     puts ("Reading: ");
-    read (STDIN_FILENO, &in, 4);
+    gets (in, 4);
+    puts ("");
+
 }
 
 static void sigchld_handler (int signo) {}
@@ -46,4 +48,6 @@ void kbd_test (void *arg) {
 
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
+    printf ("Enter any key to exit: ");
+    getchar (); puts ("");
 }

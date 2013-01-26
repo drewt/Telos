@@ -24,9 +24,14 @@
 
 #include <telos/devices.h>
 
+#define EOF 4
+
 int open (int devno);
 int close (int fd);
 int read (int fd, void *buf, int nbyte);
 int write (int fd, void *buf, int nbyte);
+
+int getchar (void);
+char *gets (char *s, int size);
 
 #endif // __TELOS_IO_H_
