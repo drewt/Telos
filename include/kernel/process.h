@@ -22,6 +22,7 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
+#include <mem.h>
 #include <sigdefs.h>
 #include <kernel/device.h>
 
@@ -88,6 +89,7 @@ struct pcb {
     /* */
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
+    struct mem_header *heap_mem;     // heap-allocated memory
     struct pcb   *next;              // pointers for linked lists
     struct pcb   *prev;              // ...
 };

@@ -17,7 +17,16 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
+
+#include <telos/mem.h>
 #include <klib.h>
+
+void *malloc (size_t size) {
+    void *r;
+    telos_malloc (size, &r);
+    return r;
+}
 
 /*-----------------------------------------------------------------------------
  * Copies len bytes from src to dst */

@@ -28,41 +28,34 @@
 #define SANITY_OK   0x12
 #define SANITY_FREE 0x0
 
-/* mem_headers should align on 16 byte boundaries; beware of pointer size */
-struct mem_header {
-    uint32_t          size;         // size of an allocated block
-    struct mem_header *prev;        // previous node in the free list
-    struct mem_header *next;        // next node in the free list
-    uint32_t          sanity_check; // padding/sanity check
-    unsigned char data_start[0];    // start of allocated block
-};
-
-extern uint32_t kend;         // start of free memory
-struct mem_header *free_list; // head of the free list
+extern uint32_t kend; // start of free memory
+static struct mem_header *free_list; // head of the free list
 
 /*-----------------------------------------------------------------------------
  * Initializes the memory system */
 //-----------------------------------------------------------------------------
 void mem_init (void) {
 
-    // XXX: bad!  There is more free memory below this
+    // XXX: there is more free memory below this
     uint32_t freemem = ((uint32_t) &kend + 0x1000) & PAGE_MASK;
     free_list = (struct mem_header*) freemem;
-    free_list->size = 0x2F0000;
+    free_list->size = 0x2F0000; // TODO: use non-arbitrary value
     free_list->next = NULL;
     free_list->prev = NULL;
     free_list->sanity_check = SANITY_FREE;
 }
 
-/* wrapper for paragraph aligned allocations */
 void *kmalloc (uint32_t size) {
-    return kmalloca (size, PARAGRAPH_MASK);
+    return hmalloc (size, NULL);
 }
 
 /*-----------------------------------------------------------------------------
- * Allocates size bytes of memory, aligned with the given mask */
+ * Allocates size bytes of memory, returning a pointer to the start of the
+ * allocated block.  If hdr is not NULL and the call succeeds in allocating
+ * size bytes of memory, *hdr will point to the struct mem_header corresponding
+ * to the allocated block when this function returns */
 //-----------------------------------------------------------------------------
-void *kmalloca (uint32_t size, uint32_t mask) {
+void *hmalloc (uint32_t size, struct mem_header **hdr) {
 
     struct mem_header *p, *r;
 
@@ -72,7 +65,7 @@ void *kmalloca (uint32_t size, uint32_t mask) {
 
     // round up to the nearest paragraph boundary
     if (size & 0xF)
-        size = (size + 0x10) & mask;
+        size = (size + 0x10) & PARAGRAPH_MASK;
 
     // find a large enough segment of free memory
     for (p = free_list; p && (p->size < size); p = p->next);
@@ -110,27 +103,38 @@ void *kmalloca (uint32_t size, uint32_t mask) {
             free_list = r;
     }
 
+    if (hdr)
+        *hdr = p;
     return &(p->data_start);
 }
 
 /*-----------------------------------------------------------------------------
- * Returns a segment of previously allocated memory to the free list */
+ * Returns a segment of previously allocated memory to the free list, given a
+ * pointer to the segment */
 //-----------------------------------------------------------------------------
 void kfree (void *addr) {
-    
-    struct mem_header *freed = (struct mem_header*) 
-        ((uint32_t) addr - sizeof (struct mem_header));
+    // compute header location and pass it to hfree
+    struct mem_header *h = (struct mem_header*) 
+        ((unsigned long) addr - sizeof (struct mem_header));
+    hfree (h);
+}
 
+/*-----------------------------------------------------------------------------
+ * Returns a segment of previously allocated memory to the free list, given the
+ * header for the segment */
+//-----------------------------------------------------------------------------
+void hfree (struct mem_header *hdr) {
+    
     // check that the supplied address is sane
-    if (freed->sanity_check != SANITY_OK) {
+    if (hdr->sanity_check != SANITY_OK) {
         kprintf ("kfree(): detected double free or corruption\n");
         return;
     }
 
     // insert freed at the beginning of the free list
-    freed->next = free_list;
-    freed->prev = NULL;
+    hdr->next = free_list;
+    hdr->prev = NULL;
     if (free_list)
-        free_list->prev = freed;
-    free_list = freed;
+        free_list->prev = hdr;
+    free_list = hdr;
 }

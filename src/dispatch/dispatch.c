@@ -64,7 +64,9 @@ static struct sysaction sysactions[DISPTAB_SIZE] = {
     [SYS_ALARM]     = { (void(*)()) sys_alarm,       1 },
     [SYS_SEND]      = { (void(*)()) sys_send,        5 },
     [SYS_RECV]      = { (void(*)()) sys_recv,        3 },
-    [SYS_REPLY]     = { (void(*)()) sys_reply,       3 }
+    [SYS_REPLY]     = { (void(*)()) sys_reply,       3 },
+    [SYS_MALLOC]    = { (void(*)()) sys_malloc,      2 },
+    [SYS_FREE]      = { (void(*)()) sys_free,        1 }
 };
 
 static inline void set_action (unsigned int vector, void(*f)(), int nargs) {

@@ -23,6 +23,7 @@
 
 #include <telos/process.h>
 #include <telos/print.h>
+#include <telos/mem.h>
 #include <telos/io.h>
 
 #include <usr/test.h>
@@ -142,6 +143,11 @@ void tsh () {
     enum shellrc rc;
     funcptr p;
 
+    char *al = malloc(10);
+    strcpy (al, "123456789");
+    puts (al);
+    free (al);
+
     signal (SIGCHLD, sigchld_handler);
 
     for (;;) {
@@ -151,6 +157,9 @@ void tsh () {
             printf ("tsh: '%s' not found\n", in);
             continue;
         }
+
+        if (p == SHELL_EXIT)
+            return;
 
         for (argc = 0; argv[argc] != NULL; argc++);
         syscreate (p, argc, argv);

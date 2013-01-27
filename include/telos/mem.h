@@ -16,24 +16,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MEM_H_
-#define __MEM_H_
+#ifndef __TELOS_MEM_H
+#define __TELOS_MEM_H
 
-#include <stdint.h>
+#include <stddef.h>
 
-/* mem_headers should align on 16 byte boundaries */
-struct mem_header {
-    uint32_t          size;         // size of an allocated block
-    struct mem_header *prev;        // previous node in the free list
-    struct mem_header *next;        // next node in the free list
-    uint32_t          sanity_check; // padding/sanity check
-    unsigned char data_start[0];    // start of allocated block
-};
+int telos_malloc (size_t size, void **p);
+void *malloc (size_t size);
+void free (void *ptr);
 
-void kprintmem (void);
-void *kmalloc (uint32_t size);
-void *hmalloc (uint32_t size, struct mem_header **hdr);
-void kfree (void *addr);
-void hfree (struct mem_header *hdr);
-
-#endif // __MEM_H_
+#endif // __TELOS_MEM_H_
