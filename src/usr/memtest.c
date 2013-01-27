@@ -16,16 +16,21 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __USR_TEST_H_
-#define __USR_TEST_H_
+#include <telos/mem.h>
+#include <telos/print.h>
 
-void msg_test (int argc, char *argv[]);
-void sig_test (int argc, char *argv[]);
-void kbd_test (int argc, char *argv[]);
-void str_test (int argc, char *argv[]);
-void proc_test (int argc, char *argv[]);
-void event_test (int argc, char *argv[]);
-void msg_test (int argc, char *argv[]);
-void memtest (int argc, char *argv[]);
+#define N 25
+#define M 100
+#define A 144
 
-#endif // __USR_TEST_H_
+void memtest (int argc, char *argv[]) {
+    void *mem[N];
+
+    puts ("Testing malloc()...");
+    for (int i = 0; i < N; i++)
+        mem[i] = malloc (i*M+A);
+
+    puts ("Testing free()...");
+    for (int i = N-1; i >= 0; i--)
+        free (mem[i]);
+}

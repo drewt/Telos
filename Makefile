@@ -19,7 +19,7 @@ DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o
 
 USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
 	    bin/usr/kbdtest.o bin/usr/eventtest.o bin/usr/msgtest.o \
-	    bin/usr/tsh.o bin/usr/printserver.o
+	    bin/usr/tsh.o bin/usr/printserver.o bin/usr/memtest.o
 
 OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
 
@@ -38,7 +38,7 @@ CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
 KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
 
 USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/io.h \
-	 $(TELOS)/devices.h $(TELOS)/process.h
+	 $(TELOS)/devices.h $(TELOS)/process.h $(TELOS)/mem.h
 
 all: bin/kernel.img
 
@@ -102,6 +102,7 @@ bin/usr/eventtest.o: src/usr/eventtest.c $(USER_H)
 bin/usr/msgtest.o: src/usr/msgtest.c $(USER_H)
 bin/usr/tsh.o: src/usr/tsh.c $(COMMON) $(USER_H)
 bin/usr/printserver.o: src/usr/printserver.c $(USER_H)
+bin/usr/memtest.o: src/usr/memtest.c $(USER_H)
 
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)

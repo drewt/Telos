@@ -28,7 +28,7 @@
 
 #include <usr/test.h>
 
-#define N_CMDS   11
+#define N_CMDS   12
 #define IN_LEN   512
 #define MAX_ARGS 100
 #define SHELL_EXIT ((void*) -1)
@@ -57,6 +57,7 @@ static struct program progtab[N_CMDS] = {
     { str_test,    "strtest"     },
     { event_test,  "eventtest"   },
     { msg_test,    "msgtest"     },
+    { memtest,     "memtest"     },
     { printserver, "printserver" },
     { printclient, "printclient" },
     { tsh,         "tsh"         }
@@ -142,11 +143,6 @@ void tsh () {
     char *argv[MAX_ARGS];
     enum shellrc rc;
     funcptr p;
-
-    char *al = malloc(10);
-    strcpy (al, "123456789");
-    puts (al);
-    free (al);
 
     signal (SIGCHLD, sigchld_handler);
 
