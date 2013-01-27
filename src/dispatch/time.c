@@ -141,10 +141,14 @@ static int delta_list_rm (int evno, struct pcb *p) {
 
     for (it = dl_head; it != del; it = it->next)
         ticks += it->delta;
-    if (it == dl_head)
+    if (it == dl_head) {
         dl_head = it->next;
-    else
+        dl_head->prev = NULL;
+    } else {
         it->prev->next = it->next;
+        if (it->next)
+            it->next->prev = it->prev;
+    }
     for (it = it->next; it; it = it->next)
         it->delta += del->delta;
     return ticks + del->delta;
