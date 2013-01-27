@@ -27,7 +27,7 @@
 static int delta_list_rm (int evno, struct pcb *p);
 static void delta_list_tick (void);
 static void delta_list_insert (unsigned int evno, struct pcb *p,
-        unsigned int ms, void (*act)(struct pcb*,int));
+        unsigned int ms, void (*act)(struct pcb*));
 
 #define N_EVENTS 2
 enum event_types {
@@ -35,31 +35,33 @@ enum event_types {
     EVENT_ALRM
 };
 
+/* Event structure.  When the event occurs, action(proc) will be called */
 struct event {
-    void (*action)(struct pcb*,int);
+    void (*action)(struct pcb*);
     int  delta;
     struct pcb *proc;
     struct event *next;
     struct event *prev;
 };
 
+/* the event queue */
 static struct event events[PT_SIZE][N_EVENTS];
 static struct event *dl_head = NULL;
 
-unsigned int tick_count = 0;
+unsigned int tick_count = 0; /* global tick count */
 
 /*-----------------------------------------------------------------------------
  * Wakes a sleeping process */
 //-----------------------------------------------------------------------------
-static void wake_action (struct pcb *p, int delta) {
-    p->rc = (delta > 0) ? delta : 0;
+static void wake_action (struct pcb *p) {
+    p->rc = 0;
     ready (p);
 }
 
 /*-----------------------------------------------------------------------------
  * Sends SIGALRM to the process */
 //-----------------------------------------------------------------------------
-static void alrm_action (struct pcb *p, int delta) {
+static void alrm_action (struct pcb *p) {
     sys_kill (p->pid, SIGALRM);
 }
 
@@ -72,7 +74,7 @@ void sys_sleep (unsigned int milliseconds) {
 }
 
 /*-----------------------------------------------------------------------------
- * Registers an alarm for the current process to go off in a given number of
+ * Registers an alarm for the current process, to go off in the given number of
  * seconds */
 //-----------------------------------------------------------------------------
 void sys_alarm (unsigned int seconds) {
@@ -88,10 +90,10 @@ int sq_rm (struct pcb *p) {
 }
 
 /*-----------------------------------------------------------------------------
- * */
+ * Schedule an event */
 //-----------------------------------------------------------------------------
 static void delta_list_insert (unsigned int evno, struct pcb *p,
-        unsigned int ms, void (*act)(struct pcb*,int)) {
+        unsigned int ms, void (*act)(struct pcb*)) {
 
     int ticks;
     int pti = PT_INDEX(p->pid);
@@ -109,7 +111,7 @@ static void delta_list_insert (unsigned int evno, struct pcb *p,
         nev->next = NULL;
         nev->prev = NULL;
     } else {
-        // find p's place in the list, updating deltas along the way
+        // find p's place in the list, updating delta along the way
         for (it = dl_head; it; it = it->next) {
             if (ticks > it->delta)
                 ticks -= it->delta;
@@ -134,13 +136,19 @@ static void delta_list_insert (unsigned int evno, struct pcb *p,
     nev->delta = ticks;
 }
 
+/*-----------------------------------------------------------------------------
+ * Remove an event from the event queue, returning the number of ticks left
+ * before the event would have occurred */
+//-----------------------------------------------------------------------------
 static int delta_list_rm (int evno, struct pcb *p) {
     int ticks = 0;
     struct event *it;
     struct event *del = &events[PT_INDEX(p->pid)][evno];
 
-    for (it = dl_head; it != del; it = it->next)
+    for (it = dl_head; it && it != del; it = it->next)
         ticks += it->delta;
+    if (!it)
+        return -1;
     if (it == dl_head) {
         dl_head = it->next;
         dl_head->prev = NULL;
@@ -155,7 +163,8 @@ static int delta_list_rm (int evno, struct pcb *p) {
 }
 
 /*-----------------------------------------------------------------------------
- * */
+ * Move the event queue one tick forward, and execute any events that become
+ * pending */
 //-----------------------------------------------------------------------------
 static void delta_list_tick (void) {
     if (!dl_head)
@@ -166,13 +175,14 @@ static void delta_list_tick (void) {
     while (dl_head && dl_head->delta <= 0) {
         tmp     = dl_head;
         dl_head = dl_head->next;
-        tmp->action (tmp->proc, tmp->delta);
+        dl_head->prev = NULL;
+        tmp->action (tmp->proc);
     }
 }
 
 /*-----------------------------------------------------------------------------
- * Called on every timer interrupt; updates the queue of sleeping processes,
- * and more stuff to come... */
+ * Called on every timer interrupt; updates global tick count, the event queue,
+ * and switches to another process */
 //-----------------------------------------------------------------------------
 void tick (void) {
 
