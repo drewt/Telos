@@ -21,7 +21,6 @@
 
 #include <string.h>
 
-#include <kernel/common.h>
 #include <telos/print.h>
 #include <usr/test.h>
 
