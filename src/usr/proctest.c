@@ -24,8 +24,8 @@
 #include <telos/process.h>
 #include <telos/print.h>
 
-static void print_proc (void *str) {
-    printf ("%s", (char*) str);
+static void print_proc (int argc, char *argv[]) {
+    printf ("%s", (char*) argv[0]);
 }
 
 static void stop_proc () {
@@ -34,19 +34,20 @@ static void stop_proc () {
 }
 
 void proc_test (void *arg) {
+    char *a = "a", *s = "s", *d = "d", *f = "f";
     printf ("Testing syscreate... asdf ?= ");
-    syscreate (print_proc, "a");
+    syscreate (print_proc, 1, &a);
     syssleep (50);
-    syscreate (print_proc, "s");
+    syscreate (print_proc, 1, &s);
     syssleep (50);
-    syscreate (print_proc, "d");
+    syscreate (print_proc, 1, &d);
     syssleep (50);
-    syscreate (print_proc, "f");
+    syscreate (print_proc, 1, &f);
     syssleep (50);
     puts ("");
 
     printf ("Testing sysstop...");
-    syscreate (stop_proc, NULL);
+    syscreate (stop_proc, 0, NULL);
     syssleep (50);
     puts ("");
 }

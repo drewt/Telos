@@ -26,20 +26,20 @@
 
 pid_t main_pid;
 
-void recv_proc (void *arg) {
+void recv_proc (int argc, char *argv[]) {
     char msg[40];
 
     if (recv (&main_pid, msg, 40) == -1) {
         puts ("recv error: returned -1");
         return;
     }
-    if (strcmp (msg, arg)) {
+    if (strcmp (msg, argv[0])) {
         puts ("recv error: msg != arg");
         return;
     }
 }
 
-void send_proc (void *arg) {
+void send_proc () {
     char msg[40] = "msg";
     char reply[40];
 
@@ -62,14 +62,14 @@ void msg_test (void *arg) {
 
     puts ("Testing block-on-recv...");
     for (int i = 0; i < 10; i++)
-        pids[i] = syscreate (recv_proc, msg);
+        pids[i] = syscreate (recv_proc, 1, &msg);
     syssleep (100);
     for (int i = 0; i < 10; i++)
         send (pids[i], msg, 4, NULL, 0);
 
     puts ("Testing block-on-send...");
     for (int i = 0; i < 10; i++)
-        pids[i] = syscreate (send_proc, NULL);
+        pids[i] = syscreate (send_proc, 0, NULL);
     syssleep (100);
     for (int i = 0; i < 10; i++) {
         if (recv (&pids[i], buf, 40) == -1) {

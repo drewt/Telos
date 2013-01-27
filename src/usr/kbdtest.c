@@ -26,7 +26,7 @@
 #include <telos/devices.h>
 #include <telos/filedes.h>
 
-static void read_proc (void *arg) {
+static void read_proc () {
     char in[5];
     
     puts ("Reading: ");
@@ -44,8 +44,8 @@ void kbd_test (void *arg) {
 
     signal (SIGCHLD, sigchld_handler);
 
-    syscreate (read_proc, NULL);
-    syscreate (read_proc, NULL);
+    syscreate (read_proc, 0, NULL);
+    syscreate (read_proc, 0, NULL);
 
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     for (sig = 0; sig != SIGCHLD; sig = sigwait ());

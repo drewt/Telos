@@ -28,7 +28,7 @@
 
 static pid_t server_pid = -1;
 
-void printserver (void *arg) {
+void printserver (int argc, char *argv[]) {
     int rv;
     pid_t pid;
     char buf[BUF_LEN];
@@ -52,16 +52,15 @@ void printserver (void *arg) {
     }
 }
 
-void printclient (void *arg) {
+void printclient (int argc, char *argv[]) {
     char reply_blk;
-    char **args = (char**) arg;
 
-    if (!arg) {
+    if (argc < 1) {
         puts ("usage: printclient [string]");
         return;
     }
-    for (int i = 0; args[i] != NULL; i++) {
-        if (send (server_pid, args[i], strlen (args[i])+1, &reply_blk, 1) == -1)
+    for (int i = 0; argv[i] != NULL; i++) {
+        if (send (server_pid, argv[i], strlen (argv[i])+1, &reply_blk, 1) == -1)
             puts ("printclient: send error");
         else
             printf (" ");

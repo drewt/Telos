@@ -27,25 +27,21 @@
 #include <telos/print.h>
 #include <signal.h>
 
-void tsh (void *arg);
+void tsh (int argc, char **argv);
 
-void idle_proc (void *arg) {
+void idle_proc () {
     for(;;);
 }
 
 static void sigchld_handler(int signo) {}
 
-void root (void *arg) {
-
-    /*cfd = open (DEV_CONSOLE_0);
-    write (cfd, "Hello, console!", 15);
-    close (DEV_CONSOLE_0);*/
+void root () {
 
     int sig;
 
     signal (SIGCHLD, sigchld_handler);
     
-    syscreate (tsh, NULL);
+    syscreate (tsh, 0, NULL);
     for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
     kprintf ("Goodbye!");
 

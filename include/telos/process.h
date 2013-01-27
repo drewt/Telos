@@ -24,7 +24,7 @@
 
 typedef int pid_t;
 
-int syscreate (void(*func)(void*), void *arg);
+int syscreate (void(*func)(int,char**), int argc, char *argv[]);
 void sysyield (void);
 void sysstop (void);
 int getpid (void);

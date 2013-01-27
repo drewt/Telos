@@ -30,8 +30,8 @@ typedef int pid_t;
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-pid_t syscreate (void(*func)(void*), void *arg) {
-    return syscall2 (SYS_CREATE, func, arg);
+pid_t syscreate (void(*func)(int,char**), int argc, char *argv[]) {
+    return syscall3 (SYS_CREATE, func, (void*) argc, argv);
 }
 
 /*-----------------------------------------------------------------------------

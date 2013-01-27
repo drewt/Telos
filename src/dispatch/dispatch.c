@@ -45,7 +45,7 @@ struct sysaction {
 static struct sysaction sysactions[DISPTAB_SIZE] = {
 //    - INDEX -             - ACTION -            - ARGS -
     [TIMER_INTR]    = { (void(*)()) tick,            0 },
-    [SYS_CREATE]    = { (void(*)()) sys_create,      2 },
+    [SYS_CREATE]    = { (void(*)()) sys_create,      3 },
     [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
     [SYS_STOP]      = { (void(*)()) sys_stop,        0 },
     [SYS_GETPID]    = { (void(*)()) sys_getpid,      0 },

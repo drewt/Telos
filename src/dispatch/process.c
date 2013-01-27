@@ -35,7 +35,7 @@ extern void sysstop (void);
 /*-----------------------------------------------------------------------------
  * Create a new process */
 //-----------------------------------------------------------------------------
-int sys_create (void (*func)(void*), void *arg) {
+int sys_create (void (*func)(int,char*), int argc, char **argv) {
     int i;
     struct pcb *p;
 
@@ -85,8 +85,8 @@ int sys_create (void (*func)(void*), void *arg) {
     // pass arguments to process
     uint32_t *args = (uint32_t*) f->iret_esp;
     args[0] = (uint32_t) sysstop; // return address
-    args[1] = (uint32_t) arg;
-    args[2] = (uint32_t) p->pid;
+    args[1] = (uint32_t) argc;
+    args[2] = (uint32_t) argv;
 
     ready (p);
 

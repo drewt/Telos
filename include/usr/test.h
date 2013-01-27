@@ -19,12 +19,12 @@
 #ifndef __USR_TEST_H_
 #define __USR_TEST_H_
 
-void msg_test (void *arg);
-void sig_test (void *arg);
-void kbd_test (void *arg);
-void str_test (void *arg);
-void proc_test (void *arg);
-void event_test (void *arg);
-void msg_test (void *arg);
+void msg_test (int argc, char *argv[]);
+void sig_test (int argc, char *argv[]);
+void kbd_test (int argc, char *argv[]);
+void str_test (int argc, char *argv[]);
+void proc_test (int argc, char *argv[]);
+void event_test (int argc, char *argv[]);
+void msg_test (int argc, char *argv[]);
 
 #endif // __USR_TEST_H_

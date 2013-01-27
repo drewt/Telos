@@ -34,13 +34,13 @@
 
 static const char const *prompt = "TELOS> ";
 
-typedef void(*funcptr)(void*);
+typedef void(*funcptr)(int, char**);
 
-void tsh (void *arg);
+void tsh ();
 
-static void help (void *arg);
-extern void printserver (void *arg);
-extern void printclient (void *arg);
+static void help (int argc, char *argv[]);
+extern void printserver (int argc, char *argv[]);
+extern void printclient (int argc, char *argv[]);
 
 struct program {
     funcptr f;
@@ -71,7 +71,7 @@ enum shellrc {
 
 static void sigchld_handler (int signo) {}
 
-static void help (void *arg) {
+static void help (int argc, char *argv[]) {
     puts ("Valid commands are:");
     for (int i = 0; i < N_CMDS; i++)
         printf ("\t%s\n", progtab[i].name);
@@ -135,10 +135,10 @@ end:
     return rc;
 }
 
-void tsh (void *arg) {
-    int sig;
+void tsh () {
+    int sig, argc;
     char in[IN_LEN];
-    char *args[MAX_ARGS];
+    char *argv[MAX_ARGS];
     enum shellrc rc;
     funcptr p;
 
@@ -146,13 +146,14 @@ void tsh (void *arg) {
 
     for (;;) {
         printf ("%s", prompt);
-        rc = get_cmd (in, IN_LEN, &args, MAX_ARGS);
+        rc = get_cmd (in, IN_LEN, &argv, MAX_ARGS);
         if (!(p = lookup (in))) {
             printf ("tsh: '%s' not found\n", in);
             continue;
         }
 
-        syscreate (p, args);
+        for (argc = 0; argv[argc] != NULL; argc++);
+        syscreate (p, argc, argv);
         if (rc != RC_BG)
             for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     }

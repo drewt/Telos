@@ -51,7 +51,7 @@ static void sigusr1_handler (int signo) {
         puts ("c");
 }
 
-static void sig_proc (void *arg) {
+static void sig_proc () {
     syssleep (500);
     kill (sigtest_pid, SIGUSR1);
     syssleep (500);
@@ -83,7 +83,7 @@ static void priority_test (void) {
     printf ("Testing signal priority... abc ?= ");
     signal (SIGUSR1, sigusr1_handler);
     signal (SIGUSR2, sigusr2_handler);
-    syscreate (sig_proc, NULL);
+    syscreate (sig_proc, 0, NULL);
     sig = sigwait ();
     if (sig != SIGUSR1)
         puts ("sig_test: bad signal");

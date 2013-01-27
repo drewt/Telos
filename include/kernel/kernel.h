@@ -32,7 +32,7 @@ extern void isr_init (void); /* ctsw.c */
 extern void paging_init (void);
 
 /* user.c */
-extern void root_proc (void *arg);
-extern void idle_proc (void *arg);
+extern void root_proc ();
+extern void idle_proc ();
 
 #endif // __KERNEL_H_
