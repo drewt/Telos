@@ -42,13 +42,13 @@ USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/io.h \
 
 all: bin/kernel.img
 
-$(OBJFILES):
+$(OBJFILES): bin/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $(patsubst bin/%.o,src/%.c,$@) -o $@
 
 $(USERFILES): $(USER_H)
 $(ROOTFILES): $(COMMON)
 $(DISPFILES): $(COMMON) $(DISP_H)
-$(DRVRFILES): $(COMMON) $(DISP_H) $(ARCH_H) $(DEVICE_H)
+$(DRVRFILES): bin/%.o: $(KERNEL)/%.h $(COMMON) $(DISP_H) $(ARCH_H) $(DEVICE_H)
 
 # make a multiboot-compliant ELF kernel
 bin/kernel.bin: bin/loader.o $(OBJFILES) $(LIB)/klib.a
@@ -65,36 +65,26 @@ bin/loader.o: boot/loader.s
 	$(AS) -o bin/loader.o boot/loader.s
 
 # ROOTFILES: core kernel files
-bin/kernel.o: src/kernel.c $(ARCH_H) $(DISP_H) $(KERNEL)/multiboot.h \
-    $(KERNEL)/kernel.h $(CONSOLE_H)
-bin/mem.o: src/mem.c include/mem.h
-bin/gdt.o: src/gdt.c $(ARCH_H) $(LIB_H)
-bin/intr.o: src/intr.c $(LIB_H) $(ARCH_H)
-bin/inthandlers.o: src/inthandlers.c $(ARCH_H)
-bin/ctsw.o: src/ctsw.c $(ARCH_H) $(DISP_H) $(KERNEL)/interrupt.h  \
-    $(KERNEL)/process.h
-bin/syscall.o: src/syscall.c include/telos/process.h
-bin/pic.o: src/pic.c $(ARCH_H)
-bin/sysproc.o: src/sysproc.c $(USER_H)
-bin/procqueue.o: src/procqueue.c $(KERNEL)/process.h
-bin/devinit.o: src/devinit.c $(DEVICE_H) $(KEYBOARD_H) $(CONSOLE_H)
+bin/kernel.o: $(ARCH_H) $(DISP_H) $(KERNEL)/multiboot.h $(KERNEL)/kernel.h \
+    $(CONSOLE_H)
+bin/mem.o: include/mem.h
+bin/gdt.o: $(ARCH_H) $(LIB_H)
+bin/intr.o: $(LIB_H) $(ARCH_H)
+bin/inthandlers.o: $(ARCH_H)
+bin/ctsw.o: $(ARCH_H) $(DISP_H) $(KERNEL)/interrupt.h $(KERNEL)/process.h
+bin/syscall.o: include/telos/process.h
+bin/pic.o: $(ARCH_H)
+bin/sysproc.o: $(USER_H)
+bin/procqueue.o: $(KERNEL)/process.h
+bin/devinit.o: $(DEVICE_H) $(KEYBOARD_H) $(CONSOLE_H)
 
 # DISPFILES: system call and interrupt service code
-bin/dispatch/dispatch.o: src/dispatch/dispatch.c include/syscall.h \
-    $(DEVICE_H) $(KERNEL)/interrupt.h
-bin/dispatch/process.o: src/dispatch/process.c $(ARCH_H) $(KERNEL)/time.h \
-    include/mem.h
-bin/dispatch/time.o: src/dispatch/time.c $(ARCH_H)
-bin/dispatch/io.o: src/dispatch/io.c $(DEVICE_H)
-bin/dispatch/sysprint.o: src/dispatch/sysprint.c
-bin/dispatch/signal.o: src/dispatch/signal.c $(ARCH_H) include/syscall.h \
-    include/signal.h
-bin/dispatch/msg.o: src/dispatch/msg.c
-bin/dispatch/mem.o: src/dispatch/mem.c include/mem.h
-
-# DRVRFILES: drivers
-bin/drivers/kbd.o: src/drivers/kbd.c $(KEYBOARD_H)
-bin/drivers/console.o: src/drivers/console.c $(CONSOLE_H)
+bin/dispatch/dispatch.o: include/syscall.h $(DEVICE_H) $(KERNEL)/interrupt.h
+bin/dispatch/process.o: $(ARCH_H) $(KERNEL)/time.h include/mem.h
+bin/dispatch/time.o: $(ARCH_H)
+bin/dispatch/io.o: $(DEVICE_H)
+bin/dispatch/signal.o: $(ARCH_H) include/syscall.h include/signal.h
+bin/dispatch/mem.o: include/mem.h
 
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)
