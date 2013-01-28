@@ -29,6 +29,102 @@
 
 #define WRITE_SIZE 200
 
+int vsnprintf (char *str, size_t size, const char *fmt, va_list ap) {
+    size_t count;
+    char *s;
+    char buf[33];
+    const char *rpos = fmt;
+
+    count = 0;
+    while (count < size && *rpos != '\0') {
+        if (*rpos == '%') {
+            rpos++;
+            switch (*rpos++) {
+            case '%':
+                str[count++] = '%';
+                break;
+            case 'c':
+                str[count++] = va_arg (ap, int);
+                break;
+            case 's':
+                s = va_arg (ap, char*);
+                while (count < size && *s != '\0')
+                    str[count++] = *s++;
+                break;
+            case 'd':
+            case 'i':
+                itoa (va_arg (ap, int), buf, 10);
+                for (int i = 0; count < size && buf[i] != '\0'; i++)
+                    str[count++] = buf[i];
+                break;
+            default:
+                break;
+            }
+        } else {
+            str[count++] = *rpos++;
+        }
+    }
+    if (count < size)
+        str[count++] = '\0';
+    return count;
+}
+
+int snprintf (char *str, size_t size, const char *fmt, ...) {
+    int rv;
+    va_list ap;
+    va_start (ap, fmt);
+    rv = vsnprintf (str, size, fmt, ap);
+    va_end (ap);
+    return rv;
+}
+
+int vsprintf (char *str, const char *fmt, va_list ap) {
+    char *s;
+    char buf[33];
+    char *wpos = str;
+    const char *rpos = fmt;
+
+    while (*rpos != '\0') {
+        if (*rpos == '%') {
+            rpos++;
+            switch (*rpos++) {
+            case '%':
+                *wpos++ = '%';
+                break;
+            case 'c':
+                *wpos++ = va_arg (ap, int);
+                break;
+            case 's':
+                s = va_arg (ap, char*);
+                while (*s != '\0')
+                    *wpos++ = *s++;
+                break;
+            case 'd':
+            case 'i':
+                itoa (va_arg (ap, int), buf, 10);
+                for (int i = 0; buf[i] != '\0'; i++)
+                    *wpos++ = buf[i];
+                break;
+            default:
+                break;
+            }
+        } else {
+            *wpos++ = *rpos++;
+        }
+    }
+    *wpos++ = '\0';
+    return wpos - str;
+}
+
+int sprintf (char *str, const char *fmt, ...) {
+    int rv;
+    va_list ap;
+    va_start (ap, fmt);
+    rv = vsprintf (str, fmt, ap);
+    va_end (ap);
+    return rv;
+}
+
 static int fmt_print (const char *fmt, va_list *ap, int *count) {
     char c;
     char *s;
