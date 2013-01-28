@@ -16,13 +16,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_MEM_H
-#define __TELOS_MEM_H
+#ifndef __TELOS_MEM_H_
+#define __TELOS_MEM_H_
 
 #include <stddef.h>
 
 int telos_malloc (size_t size, void **p);
-void *malloc (size_t size);
-void free (void *ptr);
-
 #endif // __TELOS_MEM_H_

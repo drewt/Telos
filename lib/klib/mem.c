@@ -16,11 +16,24 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
-#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <telos/mem.h>
+#include <syscall.h>
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+static inline int telos_malloc (size_t size, void **p) {
+    return syscall2 (SYS_MALLOC, (void*) size, p);
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+void free (void *ptr) {
+    syscall1 (SYS_FREE, ptr);
+}
 
 /*-----------------------------------------------------------------------------
  * */
@@ -54,5 +67,3 @@ void *realloc (void *ptr, size_t size) {
     free (ptr);
     return rp;
 }
-
-

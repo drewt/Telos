@@ -1,6 +1,6 @@
 /*  Copyright 2013 Drew T.
  *
- *  This file is part of Telos.
+ *  This file is part of the Telos C Library.
  *  
  *  Telos is free software: you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software
@@ -16,21 +16,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <telos/print.h>
+#ifndef __STDLIB_H_
+#define __STDLIB_H_
 
-#define N 25
-#define M 100
-#define A 144
+#include <stddef.h>
 
-void memtest (int argc, char *argv[]) {
-    void *mem[N];
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
 
-    puts ("Testing malloc()...");
-    for (int i = 0; i < N; i++)
-        mem[i] = malloc (i*M+A);
+void *malloc (size_t size);
+void *calloc (size_t nmemb, size_t size);
+void *realloc (void *ptr, size_t size);
+void free (void *ptr);
 
-    puts ("Testing free()...");
-    for (int i = N-1; i >= 0; i--)
-        free (mem[i]);
-}
+#endif // __STDLIB_H_

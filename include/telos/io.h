@@ -26,10 +26,13 @@
 
 #define EOF 4
 
+typedef unsigned long size_t;
+typedef long ssize_t;
+
 int open (int devno);
 int close (int fd);
-int read (int fd, void *buf, int nbyte);
-int write (int fd, void *buf, int nbyte);
+ssize_t read (int fd, void *buf, size_t nbyte);
+ssize_t write (int fd, const void *buf, size_t nbyte);
 
 int getchar (void);
 char *gets (char *s, int size);

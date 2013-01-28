@@ -19,27 +19,14 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stddef.h>
 #include <syscall.h>
 #include <telos/process.h>
+#include <telos/msg.h>
+#include <telos/io.h>
 #include <signal.h>
 
 typedef int pid_t;
-
-/* MEM.H */
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-int telos_malloc (size_t size, void **p) {
-    return syscall2 (SYS_MALLOC, (void*) size, p);
-}
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-void free (void *ptr) {
-    syscall1 (SYS_FREE, ptr);
-}
 
 /* PROCESS.H */
 
@@ -175,13 +162,13 @@ int close (int fd) {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int read (int fd, void *buf, int nbyte) {
+ssize_t read (int fd, void *buf, size_t nbyte) {
     return syscall3 (SYS_READ, (void*) fd, buf, (void*) nbyte);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int write (int fd, void *buf, int nbyte) {
-    return syscall3 (SYS_WRITE, (void*) fd, buf, (void*) nbyte);
+ssize_t write (int fd, const void *buf, size_t nbyte) {
+    return syscall3 (SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
 }

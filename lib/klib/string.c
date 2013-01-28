@@ -19,6 +19,7 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stddef.h>
 #include <string.h>
 
 /*-----------------------------------------------------------------------------
@@ -30,6 +31,8 @@ void memcpy (void *dest, const void *src, size_t n) {
     for (size_t i = 0; i < n; i++)
         d[i] = s[i];
 }
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic pop
 
 /*-----------------------------------------------------------------------------
  * Fills the first n bytes of the memory area pointed to by s with the constant
@@ -50,9 +53,9 @@ void *memchr (const void *s, int c, size_t n) {
     unsigned const char *p = s;
     for (size_t i = 0; i < n; i++) {
         if ( p[i] == c )
-            return p+i;
+            return (void*) p+i;
     }
-    return 0;
+    return NULL;
 }
 
 /*-----------------------------------------------------------------------------
@@ -63,9 +66,9 @@ void *memrchr (const void *s, int c, size_t n) {
     unsigned const char *p = s;
     for (size_t i = n-1; i > 0; i--) {
         if ( p[i] == c )
-            return p+i;
+            return (void*) p+i;
     }
-    return 0;
+    return NULL;
 }
 
 /*-----------------------------------------------------------------------------
@@ -76,7 +79,7 @@ void *rawmemchr (const void *s, int c) {
     unsigned const char *p = s;
     while ( 1 ) {
         if ( *p == c )
-            return p;
+            return (void*) p;
         p++;
     }
 }
@@ -118,7 +121,7 @@ char *strncat (char *dest, const char *src, size_t n) {
 char *strchr (const char *s, int c) {
     for (; *s != '\0'; s++) {
         if (*s == c)
-            return s;
+            return (char*) s;
     }
     return NULL;
 }
@@ -133,7 +136,7 @@ char *strrchr (const char *s, int c) {
         if (*s == c)
             rc = s;
     }
-    return rc;
+    return (char*) rc;
 }
 
 /*-----------------------------------------------------------------------------
@@ -142,7 +145,7 @@ char *strrchr (const char *s, int c) {
 //-----------------------------------------------------------------------------
 char *strchrnul (const char *s, int c) {
     for (; *s != '\0' && *s != c; s++);
-    return s;
+    return (char*) s;
 }
 
 /*-----------------------------------------------------------------------------
@@ -217,7 +220,7 @@ char *strpbrk (const char *s, const char *accept) {
     char *c;
     for (; s != '\0'; s++) {
         if ((c = strchr (accept, *s)))
-            return s;
+            return (char*) s;
     }
     return NULL;
 }
