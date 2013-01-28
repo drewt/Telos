@@ -26,6 +26,7 @@
 
 #include <telos/devices.h>
 
+#include <string.h>
 #include <klib.h>
 
 #define N_CONSOLES 2

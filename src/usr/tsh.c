@@ -26,6 +26,8 @@
 #include <telos/mem.h>
 #include <telos/io.h>
 
+#include <klib.h>
+
 #include <usr/test.h>
 
 #define N_CMDS   12
@@ -145,6 +147,10 @@ void tsh () {
     funcptr p;
 
     signal (SIGCHLD, sigchld_handler);
+
+    char buf[21];
+    snprintf (buf, 21, "formatted %s #%d\n", "string", 1);
+    printf (buf);
 
     for (;;) {
         printf ("%s", prompt);

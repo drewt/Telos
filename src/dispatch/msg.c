@@ -21,7 +21,7 @@
 
 #include <kernel/dispatch.h>
 
-#include <klib.h>
+#include <string.h>
 
 /*-----------------------------------------------------------------------------
  * Sends a message to another process.  If ibuf is not NULL, then the sending

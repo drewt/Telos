@@ -21,6 +21,72 @@
 
 #include <string.h>
 
+/*-----------------------------------------------------------------------------
+ * Copies len bytes from src to dst */
+//-----------------------------------------------------------------------------
+void memcpy (void *dest, const void *src, size_t n) {
+    const char *s = src;
+    char *d = dest;
+    for (size_t i = 0; i < n; i++)
+        d[i] = s[i];
+}
+
+/*-----------------------------------------------------------------------------
+ * Fills the first n bytes of the memory area pointed to by s with the constant
+ * byte c */
+//-----------------------------------------------------------------------------
+void *memset (void *s, char c, size_t n) {
+    char *d = s;
+    for (size_t i = 0; i < n; i++)
+        d[i] = c;
+    return s;
+}
+
+/*-----------------------------------------------------------------------------
+ * Scans the initial n bytes of the memory area pointed to by s for the first
+ * instance of c */
+//-----------------------------------------------------------------------------
+void *memchr (const void *s, int c, size_t n) {
+    unsigned const char *p = s;
+    for (size_t i = 0; i < n; i++) {
+        if ( p[i] == c )
+            return p+i;
+    }
+    return 0;
+}
+
+/*-----------------------------------------------------------------------------
+ * Like memchr, except searches backward from the end of the n bytes pointed to
+ * by s instead of forward from the beginning */
+//-----------------------------------------------------------------------------
+void *memrchr (const void *s, int c, size_t n) {
+    unsigned const char *p = s;
+    for (size_t i = n-1; i > 0; i--) {
+        if ( p[i] == c )
+            return p+i;
+    }
+    return 0;
+}
+
+/*-----------------------------------------------------------------------------
+ * Similar to memchr, except assumes that an instance of c lies somewhere in
+ * the memory area starting at the location pointed to by s */
+//-----------------------------------------------------------------------------
+void *rawmemchr (const void *s, int c) {
+    unsigned const char *p = s;
+    while ( 1 ) {
+        if ( *p == c )
+            return p;
+        p++;
+    }
+}
+
+/*-----------------------------------------------------------------------------
+ * Appends the src string to the dest string, overwriting the terminating null
+ * byte ('\0') at the end of src, then adds a terminating null byte.  The
+ * strings may not overlap, and the dest string must have enough space for the
+ * result */
+//-----------------------------------------------------------------------------
 char *strcat (char *dest, const char *src) {
     char *begin = dest;
     for (; *dest != '\0'; dest++);
@@ -30,6 +96,11 @@ char *strcat (char *dest, const char *src) {
     return begin;
 }
 
+/*-----------------------------------------------------------------------------
+ * Similar to strcat, except that this function will use at most n bytes from
+ * src, and src does not need to be null-terminated if it contains n or more
+ * bytes */
+//-----------------------------------------------------------------------------
 char *strncat (char *dest, const char *src, size_t n) {
     char *begin = dest;
 
@@ -40,6 +111,10 @@ char *strncat (char *dest, const char *src, size_t n) {
     return begin;
 }
 
+/*-----------------------------------------------------------------------------
+ * Returns a pointer to the first occurrence of the character c in the string
+ * s, or NULL if the character is not found */
+//-----------------------------------------------------------------------------
 char *strchr (const char *s, int c) {
     for (; *s != '\0'; s++) {
         if (*s == c)
@@ -48,6 +123,10 @@ char *strchr (const char *s, int c) {
     return NULL;
 }
 
+/*-----------------------------------------------------------------------------
+ * Returns a pointer to the last occurrence of the character c in the string s,
+ * or NULL if the character is not found */
+//-----------------------------------------------------------------------------
 char *strrchr (const char *s, int c) {
     const char *rc = NULL;
     for (; *s != '\0'; s++) {
@@ -57,11 +136,20 @@ char *strrchr (const char *s, int c) {
     return rc;
 }
 
+/*-----------------------------------------------------------------------------
+ * Similar to strchr, except that if c is not found in s, then this function
+ * returns a pointer to the null byte at the end of s, rather than NULL */
+//-----------------------------------------------------------------------------
 char *strchrnul (const char *s, int c) {
     for (; *s != '\0' && *s != c; s++);
     return s;
 }
 
+/*-----------------------------------------------------------------------------
+ * Compares the two strings s1 and s2, returning an integer less than, equal
+ * to, or greater than zero if s1 is found, respectively, to be less than, to
+ * match, or be greater than s2 */
+//-----------------------------------------------------------------------------
 int strcmp (const char *s1, const char *s2) {
     for(;;s1++, s2++) {
         if (*s1 != *s2)
@@ -71,6 +159,10 @@ int strcmp (const char *s1, const char *s2) {
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Similar to strcmp, except that only the first (at most) n bytes of s1 and s2
+ * are compared */
+//-----------------------------------------------------------------------------
 int strncmp (const char *s1, const char *s2, size_t n) {
     for (size_t i = 0; i < n && *s1 != '\0'; i++, s1++, s2++) {
         if (*s1 != *s2)
@@ -79,6 +171,11 @@ int strncmp (const char *s1, const char *s2, size_t n) {
     return 0;
 }
 
+/*-----------------------------------------------------------------------------
+ * Copies the string pointed to by src, including the terminating null byte
+ * ('\0'), to the buffer pointed to by dest.  The strings may not overlap, and
+ * the destination string dest must be large enough to receive the copy */
+//-----------------------------------------------------------------------------
 char *strcpy (char *dest, const char *src) {
     size_t i;
     for (i = 0; src[i] != '\0'; i++)
@@ -87,21 +184,35 @@ char *strcpy (char *dest, const char *src) {
     return dest;
 }
 
+/*-----------------------------------------------------------------------------
+ * Similar to strcpy, except that at most n bytes of src are copied.  If the
+ * length of src is less than n, strncpy() writes additional null bytes to dest
+ * to ensure that a total of n bytes are written */
+//-----------------------------------------------------------------------------
 char *strncpy (char *dest, const char *src, size_t n) {
     size_t i;
     for (i = 0; i < n && src[i] != '\0'; i++) {
         dest[i] = src[i];
     }
-    dest[i] = '\0';
+    for (; i < n; i++)
+        dest[i] = '\0';
     return dest;
 }
 
+/*-----------------------------------------------------------------------------
+ * Calculates the length of the string s, excluding the terminating null byte
+ * ('\0') */
+//-----------------------------------------------------------------------------
 size_t strlen (const char *s) {
     size_t i;
     for (i = 0; s[i] != '\0'; i++);
     return i;
 }
 
+/*-----------------------------------------------------------------------------
+ * Locates the first occurrence in the string s of any of the bytes in the
+ * string accept */
+//-----------------------------------------------------------------------------
 char *strpbrk (const char *s, const char *accept) {
     char *c;
     for (; s != '\0'; s++) {
@@ -111,6 +222,10 @@ char *strpbrk (const char *s, const char *accept) {
     return NULL;
 }
 
+/*-----------------------------------------------------------------------------
+ * Calculates the length of the initial segment of s which consists entirely of
+ * bytes in accept */
+//-----------------------------------------------------------------------------
 size_t strspn (const char *s, const char *accept) {
     size_t n;
     char *c;
@@ -121,6 +236,10 @@ size_t strspn (const char *s, const char *accept) {
     return n;
 }
 
+/*-----------------------------------------------------------------------------
+ * Calculates the length of the initial segment of s which consists entirely of
+ * bytes not in reject */
+//-----------------------------------------------------------------------------
 size_t strcspn (const char *s, const char *reject) {
     size_t n;
     char *c;
@@ -131,11 +250,18 @@ size_t strcspn (const char *s, const char *reject) {
     return n;
 }
 
+/*-----------------------------------------------------------------------------
+ * Parses str into a sequence of tokens, delimited by the bytes in delim */
+//-----------------------------------------------------------------------------
 char *strtok (char *str, const char *delim) {
     char junk;
     return telos_strtok (str, delim, &junk);
 }
 
+/*-----------------------------------------------------------------------------
+ * Like strtok, except that *d is set to the delimiter for the current token
+ * when this function returns */
+//-----------------------------------------------------------------------------
 char *telos_strtok (char *str, const char *delim, char *d) {
     static char *tokp;
     char *tmp;

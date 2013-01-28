@@ -21,6 +21,5 @@
 char *itoa (int val, char *str, int base);
 
 /* mem.c */
-void memcpy (void *dest, const void *src, uint32_t n);
-void *memset (void *s, char c, uint32_t n);
 unsigned int kbtoa (unsigned char code);
+int regmatch (const char *regex, char *text);

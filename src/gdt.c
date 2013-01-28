@@ -21,7 +21,7 @@
 
 #include <kernel/common.h>
 #include <kernel/i386.h>
-#include <klib.h>
+#include <string.h>
 
 #define GDT_N_ENTRIES 6
 

@@ -21,7 +21,7 @@
 
 #include <kernel/common.h>
 #include <kernel/i386.h>
-#include <klib.h>
+#include <string.h>
 
 #define INTR_GATE 0xE
 #define TRAP_GATE 0xF
