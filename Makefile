@@ -38,7 +38,7 @@ CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
 KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
 
 USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/io.h \
-	 $(TELOS)/devices.h $(TELOS)/process.h $(TELOS)/mem.h
+	 $(TELOS)/devices.h $(TELOS)/process.h
 
 all: bin/kernel.img
 

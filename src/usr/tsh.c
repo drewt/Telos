@@ -23,7 +23,6 @@
 
 #include <telos/process.h>
 #include <telos/print.h>
-#include <telos/mem.h>
 #include <telos/io.h>
 
 #include <klib.h>
