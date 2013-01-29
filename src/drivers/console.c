@@ -22,9 +22,8 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/device.h>
 #include <kernel/drivers/console.h>
-
-#include <telos/devices.h>
 
 #include <string.h>
 #include <klib.h>

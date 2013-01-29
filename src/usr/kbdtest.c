@@ -23,7 +23,6 @@
 #include <unistd.h>
 
 #include <telos/process.h>
-#include <telos/devices.h>
 
 static void read_proc () {
     int fd;

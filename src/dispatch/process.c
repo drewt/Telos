@@ -24,8 +24,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
 #include <kernel/mem.h>
-
-#include <telos/devices.h>
+#include <kernel/device.h>
 
 #include <errnodefs.h>
 #include <signal.h>

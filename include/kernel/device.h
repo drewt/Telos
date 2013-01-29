@@ -23,11 +23,17 @@
 #define __DEVICE_H_
 
 #include <stdarg.h>
-#include <telos/devices.h>
 
 #define DT_SIZE 16
 
 #define IO_INCOMPLETE (-1)
+
+enum dev_id {
+    DEV_KBD,
+    DEV_KBD_ECHO,
+    DEV_CONSOLE_0,
+    DEV_CONSOLE_1,
+};
 
 struct device {
     int dvnum;

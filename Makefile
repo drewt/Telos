@@ -33,7 +33,6 @@ ARCH_H = $(KERNEL)/i386.h
 DISP_H = $(KERNEL)/dispatch.h $(KERNEL)/process.h include/errnodefs.h
 LIB_H = include/klib.h
 
-DEVICE_H = $(KERNEL)/device.h $(TELOS)/devices.h
 CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
 KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
 
@@ -48,7 +47,8 @@ $(OBJFILES): bin/%.o: src/%.c
 $(USERFILES): $(USER_H)
 $(ROOTFILES): $(COMMON)
 $(DISPFILES): $(COMMON) $(DISP_H)
-$(DRVRFILES): bin/%.o: $(KERNEL)/%.h $(COMMON) $(DISP_H) $(ARCH_H) $(DEVICE_H)
+$(DRVRFILES): bin/%.o: $(KERNEL)/%.h $(COMMON) $(DISP_H) $(ARCH_H) \
+    $(KERNEL)/device.h
 
 # make a multiboot-compliant ELF kernel
 bin/kernel.bin: bin/loader.o $(OBJFILES) $(LIB)/klib.a
@@ -76,13 +76,14 @@ bin/syscall.o: include/telos/process.h
 bin/pic.o: $(ARCH_H)
 bin/sysproc.o: $(USER_H)
 bin/procqueue.o: $(KERNEL)/process.h
-bin/devinit.o: $(DEVICE_H) $(KEYBOARD_H) $(CONSOLE_H)
+bin/devinit.o: $(KERNEL)/device.h $(KEYBOARD_H) $(CONSOLE_H)
 
 # DISPFILES: system call and interrupt service code
-bin/dispatch/dispatch.o: include/syscall.h $(DEVICE_H) $(KERNEL)/interrupt.h
+bin/dispatch/dispatch.o: include/syscall.h $(KERNEL)/device.h \
+    $(KERNEL)/interrupt.h
 bin/dispatch/process.o: $(ARCH_H) $(KERNEL)/time.h $(KERNEL)/mem.h
 bin/dispatch/time.o: $(ARCH_H)
-bin/dispatch/io.o: $(DEVICE_H)
+bin/dispatch/io.o: $(KERNEL)/device.h
 bin/dispatch/signal.o: $(ARCH_H) include/syscall.h include/signal.h
 bin/dispatch/mem.o: $(KERNEL)/mem.h
 
