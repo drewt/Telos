@@ -24,8 +24,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <telos/io.h>
-
 #include <klib.h>
 
 #define WRITE_SIZE 200

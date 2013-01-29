@@ -17,9 +17,9 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 
-#include <telos/io.h>
 #include <telos/msg.h>
 #include <telos/process.h>
 #include <unistd.h>

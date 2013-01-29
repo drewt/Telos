@@ -20,11 +20,12 @@
  */
 
 #include <stddef.h>
+#include <unistd.h>
+#include <signal.h>
+
 #include <syscall.h>
 #include <telos/process.h>
 #include <telos/msg.h>
-#include <telos/io.h>
-#include <signal.h>
 
 typedef int pid_t;
 
@@ -124,42 +125,4 @@ int sigwait (void) {
 
 /* IO.H */
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-int open (const char *pathname, int flags, ...) {
-    int rv = syscall2 (SYS_OPEN, (void*) pathname, (void*) flags);
-    if (rv < 0)
-        return -1;
-    return rv;
-}
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-int close (int fd) {
-    int rv = syscall1 (SYS_CLOSE, (void*) fd);
-    if (rv < 0)
-        return -1;
-    return rv;
-}
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-ssize_t read (int fd, void *buf, size_t nbyte) {
-    int rv = syscall3 (SYS_READ, (void*) fd, buf, (void*) nbyte);
-    if (rv < 0)
-        return -1;
-    return rv;
-}
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-ssize_t write (int fd, const void *buf, size_t nbyte) {
-    int rv = syscall3 (SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
-    if (rv < 0)
-        return -1;
-    return rv;
-}

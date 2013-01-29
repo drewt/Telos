@@ -17,7 +17,7 @@
  */
 
 #include <stddef.h>
-#include <telos/io.h>
+#include <stdio.h>
 #include <unistd.h>
 
 int getchar (void) {

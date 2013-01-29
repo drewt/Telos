@@ -23,7 +23,6 @@
 #include <signal.h>
 
 #include <telos/process.h>
-#include <telos/io.h>
 
 #include <klib.h>
 
@@ -146,10 +145,6 @@ void tsh () {
     funcptr p;
 
     signal (SIGCHLD, sigchld_handler);
-
-    char buf[21];
-    snprintf (buf, 21, "formatted %s #%d\n", "string", 1);
-    printf (buf);
 
     for (;;) {
         printf ("%s", prompt);

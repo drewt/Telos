@@ -24,7 +24,6 @@
 
 #include <telos/process.h>
 #include <telos/devices.h>
-#include <telos/io.h>
 
 static void read_proc () {
     int fd;

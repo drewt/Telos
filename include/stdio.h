@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+#define EOF (-1)
+
 int vsnprintf (char *str, size_t size, const char *fmt, va_list ap);
 int snprintf (char *str, size_t size, const char *fmt, ...);
 int vsprintf (char *str, const char *fmt, va_list ap);
