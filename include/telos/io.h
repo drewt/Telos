@@ -29,7 +29,7 @@
 typedef unsigned long size_t;
 typedef long ssize_t;
 
-int open (int devno);
+int open (const char *pathname, int flags, ...);
 int close (int fd);
 ssize_t read (int fd, void *buf, size_t nbyte);
 ssize_t write (int fd, const void *buf, size_t nbyte);

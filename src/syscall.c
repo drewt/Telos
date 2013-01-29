@@ -127,27 +127,39 @@ int sigwait (void) {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int open (int devno) {
-    return syscall1 (SYS_OPEN, (void*) devno);
+int open (const char *pathname, int flags, ...) {
+    int rv = syscall2 (SYS_OPEN, (void*) pathname, (void*) flags);
+    if (rv < 0)
+        return -1;
+    return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
 int close (int fd) {
-    return syscall1 (SYS_CLOSE, (void*) fd);
+    int rv = syscall1 (SYS_CLOSE, (void*) fd);
+    if (rv < 0)
+        return -1;
+    return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
 ssize_t read (int fd, void *buf, size_t nbyte) {
-    return syscall3 (SYS_READ, (void*) fd, buf, (void*) nbyte);
+    int rv = syscall3 (SYS_READ, (void*) fd, buf, (void*) nbyte);
+    if (rv < 0)
+        return -1;
+    return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
 ssize_t write (int fd, const void *buf, size_t nbyte) {
-    return syscall3 (SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
+    int rv = syscall3 (SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
+    if (rv < 0)
+        return -1;
+    return rv;
 }

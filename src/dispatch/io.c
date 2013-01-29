@@ -23,31 +23,43 @@
 #include <kernel/device.h>
 
 #include <errnodefs.h>
+#include <string.h> // pseudo-fs hack
 
 #define FD_VALID(fd) (fd >= 0 && fd < FDT_SIZE && current->fds[fd] != FD_NONE)
+
+// TODO: replace with real dev filesystem
+static const char *devmap[4] = {
+    [DEV_KBD]       = "/dev/kbd",
+    [DEV_KBD_ECHO]  = "/dev/kbd_echo",
+    [DEV_CONSOLE_0] = "/dev/cons0",
+    [DEV_CONSOLE_1] = "/dev/cons1"
+};
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_open (enum dev_id devno) {
+void sys_open (const char *pathname, int flags, ...) {
+    int fd;
+    enum dev_id devno;
 
-    if (devno > DT_SIZE) {
-        current->rc = ENODEV;
+    // look up device corresponding to pathname
+    for (devno = 0; devno < 4; devno++)
+        if (!strcmp (pathname, devmap[devno]))
+            break;
+    if (devno == 4) {
+        current->rc = -(ENOENT);
         return;
     }
-    
-    if (devtab[devno].dvopen(devno)) {
-        current->rc = SYSERR;
-        return;
-    }
 
-    int i;
-    for (i = 0; i < FDT_SIZE && current->fds[i] != FD_NONE; i++);
-    if (i == FDT_SIZE) {
-        current->rc = EMFILE;
+    if ((current->rc = devtab[devno].dvopen(devno)))
+        return;
+
+    for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);
+    if (fd == FDT_SIZE) {
+        current->rc = -(EMFILE);
     } else {
-        current->fds[i] = devno;
-        current->rc = i;
+        current->fds[fd] = devno;
+        current->rc = fd;
     }
 }
 
@@ -58,11 +70,11 @@ void sys_close (int fd) {
 
     enum dev_id devno = current->fds[fd];
     if (!FD_VALID (fd)) {
-        current->rc = EBADF;
+        current->rc = -(EBADF);
         return;
     }
     if (devtab[devno].dvclose (devno)) {
-        current->rc = EIO;
+        current->rc = -(EIO);
         return;
     }
 
@@ -76,7 +88,7 @@ void sys_close (int fd) {
 void sys_read (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = EBADF;
+        current->rc = -(EBADF);
         return;
     }
 
@@ -89,7 +101,7 @@ void sys_read (int fd, void *buf, int nbyte) {
 void sys_write (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = EBADF;
+        current->rc = -(EBADF);
         return;
     }
 

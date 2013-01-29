@@ -60,7 +60,7 @@ void sys_sigwait (void);
 void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 void sys_recv (int *src_pid, void *buffer, int length);
 void sys_reply (int src_pid, void *buffer, int length);
-void sys_open (enum dev_id devno);
+void sys_open (const char *pathname, int flags, ...);
 void sys_close (int fd);
 void sys_read (int fd, void *buf, int nbyte);
 void sys_write (int fd, void *buf, int nbyte);

@@ -24,15 +24,24 @@
 
 #include <telos/process.h>
 #include <telos/devices.h>
+#include <telos/io.h>
 
 static void read_proc () {
+    int fd;
     char in[5];
     
     puts ("Reading: ");
-    if (gets (in, 5))
-        printf (" : %s\n", in);
-    else
-        puts (" : ERROR");
+    if ((fd = open ("/dev/kbd", 0)) == -1) {
+        puts ("Error opening keyboard");
+        return;
+    }
+
+    if (read (fd, in, 4) == -1) {
+        puts ("Error reading from keyboard");
+        return;
+    }
+    in[4] = '\0';
+    puts (in);
 }
 
 static void sigchld_handler (int signo) {}
