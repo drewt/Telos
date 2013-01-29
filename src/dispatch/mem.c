@@ -16,8 +16,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <mem.h>
 #include <kernel/dispatch.h>
+#include <kernel/mem.h>
+
+#include <errnodefs.h>
 
 #define MAX_ALLOC 0x4000
 
@@ -27,12 +29,12 @@ void sys_malloc (unsigned int size, void **p) {
 
     // TODO: limit memory use in a more `global' way
     if (size > MAX_ALLOC) {
-        current->rc = SYSERR;
+        current->rc = ENOMEM;
         return;
     }
 
     if (!(*p = hmalloc (size, &h))) {
-        current->rc = SYSERR;
+        current->rc = ENOMEM;
         return;
     }
 

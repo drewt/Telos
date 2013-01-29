@@ -21,8 +21,8 @@
 #include <telos/io.h>
 #include <telos/msg.h>
 #include <telos/print.h>
-#include <telos/filedes.h>
 #include <telos/process.h>
+#include <unistd.h>
 
 #define BUF_LEN 100
 

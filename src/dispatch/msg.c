@@ -21,6 +21,7 @@
 
 #include <kernel/dispatch.h>
 
+#include <errnodefs.h>
 #include <string.h>
 
 /*-----------------------------------------------------------------------------
@@ -33,13 +34,13 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
     struct pcb *dest;
 
     if (olen <= 0 || dest_pid <= 0) {
-        current->rc = SYSERR;
+        current->rc = -(EINVAL);
         return;
     }
 
     tmp = PT_INDEX (dest_pid);
     if (proctab[tmp].pid != dest_pid) {
-        current->rc = SYSERR;
+        current->rc = -(ESRCH);
         return;
     }
 
@@ -90,7 +91,7 @@ void sys_recv (int *src_pid, void *buffer, int length) {
     struct pcb *src = NULL;
 
     if (length <= 0 || *src_pid < 0) {
-        current->rc = SYSERR;
+        current->rc = -(EINVAL);
         return;
     }
 
@@ -108,7 +109,7 @@ void sys_recv (int *src_pid, void *buffer, int length) {
 
     tmp = PT_INDEX (*src_pid);
     if (proctab[tmp].pid != *src_pid) {
-        current->rc = SYSERR;
+        current->rc = -(ESRCH);
         return;
     }
 
@@ -145,13 +146,13 @@ void sys_reply (int src_pid, void *buffer, int length) {
     struct pcb *src;
 
     if (length < 0 || src_pid <= 0) {
-        current->rc = SYSERR;
+        current->rc = -(EINVAL);
         return;
     }
 
     tmp = PT_INDEX (src_pid);
     if (proctab[tmp].pid != src_pid) {
-        current->rc = SYSERR;
+        current->rc = -(ESRCH);
         return;
     }
 
@@ -159,7 +160,7 @@ void sys_reply (int src_pid, void *buffer, int length) {
 
     // it is an error to reply before a corresponding send
     if (src->state != STATE_BLOCKED || src->reply_blk.id != current->pid) {
-        current->rc = SYSERR;
+        current->rc = -(EBADMSG); // XXX: better errno for this?
         return;
     }
 

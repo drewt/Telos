@@ -19,12 +19,12 @@
 #include <stddef.h>
 
 #include <signal.h>
+#include <unistd.h>
 
 #include <telos/io.h>
 #include <telos/print.h>
 #include <telos/process.h>
 #include <telos/devices.h>
-#include <telos/filedes.h>
 
 static void read_proc () {
     char in[5];

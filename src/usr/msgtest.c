@@ -23,6 +23,7 @@
 #include <telos/process.h>
 #include <telos/print.h>
 #include <string.h>
+#include <unistd.h>
 
 pid_t main_pid;
 
@@ -63,14 +64,14 @@ void msg_test (void *arg) {
     puts ("Testing block-on-recv...");
     for (int i = 0; i < 10; i++)
         pids[i] = syscreate (recv_proc, 1, &msg);
-    syssleep (100);
+    sleep (1);
     for (int i = 0; i < 10; i++)
         send (pids[i], msg, 4, NULL, 0);
 
     puts ("Testing block-on-send...");
     for (int i = 0; i < 10; i++)
         pids[i] = syscreate (send_proc, 0, NULL);
-    syssleep (100);
+    sleep (1);
     for (int i = 0; i < 10; i++) {
         if (recv (&pids[i], buf, 40) == -1) {
             puts ("recv error: returned -1");

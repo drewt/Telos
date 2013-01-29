@@ -23,12 +23,13 @@
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
+#include <kernel/mem.h>
 
 #include <telos/devices.h>
-#include <telos/filedes.h>
 
+#include <errnodefs.h>
 #include <signal.h>
-#include <mem.h>
+#include <unistd.h>
 
 extern void sysstop (void);
 
@@ -37,16 +38,23 @@ extern void sysstop (void);
 //-----------------------------------------------------------------------------
 int sys_create (void (*func)(int,char*), int argc, char **argv) {
     int i;
+    void *pstack;
     struct pcb *p;
 
     // find a free PCB
     for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++);
     if (i == PT_SIZE) {
-        current->rc = SYSERR;
-        return SYSERR;
+        current->rc = EAGAIN;
+        return EAGAIN;
+    }
+    if (!(pstack = kmalloc (STACK_SIZE))) {
+        current->rc = ENOMEM;
+        return ENOMEM;
     }
 
     p = &proctab[i];
+
+    p->stack_mem = pstack;
 
     p->timestamp  = tick_count;
 
@@ -67,10 +75,6 @@ int sys_create (void (*func)(int,char*), int argc, char **argv) {
     p->fds[STDERR_FILENO] = DEV_CONSOLE_0;
     for (int j = 3; j < FDT_SIZE; j++)
         p->fds[j] = FD_NONE;
-
-    // allocate a stack
-    void *pstack = kmalloc (STACK_SIZE);
-    p->stack_mem = pstack;
 
     // set up the context stack
     struct ctxt *f = (struct ctxt*) pstack + 32;

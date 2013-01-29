@@ -20,7 +20,7 @@
  */
 
 #include <kernel/common.h>
-#include <mem.h>
+#include <kernel/mem.h>
 
 #define PARAGRAPH_MASK (~(0xF))
 #define PAGE_MASK (~(0xFFF))
@@ -45,7 +45,11 @@ void mem_init (void) {
     free_list->sanity_check = SANITY_FREE;
 }
 
-void *kmalloc (uint32_t size) {
+/*-----------------------------------------------------------------------------
+ * Allocates size bytes of memory, returning a pointer to the start of the
+ * allocated block */
+//-----------------------------------------------------------------------------
+void *kmalloc (unsigned int size) {
     return hmalloc (size, NULL);
 }
 
@@ -55,7 +59,7 @@ void *kmalloc (uint32_t size) {
  * size bytes of memory, *hdr will point to the struct mem_header corresponding
  * to the allocated block when this function returns */
 //-----------------------------------------------------------------------------
-void *hmalloc (uint32_t size, struct mem_header **hdr) {
+void *hmalloc (unsigned int size, struct mem_header **hdr) {
 
     struct mem_header *p, *r;
 

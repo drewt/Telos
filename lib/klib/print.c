@@ -21,8 +21,9 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <unistd.h>
+
 #include <telos/io.h>
-#include <telos/filedes.h>
 #include <telos/print.h>
 
 #include <klib.h>

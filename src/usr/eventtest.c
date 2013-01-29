@@ -19,24 +19,25 @@
 #include <telos/process.h>
 #include <telos/print.h>
 #include <signal.h>
+#include <unistd.h>
 
 static void sleep_proc (int argc, char *argv[]) {
-    syssleep (argc);
+    sleep (argc);
     printf ("%d ", argc);
 }
 
 static void sleep_test (void) {
     printf ("Testing sleep...\nVerify ascending: ");
-    syscreate (sleep_proc, 100, NULL);
-    syscreate (sleep_proc, 990, NULL);
-    syscreate (sleep_proc, 1440, NULL);
-    syssleep (2000);
+    syscreate (sleep_proc, 1, NULL);
+    syscreate (sleep_proc, 2, NULL);
+    syscreate (sleep_proc, 3, NULL);
+    sleep (4);
 
     printf ("\nVefify ascending: ");
-    syscreate (sleep_proc, 1440, NULL);
-    syscreate (sleep_proc, 990, NULL);
-    syscreate (sleep_proc, 100, NULL);
-    syssleep (2000);
+    syscreate (sleep_proc, 3, NULL);
+    syscreate (sleep_proc, 2, NULL);
+    syscreate (sleep_proc, 1, NULL);
+    sleep (4);
     puts ("");
 }
 

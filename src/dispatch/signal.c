@@ -22,6 +22,8 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+
+#include <errnodefs.h>
 #include <syscall.h>
 #include <signal.h>
 #include <bit.h>
@@ -136,7 +138,7 @@ void sys_sigwait (void) {
 void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
 
     if (sig < 0 || sig > 31) {
-        current->rc = SYSERR;
+        current->rc = EINVAL;
         return;
     }
 
@@ -157,7 +159,7 @@ void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
 void sys_signal (int sig, void(*func)(int)) {
 
     if (sig < 0 || sig > 31) {
-        current->rc = SYSERR;
+        current->rc = EINVAL;
         return;
     }
 
@@ -194,7 +196,7 @@ void sys_sigprocmask (int how, uint32_t *set, uint32_t *oset) {
             current->sig_ignore |= *set;
             break;
         default:
-            current->rc = SYSERR;
+            current->rc = EINVAL;
             return;
         }
     }
@@ -210,11 +212,11 @@ void sys_kill (int pid, int sig_no) {
     int pti = PT_INDEX (pid);
 
     if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {
-        current->rc = SYSERR;
+        current->rc = ESRCH;
         return;
     }
     if (sig_no < 0 || !sig_bit) {
-        current->rc = SYSERR;
+        current->rc = EINVAL;
         return;
     }
 

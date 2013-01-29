@@ -22,7 +22,6 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
-#include <mem.h>
 #include <sigdefs.h>
 #include <kernel/device.h>
 

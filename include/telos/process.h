@@ -22,13 +22,8 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
-typedef int pid_t;
-
 int syscreate (void(*func)(int,char**), int argc, char *argv[]);
 void sysyield (void);
 void sysstop (void);
-int getpid (void);
-int syssleep (int milliseconds);
-int alarm (int seconds);
 
 #endif // __PROCESS_H_

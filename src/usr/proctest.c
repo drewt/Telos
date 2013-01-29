@@ -20,6 +20,7 @@
  */
 
 #include <stddef.h>
+#include <unistd.h>
 
 #include <telos/process.h>
 #include <telos/print.h>
@@ -37,17 +38,17 @@ void proc_test (void *arg) {
     char *a = "a", *s = "s", *d = "d", *f = "f";
     printf ("Testing syscreate... asdf ?= ");
     syscreate (print_proc, 1, &a);
-    syssleep (50);
+    sleep (1);
     syscreate (print_proc, 1, &s);
-    syssleep (50);
+    sleep (1);
     syscreate (print_proc, 1, &d);
-    syssleep (50);
+    sleep (1);
     syscreate (print_proc, 1, &f);
-    syssleep (50);
+    sleep (1);
     puts ("");
 
     printf ("Testing sysstop...");
     syscreate (stop_proc, 0, NULL);
-    syssleep (50);
+    sleep (1);
     puts ("");
 }

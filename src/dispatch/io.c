@@ -22,6 +22,8 @@
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 
+#include <errnodefs.h>
+
 #define FD_VALID(fd) (fd >= 0 && fd < FDT_SIZE && current->fds[fd] != FD_NONE)
 
 /*-----------------------------------------------------------------------------
@@ -29,8 +31,12 @@
 //-----------------------------------------------------------------------------
 void sys_open (enum dev_id devno) {
 
-    // XXX: first clause redundant if DT_SIZE >= range of enum
-    if (devno > DT_SIZE || devtab[devno].dvopen(devno)) {
+    if (devno > DT_SIZE) {
+        current->rc = ENODEV;
+        return;
+    }
+    
+    if (devtab[devno].dvopen(devno)) {
         current->rc = SYSERR;
         return;
     }
@@ -38,7 +44,7 @@ void sys_open (enum dev_id devno) {
     int i;
     for (i = 0; i < FDT_SIZE && current->fds[i] != FD_NONE; i++);
     if (i == FDT_SIZE) {
-        current->rc = SYSERR;
+        current->rc = EMFILE;
     } else {
         current->fds[i] = devno;
         current->rc = i;
@@ -51,8 +57,12 @@ void sys_open (enum dev_id devno) {
 void sys_close (int fd) {
 
     enum dev_id devno = current->fds[fd];
-    if (!FD_VALID (fd) || devtab[devno].dvclose (devno)) {
-        current->rc = SYSERR;
+    if (!FD_VALID (fd)) {
+        current->rc = EBADF;
+        return;
+    }
+    if (devtab[devno].dvclose (devno)) {
+        current->rc = EIO;
         return;
     }
 
@@ -66,7 +76,7 @@ void sys_close (int fd) {
 void sys_read (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = SYSERR;
+        current->rc = EBADF;
         return;
     }
 
@@ -79,7 +89,7 @@ void sys_read (int fd, void *buf, int nbyte) {
 void sys_write (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = SYSERR;
+        current->rc = EBADF;
         return;
     }
 

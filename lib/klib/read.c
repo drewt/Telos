@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 #include <telos/io.h>
-#include <telos/filedes.h>
+#include <unistd.h>
 
 int getchar (void) {
     unsigned char c;

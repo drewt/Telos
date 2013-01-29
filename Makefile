@@ -30,7 +30,7 @@ TELOS = include/telos
 
 COMMON = $(KERNEL)/common.h
 ARCH_H = $(KERNEL)/i386.h
-DISP_H = $(KERNEL)/dispatch.h $(KERNEL)/process.h
+DISP_H = $(KERNEL)/dispatch.h $(KERNEL)/process.h include/errnodefs.h
 LIB_H = include/klib.h
 
 DEVICE_H = $(KERNEL)/device.h $(TELOS)/devices.h
@@ -38,7 +38,7 @@ CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
 KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
 
 USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/io.h \
-	 $(TELOS)/devices.h $(TELOS)/process.h
+	 $(TELOS)/devices.h $(TELOS)/process.h include/unistd.h
 
 all: bin/kernel.img
 
@@ -67,7 +67,7 @@ bin/loader.o: boot/loader.s
 # ROOTFILES: core kernel files
 bin/kernel.o: $(ARCH_H) $(DISP_H) $(KERNEL)/multiboot.h $(KERNEL)/kernel.h \
     $(CONSOLE_H)
-bin/mem.o: include/mem.h
+bin/mem.o: $(KERNEL)/mem.h
 bin/gdt.o: $(ARCH_H) $(LIB_H)
 bin/intr.o: $(LIB_H) $(ARCH_H)
 bin/inthandlers.o: $(ARCH_H)
@@ -80,11 +80,11 @@ bin/devinit.o: $(DEVICE_H) $(KEYBOARD_H) $(CONSOLE_H)
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: include/syscall.h $(DEVICE_H) $(KERNEL)/interrupt.h
-bin/dispatch/process.o: $(ARCH_H) $(KERNEL)/time.h include/mem.h
+bin/dispatch/process.o: $(ARCH_H) $(KERNEL)/time.h $(KERNEL)/mem.h
 bin/dispatch/time.o: $(ARCH_H)
 bin/dispatch/io.o: $(DEVICE_H)
 bin/dispatch/signal.o: $(ARCH_H) include/syscall.h include/signal.h
-bin/dispatch/mem.o: include/mem.h
+bin/dispatch/mem.o: $(KERNEL)/mem.h
 
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)

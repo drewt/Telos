@@ -68,8 +68,8 @@ static void alrm_action (struct pcb *p) {
 /*-----------------------------------------------------------------------------
  * Puts the current process to sleep for a given number of milliseconds */
 //-----------------------------------------------------------------------------
-void sys_sleep (unsigned int milliseconds) {
-    delta_list_insert (EVENT_WAKE, current, milliseconds, wake_action);
+void sys_sleep (unsigned int seconds) {
+    delta_list_insert (EVENT_WAKE, current, seconds * 100, wake_action);
     new_process ();
 }
 

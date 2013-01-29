@@ -31,8 +31,6 @@ void memcpy (void *dest, const void *src, size_t n) {
     for (size_t i = 0; i < n; i++)
         d[i] = s[i];
 }
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic pop
 
 /*-----------------------------------------------------------------------------
  * Fills the first n bytes of the memory area pointed to by s with the constant

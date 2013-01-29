@@ -21,6 +21,7 @@
 
 #include <stddef.h>
 #include <signal.h>
+#include <unistd.h>
 #include <kernel/common.h>
 #include <telos/process.h>
 #include <telos/print.h>
@@ -52,9 +53,9 @@ static void sigusr1_handler (int signo) {
 }
 
 static void sig_proc () {
-    syssleep (500);
+    sleep (1);
     kill (sigtest_pid, SIGUSR1);
-    syssleep (500);
+    sleep (1);
     kill (sigtest_pid, SIGUSR2);
 }
 
