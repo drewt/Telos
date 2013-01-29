@@ -17,7 +17,7 @@
  */
 
 #include <stdlib.h>
-#include <telos/print.h>
+#include <stdio.h>
 
 #define N 25
 #define M 100

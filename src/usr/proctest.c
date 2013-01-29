@@ -20,10 +20,10 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <telos/process.h>
-#include <telos/print.h>
 
 static void print_proc (int argc, char *argv[]) {
     printf ("%s", (char*) argv[0]);

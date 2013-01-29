@@ -19,13 +19,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/common.h>
-#include <kernel/device.h>
-#include <telos/io.h>
+#include <stdio.h>
+#include <signal.h>
 
 #include <telos/process.h>
-#include <telos/print.h>
-#include <signal.h>
 
 void tsh (int argc, char **argv);
 
@@ -43,7 +40,7 @@ void root () {
     
     syscreate (tsh, 0, NULL);
     for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
-    kprintf ("Goodbye!");
+    printf ("Goodbye!");
 
     for(;;);
 }

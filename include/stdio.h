@@ -1,9 +1,6 @@
-/* io.h : I/O system calls
- */
-
 /*  Copyright 2013 Drew T.
  *
- *  This file is part of Telos.
+ *  This file is part of the Telos C Library.
  *  
  *  Telos is free software: you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software
@@ -19,19 +16,21 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_IO_H_
-#define __TELOS_IO_H_
+#ifndef __STDIO_H_
+#define __STDIO_H_
 
-#include <telos/devices.h>
+#include <stddef.h>
+#include <stdarg.h>
 
-#define EOF 4
+int vsnprintf (char *str, size_t size, const char *fmt, va_list ap);
+int snprintf (char *str, size_t size, const char *fmt, ...);
+int vsprintf (char *str, const char *fmt, va_list ap);
+int sprintf (char *str, const char *fmt, ...);
+int printf (const char *fmt, ...);
+int vprintf (const char *fmt, va_list ap);
+int puts (const char *s);
 
-typedef unsigned long size_t;
-typedef long ssize_t;
+int getchar (void);
+char *gets (char *s, int size);
 
-int open (int devno);
-int close (int fd);
-ssize_t read (int fd, void *buf, size_t nbyte);
-ssize_t write (int fd, const void *buf, size_t nbyte);
-
-#endif // __TELOS_IO_H_
+#endif // __STDIO_H_

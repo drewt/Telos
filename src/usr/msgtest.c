@@ -19,11 +19,12 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <telos/msg.h>
-#include <telos/process.h>
-#include <telos/print.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <telos/msg.h>
+#include <telos/process.h>
 
 pid_t main_pid;
 

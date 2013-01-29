@@ -20,11 +20,12 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+
 #include <kernel/common.h>
 #include <telos/process.h>
-#include <telos/print.h>
 
 static pid_t sigtest_pid;
 
@@ -47,7 +48,7 @@ static void sigusr1_handler (int signo) {
     printf ("a");
     sig = sigwait ();
     if (sig != SIGUSR2)
-        sysreport ("SIGUSR1 handler: bad signal\n");
+        puts ("SIGUSR1 handler: bad signal");
     else
         puts ("c");
 }

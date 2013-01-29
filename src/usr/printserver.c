@@ -16,11 +16,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <string.h>
 
 #include <telos/io.h>
 #include <telos/msg.h>
-#include <telos/print.h>
 #include <telos/process.h>
 #include <unistd.h>
 

@@ -19,9 +19,9 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <string.h>
 
-#include <telos/print.h>
 #include <usr/test.h>
 
 static void strcmp_test (void) {

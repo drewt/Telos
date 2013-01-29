@@ -17,12 +17,11 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include <signal.h>
 #include <unistd.h>
 
-#include <telos/io.h>
-#include <telos/print.h>
 #include <telos/process.h>
 #include <telos/devices.h>
 

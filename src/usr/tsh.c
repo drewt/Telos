@@ -18,11 +18,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <signal.h>
 
 #include <telos/process.h>
-#include <telos/print.h>
 #include <telos/io.h>
 
 #include <klib.h>

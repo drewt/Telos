@@ -22,17 +22,6 @@
 #ifndef __TELOS_PRINT_H_
 #define __TELOS_PRINT_H_
 
-#include <stdarg.h>
-#include <stddef.h>
-
-int vsnprintf (char *str, size_t size, const char *fmt, va_list ap);
-int snprintf (char *str, size_t size, const char *fmt, ...);
-int vsprintf (char *str, const char *fmt, va_list ap);
-int sprintf (char *str, const char *fmt, ...);
-int printf (const char *fmt, ...);
-int vprintf (const char *fmt, va_list ap);
-int puts (const char *s);
-
 void sysreport (char *s);
 
 #endif

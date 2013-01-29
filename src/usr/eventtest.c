@@ -16,10 +16,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <telos/process.h>
-#include <telos/print.h>
+#include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+
+#include <telos/process.h>
 
 static void sleep_proc (int argc, char *argv[]) {
     sleep (argc);
