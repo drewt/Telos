@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+FILE *stdin  = &((FILE) { .fd = 0 });
+FILE *stdout = &((FILE) { .fd = 1 });
+FILE *stderr = &((FILE) { .fd = 2 });
+
 int getchar (void) {
     unsigned char c;
     if (!read (STDIN_FILENO, &c, 1))

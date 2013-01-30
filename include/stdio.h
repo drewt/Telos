@@ -24,6 +24,14 @@
 
 #define EOF (-1)
 
+typedef struct {
+    int fd;
+} FILE;
+
+extern FILE *stdin;
+extern FILE *stdout;
+extern FILE *stderr;
+
 int vsnprintf (char *str, size_t size, const char *fmt, va_list ap);
 int snprintf (char *str, size_t size, const char *fmt, ...);
 int vsprintf (char *str, const char *fmt, va_list ap);
