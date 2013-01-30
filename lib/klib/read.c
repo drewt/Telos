@@ -40,3 +40,13 @@ char *gets (char *s, int size) {
     s[rv] = '\0';
     return s;
 }
+
+size_t fwrite (const void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    int rv = write (stream->fd, ptr, size * nmemb);
+    return (rv < 0) ? 0 : rv;
+}
+
+size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    int rv = read (stream->fd, ptr, size * nmemb);
+    return (rv < 0) ? 0 : rv;
+}

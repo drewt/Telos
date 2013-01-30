@@ -40,6 +40,9 @@ int printf (const char *fmt, ...);
 int vprintf (const char *fmt, va_list ap);
 int puts (const char *s);
 
+size_t fwrite (const void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream);
+
 int getchar (void);
 char *gets (char *s, int size);
 
