@@ -47,7 +47,8 @@ enum syscall_id {
     SYS_WRITE,
     SYS_ALARM,
     SYS_MALLOC,
-    SYS_FREE
+    SYS_FREE,
+    SYSCALL_MAX
 };
 
 /* structure of arguments on the stack during a system call */

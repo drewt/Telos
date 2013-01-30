@@ -25,8 +25,6 @@
 #include <kernel/interrupt.h>
 #include <syscall.h>
 
-#define DISPTAB_SIZE 100
-
 /* routines defined in other files */
 extern unsigned int context_switch (struct pcb *p);
 extern int send_signal (int pid, int sig_no);
@@ -42,7 +40,7 @@ struct sysaction {
 };
 
 /* table of actions to be taken for interrupts/system calls */
-static struct sysaction sysactions[DISPTAB_SIZE] = {
+static struct sysaction sysactions[SYSCALL_MAX] = {
 //    - INDEX -             - ACTION -            - ARGS -
     [TIMER_INTR]    = { (void(*)()) tick,            0 },
     [SYS_CREATE]    = { (void(*)()) sys_create,      3 },
@@ -104,7 +102,7 @@ void dispatch (void) {
         req  = context_switch (current);
         args = current->esp;
 
-        if (req < DISPTAB_SIZE && sysactions[req].func != NULL) {
+        if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
             switch (sysactions[req].nargs) {
             case 0:
                 sysactions[req].func ();
