@@ -124,7 +124,7 @@ int sprintf (char *str, const char *fmt, ...) {
     return rv;
 }
 
-static int fmt_print (const char *fmt, va_list *ap, int *count) {
+static int fmt_print (int fd, const char *fmt, va_list *ap, int *count) {
     char c;
     char *s;
     char buf[33];
@@ -133,23 +133,23 @@ static int fmt_print (const char *fmt, va_list *ap, int *count) {
     for (int i = 0; fmt[i] != '\0'; i++) {
         switch (fmt[i]) {
         case '%':
-            write (STDOUT_FILENO, "%", 1);
+            write (fd, "%", 1);
             (*count)++;
             return 1;
         case 'c':
             c = va_arg (*ap, int);
-            write (STDOUT_FILENO, &c, 1);
+            write (fd, &c, 1);
             (*count)++;
             return 1;
         case 'd':
         case 'i':
             itoa (va_arg (*ap, int), buf, 10);
-            rv = write (STDOUT_FILENO, buf, 33);
+            rv = write (fd, buf, 33);
             (*count)++;
             return rv;
         case 's':
             s = va_arg (*ap, char*);
-            while ((tmp = write (STDOUT_FILENO, s, WRITE_SIZE)) != 0) {
+            while ((tmp = write (fd, s, WRITE_SIZE)) != 0) {
                 s += tmp;
                 rv += tmp;
             }
@@ -170,23 +170,36 @@ int printf (const char *fmt, ...) {
     int rv;
     va_list ap;
     va_start (ap, fmt);
-    rv = vprintf (fmt, ap);
+    rv = vfprintf (stdout, fmt, ap);
     va_end (ap);
     return rv;
 }
 
 int vprintf (const char *fmt, va_list ap) {
+    return vfprintf (stdout, fmt, ap);
+}
+
+int fprintf (FILE *stream, const char *fmt, ...) {
+    int rv;
+    va_list ap;
+    va_start (ap, fmt);
+    rv = vfprintf (stream, fmt, ap);
+    va_end (ap);
+    return rv;
+}
+
+int vfprintf (FILE *stream, const char *fmt, va_list ap) {
     int rv = 0, tmp;
     const char *pos = fmt;
 
     for (int i = 0; fmt[i] != '\0'; i++) {
         if (fmt[i] == '%') {
-            rv += write (STDOUT_FILENO, pos, &fmt[i] - pos);
-            rv += fmt_print (&fmt[i+1], &ap, &i);
+            rv += write (stream->fd, pos, &fmt[i] - pos);
+            rv += fmt_print (stream->fd, &fmt[i+1], &ap, &i);
             pos = &fmt[i+1];
         }
     }
-    while ((tmp = write (STDOUT_FILENO, pos, WRITE_SIZE)) != 0) {
+    while ((tmp = write (stream->fd, pos, WRITE_SIZE)) != 0) {
         rv += tmp;
         pos += tmp;
     }

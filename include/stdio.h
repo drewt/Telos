@@ -38,6 +38,8 @@ int vsprintf (char *str, const char *fmt, va_list ap);
 int sprintf (char *str, const char *fmt, ...);
 int printf (const char *fmt, ...);
 int vprintf (const char *fmt, va_list ap);
+int fprintf (FILE *stream, const char *fmt, ...);
+int vfprintf (FILE *stream, const char *fmt, va_list ap);
 int puts (const char *s);
 
 size_t fwrite (const void *ptr, size_t size, size_t nmemb, FILE *stream);
