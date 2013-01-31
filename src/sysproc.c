@@ -32,7 +32,7 @@ void idle_proc () {
 
 static void sigchld_handler(int signo) {}
 
-void root () {
+void root_proc () {
 
     int sig;
 

@@ -43,8 +43,6 @@ static void proctab_init (void) {
     proctab[0].pid = 0; // 0 is a reserved pid
 }
 
-extern void tsh ();
-extern void root ();
 extern int console_init (void);
 
 /*-----------------------------------------------------------------------------
@@ -81,6 +79,6 @@ void kmain (struct multiboot_info *mbd, uint32_t magic) {
     kprintf_clr (BOOT_CLR, "done\nStarting Telos...\n\n");
 
     idle_pid = sys_create (idle_proc, 0, NULL);
-    root_pid = sys_create (root, 0, NULL);
+    root_pid = sys_create (root_proc, 0, NULL);
     dispatch ();
 }
