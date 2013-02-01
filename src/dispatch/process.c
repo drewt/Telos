@@ -114,29 +114,37 @@ void sys_yield (void) {
  * Stop the current process and free all resources associated with it */
 //-----------------------------------------------------------------------------
 void sys_stop (void) {
-    struct pcb *tmp;
+    struct pcb *pit;
+    struct mem_header *hit, *tmp;
 
     // send SIGCHLD to parent
     sys_kill (current->parent_pid, SIGCHLD);
 
+    // free memory allocated to process
     kfree (current->stack_mem);
+    for (hit = current->heap_mem; hit;) {
+        tmp = hit;
+        hit = hit->next;
+        kfree (tmp->data_start);
+    }
+
     current->state = STATE_STOPPED;
     current->next = NULL;
 
-    for (tmp = proc_dequeue (&current->send_q); tmp;
-            tmp = proc_dequeue (&current->send_q)) {
-        tmp->rc = SYSERR;
-        ready (tmp);
+    for (pit = proc_dequeue (&current->send_q); pit;
+            pit = proc_dequeue (&current->send_q)) {
+        pit->rc = SYSERR;
+        ready (pit);
     }
-    for (tmp = proc_dequeue (&current->recv_q); tmp;
-            tmp = proc_dequeue (&current->recv_q)) {
-        tmp->rc = SYSERR;
-        ready (tmp);
+    for (pit = proc_dequeue (&current->recv_q); pit;
+            pit = proc_dequeue (&current->recv_q)) {
+        pit->rc = SYSERR;
+        ready (pit);
     }
-    for (tmp = proc_dequeue (&current->repl_q); tmp;
-            tmp = proc_dequeue (&current->repl_q)) {
-        tmp->rc = SYSERR;
-        ready (tmp);
+    for (pit = proc_dequeue (&current->repl_q); pit;
+            pit = proc_dequeue (&current->repl_q)) {
+        pit->rc = SYSERR;
+        ready (pit);
     }
 
     new_process ();
