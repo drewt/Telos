@@ -22,7 +22,7 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
-#include <sigdefs.h>
+#include <signal.h>
 #include <kernel/device.h>
 
 #define PT_SIZE  256
@@ -74,8 +74,8 @@ struct pcb {
     unsigned int timestamp;          // creation time
     int          sleep_delta;        // delta for sleeping queue
     /* signals */
-    struct sigaction sigactions[32]; // signal handlers
-    struct siginfo   siginfos[32];   // signal information
+    struct sigaction sigactions[_TELOS_SIGMAX]; // signal handlers
+    struct siginfo   siginfos[_TELOS_SIGMAX];   // signal information
     uint32_t     sig_pending;        // bitmask for pending signals
     uint32_t     sig_accept;         // bitmask for accepted signals
     uint32_t     sig_ignore;         // bitmask for ignored signals
@@ -94,6 +94,7 @@ struct pcb {
 };
 
 extern struct pcb proctab[];
+extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
 void proc_initq (procqueue_t *queue);
 void proc_enqueue (procqueue_t *queue, struct pcb *p);

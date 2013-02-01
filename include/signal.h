@@ -24,6 +24,11 @@
 
 #include <sigdefs.h>
 
+#define SIG_DFL  ((void(*)(int)) 1)
+#define SIG_ERR  ((void(*)(int)) 2)
+#define SIG_HOLD ((void(*)(int)) 3)
+#define SIG_IGN  ((void(*)(int)) 4)
+
 enum sig_nums {
     SIGABRT,
     SIGALRM,
@@ -51,7 +56,8 @@ enum sig_nums {
     SIGVTALRM,
     SIGXCPU,
     SIGSTOP,
-    SIGKILL
+    SIGKILL,
+    _TELOS_SIGMAX
 };
 
 enum sigaction_flags {
@@ -65,8 +71,6 @@ enum sigaction_flags {
 };
 
 enum sigprocmask_flags { SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK };
-
-enum signal_defaults { SIG_IGN, SIG_DFL };
 
 int kill (pid_t pid, int signal_number);
 int sigaction (int sig, struct sigaction *act, struct sigaction *oact);

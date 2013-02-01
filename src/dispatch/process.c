@@ -36,13 +36,13 @@ extern void sysstop (void);
  * Create a new process */
 //-----------------------------------------------------------------------------
 int sys_create (void (*func)(int,char*), int argc, char **argv) {
-    int i;
+    int pti;
     void *pstack;
     struct pcb *p;
 
     // find a free PCB
-    for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++);
-    if (i == PT_SIZE) {
+    for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++);
+    if (pti == PT_SIZE) {
         current->rc = EAGAIN;
         return EAGAIN;
     }
@@ -51,7 +51,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv) {
         return ENOMEM;
     }
 
-    p = &proctab[i];
+    p = &proctab[pti];
 
     p->stack_mem = pstack;
 
@@ -67,13 +67,18 @@ int sys_create (void (*func)(int,char*), int argc, char **argv) {
     p->sig_pending = 0;
     p->sig_accept  = 0;
     p->sig_ignore  = ~0;
+    for (int i = 0; i < _TELOS_SIGMAX; i++) {
+        p->sigactions[i] = default_sigactions[i];
+        if (default_sigactions[i].sa_handler != SIG_IGN)
+            p->sig_accept |= 1 << i;
+    }
 
     // initialize file descriptor table
     p->fds[STDIN_FILENO]  = DEV_KBD_ECHO;
     p->fds[STDOUT_FILENO] = DEV_CONSOLE_0;
     p->fds[STDERR_FILENO] = DEV_CONSOLE_0;
-    for (int j = 3; j < FDT_SIZE; j++)
-        p->fds[j] = FD_NONE;
+    for (int i = 3; i < FDT_SIZE; i++)
+        p->fds[i] = FD_NONE;
 
     // set up the context stack
     struct ctxt *f = (struct ctxt*) pstack + 32;

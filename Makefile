@@ -7,9 +7,9 @@ AS       = $(CCPREFIX)as #--32
 
 LIB      = lib
 
-ROOTFILES = bin/kernel.o bin/mem.o bin/gdt.o bin/intr.o \
-	    bin/ctsw.o bin/syscall.o bin/pic.o bin/sysproc.o \
-	    bin/inthandlers.o bin/procqueue.o bin/devinit.o
+ROOTFILES = bin/kernel.o bin/mem.o bin/gdt.o bin/intr.o bin/ctsw.o \
+	    bin/syscall.o bin/pic.o bin/sysproc.o bin/inthandlers.o \
+	    bin/procqueue.o bin/devinit.o bin/sighandlers.o
 
 DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
 	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o \
@@ -77,6 +77,7 @@ bin/pic.o: $(ARCH_H)
 bin/sysproc.o: $(USER_H)
 bin/procqueue.o: $(KERNEL)/process.h
 bin/devinit.o: $(KERNEL)/device.h $(KEYBOARD_H) $(CONSOLE_H)
+bin/sighandlers.o: $(TELOS)/process.h
 
 # DISPFILES: system call and interrupt service code
 bin/dispatch/dispatch.o: include/syscall.h $(KERNEL)/device.h \

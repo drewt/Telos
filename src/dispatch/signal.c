@@ -165,9 +165,9 @@ void sys_signal (int sig, void(*func)(int)) {
 
     current->rc = (int) current->sigactions[sig].sa_handler;
 
-    if ((int) func == SIG_IGN) {
+    if (func == SIG_IGN) {
        current->sig_accept &= ~(1 << sig);
-    } else if ((int) func == SIG_DFL) {
+    } else if (func == SIG_DFL) {
         // ???
     } else {
         current->sigactions[sig].sa_handler = func;
