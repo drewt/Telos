@@ -15,7 +15,7 @@ DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
 	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o \
 	    bin/dispatch/msg.o bin/dispatch/mem.o
 
-DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o
+DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o bin/drivers/serial.o
 
 USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
 	    bin/usr/kbdtest.o bin/usr/eventtest.o bin/usr/msgtest.o \

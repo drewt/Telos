@@ -1,6 +1,3 @@
-/* device.h : devices
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,37 +16,15 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __DEVICE_H_
-#define __DEVICE_H_
+#ifndef __SERIAL_H_
+#define __SERIAL_H_
 
-#include <stdarg.h>
+int serial_init (void);
+int serial_read (int fd, void *buf, int buf_len);
+int serial_write (int fd, void *buf, int buf_len);
+int serial_open (enum dev_id devno);
+int serial_close (enum dev_id devno);
+int serial_ioctl (int fd, unsigned long command, va_list vargs);
+void serial_int (void);
 
-#define DT_SIZE 16
-
-#define IO_INCOMPLETE (-1)
-
-enum dev_id {
-    DEV_KBD,
-    DEV_KBD_ECHO,
-    DEV_CONSOLE_0,
-    DEV_CONSOLE_1,
-    DEV_SERIAL
-};
-
-struct device {
-    int dvnum;
-    char *dvname;
-    int (*dvinit)(void);
-    int (*dvopen)(enum dev_id devno);
-    int (*dvclose)(enum dev_id devno);
-    int (*dvread)(int fd, void *buf, int nbytes);
-    int (*dvwrite)(int fd, void *buf, int nbytes);
-    int (*dvioctl)(int fd, unsigned long request, va_list vargs);
-    void (*dviint)(void);
-    void (*dvoint)(void);
-    void *dvioblk;
-};
-
-extern struct device devtab[DT_SIZE];
-
-#endif // __DEVICE_H_
+#endif // __SERIAL_H

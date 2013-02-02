@@ -23,6 +23,7 @@
 #include <kernel/device.h>
 #include <kernel/drivers/kbd.h>
 #include <kernel/drivers/console.h>
+#include <kernel/drivers/serial.h>
 
 static int io_error () {
     return SYSERR;
@@ -79,6 +80,19 @@ struct device devtab[DT_SIZE] = {
         .dvioctl = console_ioctl,
         .dviint  = NULL,
         .dvoint  = NULL,
+        .dvioblk = NULL
+    },
+    [DEV_SERIAL] = {
+        .dvnum   = DEV_SERIAL,
+        .dvname  = "Serial port",
+        .dvinit  = serial_init,
+        .dvopen  = serial_open,
+        .dvclose = serial_close,
+        .dvread  = serial_read,
+        .dvwrite = serial_write,
+        .dvioctl = serial_ioctl,
+        .dviint  = serial_int,
+        .dvoint  = serial_int,
         .dvioblk = NULL
     }
 };
