@@ -16,6 +16,7 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdarg.h>
 #include <unistd.h>
 #include <syscall.h>
 
@@ -78,4 +79,16 @@ ssize_t write (int fd, const void *buf, size_t nbyte) {
     if (rv < 0)
         return -1;
     return rv;
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+int ioctl (int fd, int command, ...) {
+    int rv;
+    va_list ap;
+    va_start (ap, command);
+    rv = syscall3 (SYS_IOCTL, (void*) fd, (void*) command, ap);
+    va_end (ap);
+    return (rv < 0) ? -1 : rv;
 }

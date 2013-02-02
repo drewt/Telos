@@ -23,7 +23,8 @@
 #define __TELOS_CONSOLE_H_
 
 enum console_ioctl {
-    CONSOLE_IOCTL_SWITCH
+    CONSOLE_IOCTL_SWITCH,
+    CONSOLE_IOCTL_CLEAR
 };
 
 #endif // __TELOS_CONSOLE_H_

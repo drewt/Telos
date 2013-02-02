@@ -47,7 +47,7 @@ void sys_open (const char *pathname, int flags, ...) {
         if (!strcmp (pathname, devmap[devno]))
             break;
     if (devno == 4) {
-        current->rc = -(ENOENT);
+        current->rc = -ENOENT;
         return;
     }
 
@@ -56,7 +56,7 @@ void sys_open (const char *pathname, int flags, ...) {
 
     for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);
     if (fd == FDT_SIZE) {
-        current->rc = -(EMFILE);
+        current->rc = -EMFILE;
     } else {
         current->fds[fd] = devno;
         current->rc = fd;
@@ -70,11 +70,11 @@ void sys_close (int fd) {
 
     enum dev_id devno = current->fds[fd];
     if (!FD_VALID (fd)) {
-        current->rc = -(EBADF);
+        current->rc = -EBADF;
         return;
     }
     if (devtab[devno].dvclose (devno)) {
-        current->rc = -(EIO);
+        current->rc = -EIO;
         return;
     }
 
@@ -88,7 +88,7 @@ void sys_close (int fd) {
 void sys_read (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = -(EBADF);
+        current->rc = -EBADF;
         return;
     }
 
@@ -101,9 +101,22 @@ void sys_read (int fd, void *buf, int nbyte) {
 void sys_write (int fd, void *buf, int nbyte) {
 
     if (!FD_VALID (fd)) {
-        current->rc = -(EBADF);
+        current->rc = -EBADF;
         return;
     }
 
     current->rc = devtab[current->fds[fd]].dvwrite (fd, buf, nbyte);
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+void sys_ioctl (int fd, unsigned long command, va_list vargs) {
+
+    if (!FD_VALID (fd)) {
+        current->rc = -EBADF;
+        return;
+    }
+
+    current->rc = devtab[current->fds[fd]].dvioctl (fd, command, vargs);
 }

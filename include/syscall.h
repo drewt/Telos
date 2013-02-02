@@ -45,6 +45,7 @@ enum syscall_id {
     SYS_CLOSE,
     SYS_READ,
     SYS_WRITE,
+    SYS_IOCTL,
     SYS_ALARM,
     SYS_MALLOC,
     SYS_FREE,

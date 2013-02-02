@@ -25,6 +25,7 @@
 #include <kernel/device.h>
 #include <kernel/drivers/console.h>
 
+#include <errnodefs.h>
 #include <string.h>
 #include <klib.h>
 
@@ -97,15 +98,10 @@ int console_init (void) {
     return 0;
 }
 
-int console_ioctl (unsigned long command, va_list vargs) {
-    unsigned int to;
+int console_switch (unsigned int to) {
 
-    if (command != CONSOLE_IOCTL_SWITCH)
-        return SYSERR;
-
-    to = va_arg (vargs, unsigned int);
     if (to >= N_CONSOLES)
-        return SYSERR;
+        return -EINVAL;
 
     // swap current console to driver memory and load new console to vga memory
     memcpy (constab[visible].mem, (void*) CLR_BUF, ROW*COL*CHR);
@@ -113,6 +109,18 @@ int console_ioctl (unsigned long command, va_list vargs) {
 
     visible = to;
     return 0;
+}
+
+int console_ioctl (int fd, unsigned long command, va_list vargs) {
+    switch (command) {
+    case CONSOLE_IOCTL_SWITCH:
+        return console_switch (va_arg (vargs, unsigned int));
+    case CONSOLE_IOCTL_CLEAR:
+        break;
+    default:
+        return -EINVAL;
+    }
+    return -EIO;
 }
 
 /*-----------------------------------------------------------------------------

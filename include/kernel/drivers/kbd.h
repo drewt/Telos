@@ -30,6 +30,6 @@ int kbd_open (enum dev_id devno);
 int kbd_close (enum dev_id devno);
 int kbd_read (int fd, void *buf, int nbytes);
 int kbd_read_echo (int fd, void *buf, int nbytes);
-int kbd_ioctl (unsigned long command, va_list vargs);
+int kbd_ioctl (int fd, unsigned long command, va_list vargs);
 
 #endif // __KBD_H_

@@ -64,5 +64,6 @@ void sys_open (const char *pathname, int flags, ...);
 void sys_close (int fd);
 void sys_read (int fd, void *buf, int nbyte);
 void sys_write (int fd, void *buf, int nbyte);
+void sys_ioctl (int fd, unsigned long command, va_list vargs);
 
 #endif // __DISPATCH_H_

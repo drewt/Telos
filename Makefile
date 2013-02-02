@@ -1,9 +1,9 @@
-CCPREFIX = i586-elf-
-CC       = $(CCPREFIX)gcc #-m32 -march=i386
+CCPREFIX = #i586-elf-
+CC       = $(CCPREFIX)gcc -m32 -march=i386
 CFLAGS   = -Wall -Wextra -Wno-unused-parameter -fno-builtin -ffreestanding \
 	   -std=gnu99 -I include
-LD       = $(CCPREFIX)ld #-m elf_i386
-AS       = $(CCPREFIX)as #--32
+LD       = $(CCPREFIX)ld -m elf_i386
+AS       = $(CCPREFIX)as --32
 
 LIB      = lib
 

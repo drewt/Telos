@@ -23,7 +23,10 @@
 #define NULL ((void*)0)
 #endif
 
+#ifndef __SIZE_TYPE__
 typedef unsigned long size_t;
+#endif
+
 typedef long ssize_t;
 typedef int pid_t;
 
@@ -40,5 +43,6 @@ int open (const char *pathname, int flags, ...);
 int close (int fd);
 ssize_t read (int fd, void *buf, size_t nbyte);
 ssize_t write (int fd, const void *buf, size_t nbyte);
+int ioctl (int fd, int command, ...);
 
 #endif // __UNISTD_H_

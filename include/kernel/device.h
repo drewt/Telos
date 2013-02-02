@@ -43,7 +43,7 @@ struct device {
     int (*dvclose)(enum dev_id devno);
     int (*dvread)(int fd, void *buf, int nbytes);
     int (*dvwrite)(int fd, void *buf, int nbytes);
-    int (*dvioctl)(unsigned long request, va_list vargs);
+    int (*dvioctl)(int fd, unsigned long request, va_list vargs);
     void (*dviint)(void);
     void (*dvoint)(void);
     void *dvioblk;

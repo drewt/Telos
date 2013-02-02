@@ -1,5 +1,5 @@
-CCPREFIX = i586-elf-
-CC       = $(CCPREFIX)gcc
+CCPREFIX = #i586-elf-
+CC       = $(CCPREFIX)gcc -m32 -march=i386
 CFLAGS   = -Wall -Wextra -fno-builtin -ffreestanding -std=gnu99 -I ../../include -c
 AR       = $(CCPREFIX)ar
 LIB      = ..

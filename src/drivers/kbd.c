@@ -185,7 +185,7 @@ int kbd_init (void) {
  * parameter is the integer value of the character that is to become the new
  * EOF indicator */
 //-----------------------------------------------------------------------------
-int kbd_ioctl (unsigned long command, va_list vargs) {
+int kbd_ioctl (int fd, unsigned long command, va_list vargs) {
 
     if (command != KBD_IOCTL_MOD_EOF)
         return SYSERR;
