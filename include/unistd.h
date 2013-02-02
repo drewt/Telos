@@ -25,6 +25,8 @@
 
 #ifndef __SIZE_TYPE__
 typedef unsigned long size_t;
+#else
+typedef __SIZE_TYPE__ size_t;
 #endif
 
 typedef long ssize_t;
