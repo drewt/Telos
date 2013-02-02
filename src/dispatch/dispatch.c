@@ -59,6 +59,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
     [SYS_CLOSE]     = { (void(*)()) sys_close,       1 },
     [SYS_READ]      = { (void(*)()) sys_read,        3 },
     [SYS_WRITE]     = { (void(*)()) sys_write,       3 },
+    [SYS_IOCTL]     = { (void(*)()) sys_ioctl,       3 },
     [SYS_ALARM]     = { (void(*)()) sys_alarm,       1 },
     [SYS_SEND]      = { (void(*)()) sys_send,        5 },
     [SYS_RECV]      = { (void(*)()) sys_recv,        3 },
