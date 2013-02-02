@@ -56,6 +56,7 @@ static unsigned int visible = 0; /* currently visible console */
 
 static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno);
+static void cursor (int pos);
 
 int console_write (int fd, void *buf, int buf_len) {
     int i;
@@ -98,6 +99,9 @@ int console_init (void) {
     return 0;
 }
 
+/*-----------------------------------------------------------------------------
+ * Switches to the given console */
+//-----------------------------------------------------------------------------
 int console_switch (unsigned int to) {
 
     if (to >= N_CONSOLES)
@@ -111,12 +115,26 @@ int console_switch (unsigned int to) {
     return 0;
 }
 
+/*-----------------------------------------------------------------------------
+ * Clears the visible console and sets the cursor position to 0 */
+//-----------------------------------------------------------------------------
+void clear_console (void) {
+    for (int i = 0; i < ROW; i++)
+        console_putc ('\n', TXT_CLR, visible);
+    cursor (0);
+    constab[visible].pos = (unsigned char*) CLR_BUF;
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
 int console_ioctl (int fd, unsigned long command, va_list vargs) {
     switch (command) {
     case CONSOLE_IOCTL_SWITCH:
         return console_switch (va_arg (vargs, unsigned int));
     case CONSOLE_IOCTL_CLEAR:
-        break;
+        clear_console ();
+        return 0;
     default:
         return -EINVAL;
     }
@@ -254,14 +272,4 @@ int kprintf (const char *fmt, ...) {
     int ret = kvprintf (TXT_CLR, fmt, ap);
     va_end (ap);
     return ret;
-}
-
-/*-----------------------------------------------------------------------------
- * Clears the visible console and sets the cursor position to 0 */
-//-----------------------------------------------------------------------------
-void clear_console (void) {
-    for (int i = 0; i < ROW; i++)
-        console_putc ('\n', TXT_CLR, visible);
-    cursor (0);
-    constab[visible].pos = (unsigned char*) CLR_BUF;
 }

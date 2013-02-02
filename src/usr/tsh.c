@@ -21,17 +21,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <telos/process.h>
+#include <telos/console.h>
 
 #include <klib.h>
 
 #include <usr/test.h>
 
-#define N_CMDS   12
+#define N_CMDS   13
 #define IN_LEN   512
 #define MAX_ARGS 100
-#define SHELL_EXIT ((void*) -1)
+
+#define SHELL_EXIT  ((void*) -1)
+#define SHELL_CLEAR ((void*) -2)
 
 static const char const *prompt = "TELOS> ";
 
@@ -50,6 +54,7 @@ struct program {
 
 static struct program progtab[N_CMDS] = {
     { SHELL_EXIT,  "exit"        },
+    { SHELL_CLEAR, "clear"       },
     { help,        "help"        },
     { proc_test,   "proctest"    },
     { sig_test,    "sigtest"     },
@@ -156,6 +161,10 @@ void tsh () {
 
         if (p == SHELL_EXIT)
             return;
+        if (p == SHELL_CLEAR) {
+            ioctl (STDOUT_FILENO, CONSOLE_IOCTL_CLEAR);
+            continue;
+        }
 
         for (argc = 0; argv[argc] != NULL; argc++);
         syscreate (p, argc, argv);
