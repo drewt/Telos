@@ -1,9 +1,6 @@
-/* syscall.c : system calls
- */
-
 /*  Copyright 2013 Drew T.
  *
- *  This file is part of Telos.
+ *  This file is part of the Telos C Library.
  *  
  *  Telos is free software: you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software
@@ -19,44 +16,27 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stddef.h>
-#include <unistd.h>
-#include <signal.h>
-
 #include <syscall.h>
-#include <telos/process.h>
 #include <telos/msg.h>
 
-typedef int pid_t;
-
-/* PROCESS.H */
-
 /*-----------------------------------------------------------------------------
- * */
+ * */ 
 //-----------------------------------------------------------------------------
-pid_t syscreate (void(*func)(int,char**), int argc, char *argv[]) {
-    return syscall3 (SYS_CREATE, func, (void*) argc, argv);
+int send (pid_t pid, void *obuf, int olen, void *ibuf, int ilen) {
+    return syscall5 (SYS_SEND, (void*) pid, obuf, (void*) olen, ibuf,
+            (void*) ilen);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sysyield (void) {
-    syscall0 (SYS_YIELD);
+int recv (pid_t *pid, void *buffer, int length) {
+    return syscall3 (SYS_RECV, (void*) pid, buffer, (void*) length);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sysstop (void) {
-    syscall0 (SYS_STOP);
-}
-
-/* PRINT.H */
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-void sysreport (char *s) {
-    syscall1 (SYS_REPORT, s);
+int reply (pid_t pid, void *buffer, int length) {
+    return syscall3 (SYS_REPLY, (void*) pid, buffer, (void*) length);
 }
