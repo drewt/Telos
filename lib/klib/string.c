@@ -25,7 +25,7 @@
 /*-----------------------------------------------------------------------------
  * Copies len bytes from src to dst */
 //-----------------------------------------------------------------------------
-void memcpy (void *dest, const void *src, size_t n) {
+void memcpy (void *restrict dest, const void *restrict src, size_t n) {
     const char *s = src;
     char *d = dest;
     for (size_t i = 0; i < n; i++)
@@ -88,7 +88,7 @@ void *rawmemchr (const void *s, int c) {
  * strings may not overlap, and the dest string must have enough space for the
  * result */
 //-----------------------------------------------------------------------------
-char *strcat (char *dest, const char *src) {
+char *strcat (char *restrict dest, const char *restrict src) {
     char *begin = dest;
     for (; *dest != '\0'; dest++);
     for (; *src != '\0'; dest++, src++)
@@ -102,7 +102,7 @@ char *strcat (char *dest, const char *src) {
  * src, and src does not need to be null-terminated if it contains n or more
  * bytes */
 //-----------------------------------------------------------------------------
-char *strncat (char *dest, const char *src, size_t n) {
+char *strncat (char *restrict dest, const char *restrict src, size_t n) {
     char *begin = dest;
 
     for (; *dest != '\0'; dest++);
@@ -177,7 +177,7 @@ int strncmp (const char *s1, const char *s2, size_t n) {
  * ('\0'), to the buffer pointed to by dest.  The strings may not overlap, and
  * the destination string dest must be large enough to receive the copy */
 //-----------------------------------------------------------------------------
-char *strcpy (char *dest, const char *src) {
+char *strcpy (char *restrict dest, const char *restrict src) {
     size_t i;
     for (i = 0; src[i] != '\0'; i++)
         dest[i] = src[i];
@@ -190,7 +190,7 @@ char *strcpy (char *dest, const char *src) {
  * length of src is less than n, strncpy() writes additional null bytes to dest
  * to ensure that a total of n bytes are written */
 //-----------------------------------------------------------------------------
-char *strncpy (char *dest, const char *src, size_t n) {
+char *strncpy (char *restrict dest, const char *restrict src, size_t n) {
     size_t i;
     for (i = 0; i < n && src[i] != '\0'; i++) {
         dest[i] = src[i];
@@ -254,7 +254,7 @@ size_t strcspn (const char *s, const char *reject) {
 /*-----------------------------------------------------------------------------
  * Parses str into a sequence of tokens, delimited by the bytes in delim */
 //-----------------------------------------------------------------------------
-char *strtok (char *str, const char *delim) {
+char *strtok (char *restrict str, const char *restrict delim) {
     char junk;
     return telos_strtok (str, delim, &junk);
 }
@@ -263,7 +263,7 @@ char *strtok (char *str, const char *delim) {
  * Like strtok, except that *d is set to the delimiter for the current token
  * when this function returns */
 //-----------------------------------------------------------------------------
-char *telos_strtok (char *str, const char *delim, char *d) {
+char *telos_strtok (char *restrict str, const char *restrict delim, char *d) {
     static char *tokp;
     char *tmp;
     int i;

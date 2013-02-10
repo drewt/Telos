@@ -24,25 +24,25 @@
 
 #include <stddef.h>
 
-void memcpy (void *dest, const void *src, size_t n);
+void memcpy (void *restrict dest, const void *restrict src, size_t n);
 void *memset (void *s, char c, size_t n);
 void *memchr (const void *s, int c, size_t n);
 void *memrchr (const void *s, int c, size_t n);
 void *rawmemchr (const void *s, int c);
-char *strcat (char *dest, const char *src);
-char *strncat (char *dest, const char *src, size_t n);
+char *strcat (char *restrict dest, const char *restrict src);
+char *strncat (char *restrict dest, const char *restrict src, size_t n);
 char *strchr (const char *s, int c);
 char *strrchr (const char *s, int c);
 char *strchrnul (const char *s, int c);
 int strcmp (const char *s1, const char *s2);
 int strncmp (const char *s1, const char *s2, size_t n);
-char *strcpy (char *dest, const char *src);
+char *strcpy (char *restrict dest, const char *restrict src);
 char *strncpy (char *dest, const char *src, size_t n);
 size_t strlen (const char *s);
 char *strpbrk (const char *s, const char *accept);
 size_t strspn (const char *s, const char *accept);
 size_t strcspn (const char *s, const char *reject);
-char *strtok (char *str, const char *delim);
-char *telos_strtok (char *str, const char *delim, char *d);
+char *strtok (char *restrict str, const char *restrict delim);
+char *telos_strtok (char *restrict str, const char *restrict delim, char *d);
 
 #endif // __STRING_H_
