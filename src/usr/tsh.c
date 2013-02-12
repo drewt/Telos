@@ -30,7 +30,7 @@
 
 #include <usr/test.h>
 
-#define N_CMDS   13
+#define N_CMDS   (sizeof (progtab) / sizeof (*progtab))
 #define IN_LEN   512
 #define MAX_ARGS 100
 
@@ -52,7 +52,7 @@ struct program {
     char *name;
 };
 
-static struct program progtab[N_CMDS] = {
+static struct program progtab[] = {
     { SHELL_EXIT,  "exit"        },
     { SHELL_CLEAR, "clear"       },
     { help,        "help"        },
@@ -80,12 +80,12 @@ static void sigchld_handler (int signo) {}
 
 static void help (int argc, char *argv[]) {
     puts ("Valid commands are:");
-    for (int i = 0; i < N_CMDS; i++)
+    for (size_t i = 0; i < N_CMDS; i++)
         printf ("\t%s\n", progtab[i].name);
 }
 
 static funcptr lookup (char *in) {
-    int i;
+    size_t i;
     for (i = 0; i < N_CMDS; i++)
         if (!strcmp (in, progtab[i].name))
             return progtab[i].f;
