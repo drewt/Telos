@@ -1,96 +1,72 @@
-CCPREFIX = #i586-elf-
-CC       = $(CCPREFIX)gcc -m32 -march=i386
-CFLAGS   = -Wall -Wextra -Wno-unused-parameter -fno-builtin -ffreestanding \
-	   -std=gnu99 -I include
-LD       = $(CCPREFIX)ld -m elf_i386
-AS       = $(CCPREFIX)as --32
+BIN = bin
+SRC = src
+LIB = lib
+INC = include
+DEP = make
+BOOT = boot
 
-LIB      = lib
+SHELL     = /bin/sh
+CCPREFIX  = i586-elf-
+CC        = $(CCPREFIX)gcc #-m32 -march=i386
+CFLAGS    = -Wall -Wextra -Wno-unused-parameter -std=gnu99
+ALLCFLAGS = -I $(INC) -fno-builtin -ffreestanding $(CFLAGS)
+LD        = $(CCPREFIX)ld #-m elf_i386
+AS        = $(CCPREFIX)as #--32
 
-ROOTFILES = bin/kernel.o bin/mem.o bin/gdt.o bin/intr.o bin/ctsw.o \
-	    bin/syscall.o bin/pic.o bin/sysproc.o bin/inthandlers.o \
-	    bin/procqueue.o bin/devinit.o bin/sighandlers.o
+FINDSRC = find src -name *.c | tr '\n' ' '
 
-DISPFILES = bin/dispatch/dispatch.o bin/dispatch/io.o bin/dispatch/signal.o \
-	    bin/dispatch/process.o bin/dispatch/time.o bin/dispatch/sysprint.o \
-	    bin/dispatch/msg.o bin/dispatch/mem.o
+.SUFFIXES:
+.PHONY: names.mk clean depclean maintainer-clean
 
-DRVRFILES = bin/drivers/kbd.o bin/drivers/console.o bin/drivers/serial.o
+all: $(BIN)/kernel.img
 
-USERFILES = bin/usr/strtest.o bin/usr/proctest.o bin/usr/sigtest.o \
-	    bin/usr/kbdtest.o bin/usr/eventtest.o bin/usr/msgtest.o \
-	    bin/usr/tsh.o bin/usr/printserver.o bin/usr/memtest.o
+-include names.mk
+-include $(DFILES)
 
-OBJFILES = $(ROOTFILES) $(DISPFILES) $(DRVRFILES) $(USERFILES)
+# build binaries in $(BIN)
+$(BIN)/%.o: $(SRC)/%.c
+	$(CC) -c $(ALLCFLAGS) $(CPPFLAGS) $< -o $@
 
-# directories
-KERNEL = include/kernel
-DRIVERS = $(KERNEL)/drivers
-TELOS = include/telos
-
-COMMON = $(KERNEL)/common.h
-ARCH_H = $(KERNEL)/i386.h
-DISP_H = $(KERNEL)/dispatch.h $(KERNEL)/process.h include/errnodefs.h
-LIB_H = include/klib.h
-
-CONSOLE_H = $(DRIVERS)/console.h $(TELOS)/console.h
-KEYBOARD_H = $(DRIVERS)/kbd.h $(TELOS)/kbd.h
-
-USER_H = include/signal.h include/string.h $(TELOS)/print.h $(TELOS)/process.h \
-	 include/unistd.h
-
-all: bin/kernel.img
-
-$(OBJFILES): bin/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $(patsubst bin/%.o,src/%.c,$@) -o $@
-
-$(USERFILES): $(USER_H)
-$(ROOTFILES): $(COMMON)
-$(DISPFILES): $(COMMON) $(DISP_H)
-$(DRVRFILES): bin/%.o: $(KERNEL)/%.h $(COMMON) $(DISP_H) $(ARCH_H) \
-    $(KERNEL)/device.h
+# automatically generate dependencies
+$(DEP)/%.d: $(SRC)/%.c
+	@echo "Generating dependencies for $<"
+	@$(CC) -MM -MF $@ -MT "$@ $(subst $(DEP)/,$(BIN)/,$(basename $@)).o" \
+	    -I $(INC) $(CPPFLAGS) $<
 
 # make a multiboot-compliant ELF kernel
-bin/kernel.bin: bin/loader.o $(OBJFILES) $(LIB)/klib.a
-	$(LD) -T bin/linker.ld bin/loader.o $(OBJFILES) $(LIB)/klib.a -o \
-	    bin/kernel.bin
+$(BIN)/kernel.bin: $(BIN)/loader.o $(OFILES) $(LIB)/klib.a
+	$(LD) -T $(BIN)/linker.ld $(BIN)/loader.o $(OFILES) $(LIB)/klib.a -o \
+	    $@
 
 # make a bootable floppy image with grub legacy
-bin/kernel.img: bin/kernel.bin
-	dd if=/dev/zero of=bin/pad bs=1 count=750
-	cat boot/stage1 boot/stage2 bin/pad bin/kernel.bin > bin/kernel.img
+$(BIN)/kernel.img: $(BIN)/kernel.bin $(BIN)/pad
+	cat $(BOOT)/stage1 $(BOOT)/stage2 $(BIN)/pad $(BIN)/kernel.bin \
+	    > $@
+
+$(BIN)/pad:
+	dd if=/dev/zero of=$@ bs=1 count=750
 
 # assembly files
-bin/loader.o: boot/loader.s
-	$(AS) -o bin/loader.o boot/loader.s
+$(BIN)/loader.o: $(BOOT)/loader.s
+	$(AS) -o $@ $<
 
-# ROOTFILES: core kernel files
-bin/kernel.o: $(ARCH_H) $(DISP_H) $(KERNEL)/multiboot.h $(KERNEL)/kernel.h \
-    $(CONSOLE_H)
-bin/mem.o: $(KERNEL)/mem.h
-bin/gdt.o: $(ARCH_H) $(LIB_H)
-bin/intr.o: $(LIB_H) $(ARCH_H)
-bin/inthandlers.o: $(ARCH_H)
-bin/ctsw.o: $(ARCH_H) $(DISP_H) $(KERNEL)/interrupt.h $(KERNEL)/process.h
-bin/syscall.o: include/telos/process.h
-bin/pic.o: $(ARCH_H)
-bin/sysproc.o: $(USER_H)
-bin/procqueue.o: $(KERNEL)/process.h
-bin/devinit.o: $(KERNEL)/device.h $(KEYBOARD_H) $(CONSOLE_H)
-bin/sighandlers.o: $(TELOS)/process.h
-
-# DISPFILES: system call and interrupt service code
-bin/dispatch/dispatch.o: include/syscall.h $(KERNEL)/device.h \
-    $(KERNEL)/interrupt.h
-bin/dispatch/process.o: $(ARCH_H) $(KERNEL)/time.h $(KERNEL)/mem.h
-bin/dispatch/time.o: $(ARCH_H)
-bin/dispatch/io.o: $(KERNEL)/device.h
-bin/dispatch/signal.o: $(ARCH_H) include/syscall.h include/signal.h
-bin/dispatch/mem.o: $(KERNEL)/mem.h
+# generate mk file with the CFILES, OFILES and DFILES variables
+names.mk:
+	@echo "Generating *FILES variables for make"
+	@printf "CFILES = %s\nOFILES = %s\nDFILES = %s\n" \
+	    "`$(FINDSRC)`" \
+	    "`$(FINDSRC) | sed 's/$(SRC)\/\([^ ]*\)\.c/$(BIN)\/\1\.o/g'`" \
+	    "`$(FINDSRC) | sed 's/$(SRC)\/\([^ ]*\)\.c/$(DEP)\/\1\.d/g'`" \
+	    > names.mk
 
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)
 
 clean:
-	rm $(OBJFILES) bin/kernel.bin bin/kernel.img
+	rm -f $(OFILES) $(BIN)/loader.o $(BIN)/kernel.bin $(BIN)/kernel.img
 
+depclean:
+	rm -f $(DFILES) 
+
+maintainer-clean: clean depclean
+	rm -f names.mk $(BIN)/pad
