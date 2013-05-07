@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UNISTD_H_
-#define __UNISTD_H_
+#ifndef _TELOS_UNISTD_H_
+#define _TELOS_UNISTD_H_
 
 #ifndef NULL
 #define NULL ((void*)0)
@@ -25,13 +25,8 @@
 
 #ifndef _SIZE_T
 #define _SIZE_T
-#ifndef __SIZE_TYPE__
-typedef unsigned long size_t;
-#else
-typedef __SIZE_TYPE__ size_t;
+typedef unsigned int size_t;
 #endif
-#endif
-
 
 #ifndef _SSIZE_T
 #define _SSIZE_T
@@ -55,4 +50,4 @@ ssize_t read (int fd, void *buf, size_t nbyte);
 ssize_t write (int fd, const void *buf, size_t nbyte);
 int ioctl (int fd, int command, ...);
 
-#endif // __UNISTD_H_
+#endif
