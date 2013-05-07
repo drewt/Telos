@@ -19,23 +19,13 @@
 #ifndef _TELOS_UNISTD_H_
 #define _TELOS_UNISTD_H_
 
+#include <sys/types.h>
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
 
-#ifndef _SIZE_T
-#define _SIZE_T
-typedef unsigned int size_t;
-#endif
-
-#ifndef _SSIZE_T
-#define _SSIZE_T
-typedef int ssize_t;
-#endif
-
-typedef int pid_t;
-
-enum std_fds {
+enum {
     STDIN_FILENO,
     STDOUT_FILENO,
     STDERR_FILENO,
