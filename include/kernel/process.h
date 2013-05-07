@@ -24,6 +24,7 @@
 
 #include <signal.h>
 #include <kernel/device.h>
+#include <kernel/queue.h>
 
 #define PT_SIZE  256
 #define PID_MASK (PT_SIZE - 1)
@@ -60,6 +61,7 @@ typedef struct {
 
 /* process control block */
 struct pcb {
+    queue_chain_t chain;
     /* metadata */
     int          pid;                // process ID
     int          parent_pid;         // parent process's pid

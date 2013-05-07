@@ -34,7 +34,6 @@ extern int root_pid;
 
 void dispatch_init (void);
 void dispatch (void);
-struct pcb *next (void);
 void ready (struct pcb *p);
 void new_process (void);
 int sq_rm (struct pcb *p);

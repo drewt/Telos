@@ -30,9 +30,13 @@ extern unsigned int context_switch (struct pcb *p);
 extern int send_signal (int pid, int sig_no);
 extern void tick (void);
 
-struct pcb *current    = NULL; /* the running process     */
-struct pcb *ready_head = NULL; /* head of the ready queue */
-struct pcb *ready_tail = NULL; /* tail of the ready queue */
+struct pcb *current    = NULL;   /* the running process      */
+queue_head_t ready_queue; /* queue of ready processes */
+
+#define next() ((struct pcb*) dequeue (&ready_queue))
+
+//struct pcb *ready_head = NULL; /* head of the ready queue */
+//struct pcb *ready_tail = NULL; /* tail of the ready queue */
 
 struct sysaction {
     void(*func)(); // service routine
@@ -77,6 +81,7 @@ static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
  * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
+    queue_init (&ready_queue);
     // initialize actions that can't be initialized statically
     set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
 }
@@ -135,19 +140,20 @@ void dispatch (void) {
 /*-----------------------------------------------------------------------------
  * Dequeues and returns a process from the ready queue */
 //-----------------------------------------------------------------------------
-struct pcb *next (void) {
+/*struct pcb *next (void) {
     if (!ready_head) return NULL;
     struct pcb *next = ready_head;
     ready_head = ready_head->next;
     return next;
-}
+}*/
 
 /*-----------------------------------------------------------------------------
  * Enqueues a process on the ready queue */
 //-----------------------------------------------------------------------------
 void ready (struct pcb *p) {
     p->state = STATE_READY;
-    p->next  = NULL;
+    enqueue (&ready_queue, (queue_entry_t) p);
+    /*p->next  = NULL;
 
     if (!ready_head) {
         ready_head = p;
@@ -155,7 +161,7 @@ void ready (struct pcb *p) {
     } else {
         ready_tail->next = p;
         ready_tail = p;
-    }
+    }*/
 }
 
 /*-----------------------------------------------------------------------------
@@ -166,7 +172,7 @@ void new_process (void) {
     current = next ();
 
     // skip idle process if possible
-    if (current->pid == idle_pid && ready_head) {
+    if (current->pid == idle_pid && !queue_empty (&ready_queue)) {//ready_head) {
         ready (current);
         current = next ();
     }
