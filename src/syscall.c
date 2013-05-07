@@ -19,12 +19,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <unistd.h>
-#include <signal.h>
-
 #include <syscall.h>
 #include <telos/process.h>
-#include <telos/msg.h>
 
 typedef int pid_t;
 
