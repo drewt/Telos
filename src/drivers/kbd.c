@@ -25,6 +25,8 @@
 #include <kernel/device.h>
 #include <kernel/drivers/kbd.h>
 
+#include <kernel/queue.h>
+
 #include <klib.h>
 
 #define KBD_CMD 0x64
@@ -36,7 +38,7 @@
 
 #define NOCHAR 256
 
-static procqueue_t work_q;
+static queue_head_t work_q;
 
 static char kbd_eof;
 
@@ -83,7 +85,7 @@ void kbd_interrupt (void) {
                 reader->rc = cpy_buf_next;
                 ready (reader);
 
-                if ((reader = proc_dequeue (&work_q))) {
+                if ((reader = (struct pcb*) dequeue (&work_q))) {
                     echo = (reader->fds[reader->pbuf.id] == DEV_KBD_ECHO);
                     cpy_buf = reader->pbuf.buf;
                     cpy_buf_len = reader->pbuf.len;
@@ -140,7 +142,7 @@ int kbd_read (int fd, void *buf, int buf_len) {
     if (reading) {
         current->pbuf = (struct pbuf)
             { .buf = buf, .len = buf_len, .id = fd };
-        proc_enqueue (&work_q, current);
+        enqueue (&work_q, (queue_entry_t) current);
         new_process ();
         return 0;
     }
@@ -175,6 +177,7 @@ int kbd_close (enum dev_id devno) {
  * */
 //-----------------------------------------------------------------------------
 int kbd_init (void) {
+    queue_init (&work_q);
     enable_irq (1, 0);
     return 0;
 }
