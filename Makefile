@@ -16,7 +16,7 @@ AS        = $(CCPREFIX)as #--32
 FINDSRC = find src -name *.c | tr '\n' ' '
 
 .SUFFIXES:
-.PHONY: names.mk clean depclean maintainer-clean
+.PHONY: clean depclean maintainer-clean
 
 all: $(BIN)/kernel.img
 
@@ -50,15 +50,6 @@ $(BIN)/pad:
 $(BIN)/loader.o: $(BOOT)/loader.s
 	$(AS) -o $@ $<
 
-# generate mk file with the CFILES, OFILES and DFILES variables
-names.mk:
-	@echo "Generating *FILES variables for make"
-	@printf "CFILES = %s\nOFILES = %s\nDFILES = %s\n" \
-	    "`$(FINDSRC)`" \
-	    "`$(FINDSRC) | sed 's/$(SRC)\/\([^ ]*\)\.c/$(BIN)\/\1\.o/g'`" \
-	    "`$(FINDSRC) | sed 's/$(SRC)\/\([^ ]*\)\.c/$(DEP)\/\1\.d/g'`" \
-	    > names.mk
-
 $(LIB)/klib.a: $(LIB)/klib/string.c
 	(cd $(LIB)/klib; make install)
 
@@ -69,4 +60,4 @@ depclean:
 	rm -f $(DFILES) 
 
 maintainer-clean: clean depclean
-	rm -f names.mk $(BIN)/pad
+	rm -f $(BIN)/pad

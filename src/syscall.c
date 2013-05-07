@@ -19,7 +19,6 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stddef.h>
 #include <unistd.h>
 #include <signal.h>
 

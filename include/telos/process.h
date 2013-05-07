@@ -22,19 +22,8 @@
 #ifndef __PROCESS_H_
 #define __PROCESS_H_
 
-#ifndef __pid_t_defined
-typedef int pid_t;
-#define __pid_t_defined
-#endif // __pid_t_defined
-
-#ifdef __need_pid_t
-#undef __need_pid_t
-#undef __PROCESS_H_
-#else
-
 int syscreate (void(*func)(int,char**), int argc, char *argv[]);
 void sysyield (void);
 void sysstop (void);
 
-#endif // __need_pid_t
-#endif // __PROCESS_H_
+#endif

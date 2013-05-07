@@ -23,13 +23,21 @@
 #define NULL ((void*)0)
 #endif
 
+#ifndef _SIZE_T
+#define _SIZE_T
 #ifndef __SIZE_TYPE__
 typedef unsigned long size_t;
 #else
 typedef __SIZE_TYPE__ size_t;
 #endif
+#endif
 
-typedef long ssize_t;
+
+#ifndef _SSIZE_T
+#define _SSIZE_T
+typedef int ssize_t;
+#endif
+
 typedef int pid_t;
 
 enum std_fds {
