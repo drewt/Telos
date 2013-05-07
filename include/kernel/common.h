@@ -21,6 +21,8 @@
 
 #include <kernel/types.h>
 
+#define __KERNEL__
+
 #define SYSERR (-1)
 
 #define STACK_SIZE (1024*16)

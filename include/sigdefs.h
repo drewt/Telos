@@ -19,10 +19,14 @@
 #ifndef __SIGDEFS_H_
 #define __SIGDEFS_H_
 
+#ifdef __KERNEL__
+#include <kernel/types.h>
+#else
 #include <stddef.h>
+typedef int pid_t;
+#endif
 
 typedef unsigned long sigset_t;
-typedef int pid_t;
 
 typedef struct sigstack {
     int    ss_onstack; // non-zero when signal stack is in use
@@ -61,4 +65,4 @@ struct sigaction {
     int      sa_flags;
 };
 
-#endif // __SIGDEFS_H_
+#endif
