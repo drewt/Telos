@@ -22,10 +22,7 @@
 #ifndef __TELOS_MSG_H_
 #define __TELOS_MSG_H_
 
-#ifndef __pid_t_defined
-#define __need_pid_t
-#include <telos/process.h>
-#endif
+#include <sys/types.h>
 
 int send (pid_t dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 int recv (pid_t *src_pid, void *buffer, int length);
