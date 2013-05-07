@@ -2,7 +2,7 @@ OFILES = bin/usr/strtest.o bin/usr/eventtest.o bin/usr/tsh.o bin/usr/memtest.o\
 	 bin/usr/proctest.o bin/usr/kbdtest.o bin/usr/msgtest.o\
 	 bin/usr/printserver.o bin/usr/sigtest.o bin/sighandlers.o\
 	 bin/kernel.o bin/mem.o bin/syscall.o bin/intr.o bin/sysproc.o\
-	 bin/procqueue.o bin/ctsw.o bin/inthandlers.o bin/gdt.o\
+	 bin/ctsw.o bin/inthandlers.o bin/gdt.o\
 	 bin/dispatch/process.o bin/dispatch/mem.o bin/dispatch/dispatch.o\
 	 bin/dispatch/sysprint.o bin/dispatch/io.o bin/dispatch/msg.o\
 	 bin/dispatch/signal.o bin/dispatch/time.o bin/pic.o bin/devinit.o\
@@ -11,7 +11,7 @@ DFILES = make/usr/strtest.d make/usr/eventtest.d make/usr/tsh.d\
 	 make/usr/memtest.d make/usr/proctest.d make/usr/kbdtest.d\
 	 make/usr/msgtest.d make/usr/printserver.d make/usr/sigtest.d\
 	 make/sighandlers.d make/kernel.d make/mem.d make/syscall.d\
-	 make/intr.d make/sysproc.d make/procqueue.d make/ctsw.d\
+	 make/intr.d make/sysproc.d make/ctsw.d\
 	 make/inthandlers.d make/gdt.d make/dispatch/process.d\
 	 make/dispatch/mem.d make/dispatch/dispatch.d make/dispatch/sysprint.d\
 	 make/dispatch/io.d make/dispatch/msg.d make/dispatch/signal.d\

@@ -59,7 +59,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
             *((int*) dest->parg) = current->pid;
 
         // unblock receiver
-        proc_rm (&current->recv_q, dest);
+        remqueue (&current->recv_q, (queue_entry_t) dest);
         ready (dest);
 
         // send message
@@ -68,7 +68,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 
         // if sender expects reply, block in receiver's reply queue
         if (ibuf) {
-            proc_enqueue (&dest->repl_q, current);
+            enqueue (&dest->repl_q, (queue_entry_t) current);
             current->state = STATE_BLOCKED;
             new_process ();
         }
@@ -76,7 +76,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
         // block sender on receiver's recv queue
         current->pbuf = (struct pbuf)
             { .buf = obuf, .len = olen, .id = dest_pid };
-        proc_enqueue (&dest->send_q, current);
+        enqueue (&dest->send_q, (queue_entry_t) current);
         current->state = STATE_BLOCKED;
         new_process ();
     }
@@ -96,7 +96,7 @@ void sys_recv (int *src_pid, void *buffer, int length) {
     }
 
     // block if recvall and no processes waiting to send
-    if (!(*src_pid) && !(src = proc_peek (&current->send_q))) {
+    if (!(*src_pid) && !(src = (struct pcb*) queue_first (&current->send_q))) {
         current->pbuf = (struct pbuf)
             { .buf = buffer, .len = length, .id = 0 };
         current->state = STATE_BLOCKED;
@@ -120,15 +120,15 @@ void sys_recv (int *src_pid, void *buffer, int length) {
         current->pbuf = (struct pbuf)
             { .buf = buffer, .len = length, .id = src->pid };
         current->state = STATE_BLOCKED;
-        proc_enqueue (&src->recv_q, current);
+        enqueue (&src->recv_q, (queue_entry_t) current);
         new_process ();
     } else {
         // unblock sender if no-reply send, otherwise move to reply queue
-        proc_rm (&current->send_q, src);
+        remqueue (&current->send_q, (queue_entry_t) src);
         if (!src->reply_blk.id)
             ready (src);
         else
-            proc_enqueue (&current->repl_q, src);
+            enqueue (&current->repl_q, (queue_entry_t) src);
 
         // receive message
         tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
@@ -172,6 +172,6 @@ void sys_reply (int src_pid, void *buffer, int length) {
 
     // unblock sender
     src->reply_blk.id = 0;
-    proc_rm (&current->repl_q, src);
+    remqueue (&current->repl_q, (queue_entry_t) src);
     ready (src);
 }

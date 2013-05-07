@@ -38,7 +38,6 @@ static void proctab_init (void) {
     for (int i = 0; i < PT_SIZE; i++) {
         proctab[i].pid   = i - PT_SIZE;
         proctab[i].state = STATE_STOPPED;
-        proctab[i].next  = NULL;
     }
     proctab[0].pid = 0; // 0 is a reserved pid
 }

@@ -25,6 +25,7 @@
 #include <kernel/time.h>
 #include <kernel/mem.h>
 #include <kernel/device.h>
+#include <kernel/queue.h>
 
 #include <errnodefs.h>
 #include <signal.h>
@@ -35,17 +36,20 @@ extern void sysstop (void);
 /*-----------------------------------------------------------------------------
  * Create a new process */
 //-----------------------------------------------------------------------------
-int sys_create (void (*func)(int,char*), int argc, char **argv) {
+int sys_create (void (*func)(int,char*), int argc, char **argv)
+{
     int pti;
     void *pstack;
     struct pcb *p;
 
     // find a free PCB
-    for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++);
+    for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++)
+        /* nothing */;
     if (pti == PT_SIZE) {
         current->rc = EAGAIN;
         return EAGAIN;
     }
+
     if (!(pstack = kmalloc (STACK_SIZE))) {
         current->rc = ENOMEM;
         return ENOMEM;
@@ -55,14 +59,14 @@ int sys_create (void (*func)(int,char*), int argc, char **argv) {
 
     p->stack_mem = pstack;
 
-    p->timestamp  = tick_count;
+    p->timestamp = tick_count;
 
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
 
-    proc_initq (&p->send_q);
-    proc_initq (&p->recv_q);
-    proc_initq (&p->repl_q);
+    queue_init (&p->send_q);
+    queue_init (&p->recv_q);
+    queue_init (&p->repl_q);
 
     p->sig_pending = 0;
     p->sig_accept  = 0;
@@ -105,7 +109,8 @@ int sys_create (void (*func)(int,char*), int argc, char **argv) {
 /*-----------------------------------------------------------------------------
  * Yeild control to another process */
 //-----------------------------------------------------------------------------
-void sys_yield (void) {
+void sys_yield (void)
+{
     ready (current);
     new_process ();
 }
@@ -113,7 +118,8 @@ void sys_yield (void) {
 /*-----------------------------------------------------------------------------
  * Stop the current process and free all resources associated with it */
 //-----------------------------------------------------------------------------
-void sys_stop (void) {
+void sys_stop (void)
+{
     struct pcb *pit;
     struct mem_header *hit, *tmp;
 
@@ -129,20 +135,19 @@ void sys_stop (void) {
     }
 
     current->state = STATE_STOPPED;
-    current->next = NULL;
 
-    for (pit = proc_dequeue (&current->send_q); pit;
-            pit = proc_dequeue (&current->send_q)) {
+    for (pit = (struct pcb*) dequeue (&current->send_q); pit;
+            pit = (struct pcb*) dequeue (&current->send_q)) {
         pit->rc = SYSERR;
         ready (pit);
     }
-    for (pit = proc_dequeue (&current->recv_q); pit;
-            pit = proc_dequeue (&current->recv_q)) {
+    for (pit = (struct pcb*) dequeue (&current->recv_q); pit;
+            pit = (struct pcb*) dequeue (&current->recv_q)) {
         pit->rc = SYSERR;
         ready (pit);
     }
-    for (pit = proc_dequeue (&current->repl_q); pit;
-            pit = proc_dequeue (&current->repl_q)) {
+    for (pit = (struct pcb*) dequeue (&current->repl_q); pit;
+            pit = (struct pcb*) dequeue (&current->repl_q)) {
         pit->rc = SYSERR;
         ready (pit);
     }
@@ -153,6 +158,7 @@ void sys_stop (void) {
 /*-----------------------------------------------------------------------------
  * Return the current process's pid */
 //-----------------------------------------------------------------------------
-void sys_getpid (void) {
+void sys_getpid (void)
+{
     current->rc = current->pid;
 }

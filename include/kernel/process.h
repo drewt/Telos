@@ -19,8 +19,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PROCESS_H_
-#define __PROCESS_H_
+#ifndef _KERNEL_PROCESS_H_
+#define _KERNEL_PROCESS_H_
 
 #include <signal.h>
 #include <kernel/device.h>
@@ -51,14 +51,6 @@ struct pbuf {
     int  id;   // id (context dependent)
 };
 
-struct pcb;
-
-typedef struct {
-    struct pcb *head;
-    struct pcb *tail;
-    int        size;
-} procqueue_t;
-
 /* process control block */
 struct pcb {
     queue_chain_t chain;
@@ -84,24 +76,16 @@ struct pcb {
     /* message passing IPC */
     struct pbuf  pbuf;               // saved buffer
     struct pbuf  reply_blk;
-    procqueue_t  send_q;             // processes waiting to send
-    procqueue_t  recv_q;             // processes waiting to receive
-    procqueue_t  repl_q;             // processes waiting for a reply
+    queue_head_t  send_q;            // processes waiting to send
+    queue_head_t  recv_q;            // processes waiting to receive
+    queue_head_t  repl_q;            // processes waiting for a reply
     /* */
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
     struct mem_header *heap_mem;     // heap-allocated memory
-    struct pcb   *next;              // pointers for linked lists
-    struct pcb   *prev;              // ...
 };
 
 extern struct pcb proctab[];
 extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
-void proc_initq (procqueue_t *queue);
-void proc_enqueue (procqueue_t *queue, struct pcb *p);
-struct pcb *proc_dequeue (procqueue_t *queue);
-struct pcb *proc_peek (procqueue_t *queue);
-void proc_rm (procqueue_t *queue, struct pcb *p);
-
-#endif // __PROCESS_H_
+#endif /* _KERNEL_PROCESS_H_ */
