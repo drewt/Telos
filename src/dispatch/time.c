@@ -26,7 +26,7 @@
 
 static int delta_list_rm (int evno, struct pcb *p);
 static void delta_list_tick (void);
-static void delta_list_insert (unsigned int evno, struct pcb *p,
+static int delta_list_insert (unsigned int evno, struct pcb *p,
         unsigned int ms, void (*act)(struct pcb*));
 
 #define N_EVENTS 2
@@ -78,7 +78,11 @@ void sys_sleep (unsigned int seconds) {
  * seconds */
 //-----------------------------------------------------------------------------
 void sys_alarm (unsigned int seconds) {
-    delta_list_insert (EVENT_ALRM, current, seconds * 100, alrm_action);
+    int ticks = seconds ?
+            delta_list_insert (EVENT_ALRM, current, seconds*100, alrm_action)
+            : delta_list_rm (EVENT_ALRM, current);
+
+    current->rc = ticks / 10;
 }
 
 /*-----------------------------------------------------------------------------
@@ -92,13 +96,18 @@ int sq_rm (struct pcb *p) {
 /*-----------------------------------------------------------------------------
  * Schedule an event */
 //-----------------------------------------------------------------------------
-static void delta_list_insert (unsigned int evno, struct pcb *p,
+static int delta_list_insert (unsigned int evno, struct pcb *p,
         unsigned int ms, void (*act)(struct pcb*)) {
 
+    int rv;
     int ticks;
     int pti = PT_INDEX(p->pid);
     struct event *it, *last = NULL;
     struct event *nev = &events[pti][evno];
+
+    rv = nev->delta; // ticks until previously scheduled event, or 0
+    if (rv)
+        delta_list_rm (evno, p);
 
     // convert milliseconds to timer intervals
     ticks = (ms % 10) ? ms/10 + 1 : ms/10;
@@ -134,6 +143,8 @@ static void delta_list_insert (unsigned int evno, struct pcb *p,
             it->delta -= ticks;
     }
     nev->delta = ticks;
+
+    return rv;
 }
 
 /*-----------------------------------------------------------------------------
@@ -144,6 +155,8 @@ static int delta_list_rm (int evno, struct pcb *p) {
     int ticks = 0;
     struct event *it;
     struct event *del = &events[PT_INDEX(p->pid)][evno];
+    if (!del->delta)
+        return 0;
 
     for (it = dl_head; it && it != del; it = it->next)
         ticks += it->delta;
@@ -173,7 +186,8 @@ static void delta_list_tick (void) {
     struct event *tmp;
     dl_head->delta--;
     while (dl_head && dl_head->delta <= 0) {
-        tmp     = dl_head;
+        tmp = dl_head;
+        tmp->delta = 0;
         dl_head = dl_head->next;
         dl_head->prev = NULL;
         tmp->action (tmp->proc);

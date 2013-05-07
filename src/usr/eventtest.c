@@ -47,12 +47,20 @@ static void alarm_handler (int signo) {
 }
 
 static void alarm_test (void) {
-    int sig;
+    int sig, rv;
     signal (SIGALRM, alarm_handler);
     printf ("Testing alarm... alrm ?= ");
     alarm (2);
+    if ((rv = alarm (2)) <= 0)
+        printf ("error");
     printf ("al");
     for (sig = sigwait (); sig != SIGALRM; sig = sigwait ());
+    printf ("Testing alarm(0)... ");
+    alarm (2);
+    if (alarm (0) > 0)
+        puts ("okay");
+    else
+        puts ("error");
 }
 
 void event_test (int argc, char *argv[]) {
