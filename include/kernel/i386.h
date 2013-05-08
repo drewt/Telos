@@ -94,13 +94,13 @@ struct tss_entry {
 extern struct tss_entry tss;
 
 /* wrapper for outb instruction */
-static inline void outb (unsigned short port, unsigned char data)
+static inline void outb (port_t port, unsigned char data)
 {
     asm volatile ("outb %1, %0" : : "d" (port), "a" (data));
 }
 
 /* wrapper for inb instruction */
-static inline unsigned char inb (unsigned short port)
+static inline unsigned char inb (port_t port)
 {
     unsigned char ret;
     asm volatile ("inb %1, %0" : "=a" (ret) : "d" (port));

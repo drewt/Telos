@@ -81,7 +81,7 @@ void pic_eoi (void)
 //-----------------------------------------------------------------------------
 void enable_irq (unsigned char irq, bool disable)
 {
-    unsigned short port;
+    port_t port;
     unsigned char val;
 
     // select PIC

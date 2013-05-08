@@ -19,6 +19,8 @@ typedef int pid_t;
 
 #ifdef __KERNEL__
 
+typedef unsigned short port_t;
+
 // XXX: arch/implementation dependent
 typedef signed   char      s8;
 typedef unsigned char      u8;
