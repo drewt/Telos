@@ -1,3 +1,21 @@
+/*  Copyright 2013 Drew Thoreson
+ *
+ *  This file is part of Telos.
+ *  
+ *  Telos is free software: you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  Telos is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ *  details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /* 
  * Mach Operating System
  * Copyright (c) 1993-1987 Carnegie Mellon University
@@ -415,5 +433,10 @@ void		remqueue(queue_t que, queue_entry_t elt);
 	for ((elt) = (type) queue_first(head);			\
 	     !queue_end((head), (queue_entry_t)(elt));		\
 	     (elt) = (type) queue_next(&(elt)->field))
+
+#define dequeue_iterate(head, elt, type) \
+    for ((elt) = (type) dequeue(head);   \
+         (elt);                          \
+         (elt) = (type) dequeue(head))
 
 #endif /* _KERNEL_QUEUE_H_ */

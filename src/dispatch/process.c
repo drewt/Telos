@@ -1,7 +1,7 @@
 /* process.c : process management
  */
 
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -139,22 +139,14 @@ void sys_stop (void)
 
     current->state = STATE_STOPPED;
 
-    // TODO: use Mach queue iteration contructs
-    for (pit = (struct pcb*) dequeue (&current->send_q); pit;
-            pit = (struct pcb*) dequeue (&current->send_q)) {
-        pit->rc = SYSERR;
-        ready (pit);
+    #define CLEAR_MSG_QUEUE(q)                \
+    dequeue_iterate ((q), pit, struct pcb*) { \
+        pit->rc = SYSERR;                     \
+        ready (pit);                          \
     }
-    for (pit = (struct pcb*) dequeue (&current->recv_q); pit;
-            pit = (struct pcb*) dequeue (&current->recv_q)) {
-        pit->rc = SYSERR;
-        ready (pit);
-    }
-    for (pit = (struct pcb*) dequeue (&current->repl_q); pit;
-            pit = (struct pcb*) dequeue (&current->repl_q)) {
-        pit->rc = SYSERR;
-        ready (pit);
-    }
+    CLEAR_MSG_QUEUE (&current->send_q)
+    CLEAR_MSG_QUEUE (&current->recv_q)
+    CLEAR_MSG_QUEUE (&current->repl_q)
 
     new_process ();
 }
