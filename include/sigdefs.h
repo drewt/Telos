@@ -59,10 +59,15 @@ typedef struct siginfo {
 } siginfo_t;
 
 struct sigaction {
-    void     (*sa_handler)(int);
-    void     (*sa_sigaction)(int,siginfo_t*,void*);
+    union {
+        void (*sa_handler)(int);
+        void (*sa_sigaction)(int,siginfo_t*,void*);
+    } _u;
     sigset_t sa_mask;
     int      sa_flags;
 };
+
+#define sa_handler   _u.sa_handler
+#define sa_sigaction _u.sa_sigaction
 
 #endif

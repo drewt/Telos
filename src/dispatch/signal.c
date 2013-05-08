@@ -85,8 +85,7 @@ int send_signal (pid_t pid, int sig_no) {
     // set up sigtramp frame
     uint32_t *args = (uint32_t*) sig_ctxt->iret_esp;
     args[0] = (uint32_t) sig_err;
-    args[1] = siginfo ? (uint32_t) act->sa_sigaction :
-                        (uint32_t) act->sa_handler;
+    args[1] = (uint32_t) act->sa_handler;
     args[2] = (uint32_t) old_ctxt;
     args[3] = (uint32_t) sig_no;
     if (siginfo) {

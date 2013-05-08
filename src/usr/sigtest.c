@@ -97,15 +97,14 @@ static void sigaction_test (void) {
 
     printf ("Testing sigaction... ");
     struct sigaction act = {
-        sigusr2_handler,
-        sigusr2_action,
+        .sa_sigaction = sigusr2_action,
         mask,
         SA_SIGINFO
     };
     struct sigaction oact;
     sigaction (SIGUSR2, &act, NULL);
 
-    // verify that sa_sigaction is called (and not sa_handler)
+    // verify that signal handler is called
     printf ("asdf ?= ");
     kill (sigtest_pid, SIGUSR2);
 
