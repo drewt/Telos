@@ -84,13 +84,9 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     for (int i = 3; i < FDT_SIZE; i++)
         p->fds[i] = FD_NONE;
 
-    // set up the context stack
     struct ctxt *f = (struct ctxt*) pstack + 32;
-    f->iret_cs  = SEG_UCODE | 3;
-    f->iret_eip = (unsigned long) func;
-    f->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
-    f->iret_esp = (unsigned long) ((char*) pstack + STACK_SIZE - 256);
-    f->iret_ss  = SEG_UDATA | 3;
+    put_iret_frame (f, (unsigned long) func,
+            (unsigned long) ((char *) pstack + STACK_SIZE - 256));
     p->esp = f;
     p->ifp = f + 1;
 

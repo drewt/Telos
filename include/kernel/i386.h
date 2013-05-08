@@ -186,6 +186,16 @@ static inline void load_tss (unsigned short val)
     );
 }
 
+static inline void put_iret_frame (struct ctxt *f, unsigned long eip,
+        unsigned long esp)
+{
+    f->iret_cs  = SEG_UCODE | 3;
+    f->iret_eip = eip;
+    f->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
+    f->iret_esp = esp;
+    f->iret_ss  = SEG_UDATA | 3;
+}
+
 extern void gdt_install (void);
 extern void idt_install (void);
 extern void set_gate (unsigned int num, unsigned long handler,

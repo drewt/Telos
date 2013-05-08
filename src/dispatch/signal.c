@@ -74,23 +74,20 @@ int send_signal (pid_t pid, int sig_no)
 
     struct ctxt *old_ctxt = p->esp;
     struct ctxt *sig_ctxt = old_ctxt - 1;
+    unsigned long sig_eip = siginfo ? (unsigned long) sigtramp1
+                                    : (unsigned long) sigtramp0;
+    unsigned long sig_esp = (unsigned long)
+        ((unsigned long*) old_ctxt->iret_esp - (siginfo ? 13 : 6));
 
     // update pcb
     p->ifp = p->esp;
     p->esp = sig_ctxt;
     p->sig_pending &= ~(BIT(sig_no));
 
-    // set up signal context
-    sig_ctxt->iret_cs  = SEG_UCODE | 3;
-    sig_ctxt->iret_eip = (siginfo ? (unsigned long) sigtramp1 :
-                                    (unsigned long) sigtramp0);
-    sig_ctxt->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
-    sig_ctxt->iret_esp = (unsigned long) 
-        ((unsigned long*) old_ctxt->iret_esp - (siginfo ? 13 : 6));
-    sig_ctxt->iret_ss  = SEG_UDATA | 3;
+    put_iret_frame (sig_ctxt, sig_eip, sig_esp);
 
     // set up sigtramp frame
-    unsigned long *args = (unsigned long*) sig_ctxt->iret_esp;
+    unsigned long *args = (unsigned long*) sig_esp;
     args[0] = (unsigned long) sig_err;
     args[1] = (unsigned long) act->sa_handler;
     args[2] = (unsigned long) old_ctxt;
