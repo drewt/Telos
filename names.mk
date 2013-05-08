@@ -6,7 +6,7 @@ OFILES = bin/usr/strtest.o bin/usr/eventtest.o bin/usr/tsh.o bin/usr/memtest.o\
 	 bin/dispatch/process.o bin/dispatch/mem.o bin/dispatch/dispatch.o\
 	 bin/dispatch/sysprint.o bin/dispatch/io.o bin/dispatch/msg.o\
 	 bin/dispatch/signal.o bin/dispatch/time.o bin/pic.o bin/devinit.o\
-	 bin/drivers/console.o bin/drivers/serial.o bin/drivers/kbd.o bin/queue.o
+	 bin/drivers/console.o bin/drivers/serial.o bin/drivers/kbd.o
 DFILES = make/usr/strtest.d make/usr/eventtest.d make/usr/tsh.d\
 	 make/usr/memtest.d make/usr/proctest.d make/usr/kbdtest.d\
 	 make/usr/msgtest.d make/usr/printserver.d make/usr/sigtest.d\
@@ -16,4 +16,4 @@ DFILES = make/usr/strtest.d make/usr/eventtest.d make/usr/tsh.d\
 	 make/dispatch/mem.d make/dispatch/dispatch.d make/dispatch/sysprint.d\
 	 make/dispatch/io.d make/dispatch/msg.d make/dispatch/signal.d\
 	 make/dispatch/time.d make/pic.d make/devinit.d make/drivers/console.d\
-	 make/drivers/serial.d make/drivers/kbd.d make/queue.d
+	 make/drivers/serial.d make/drivers/kbd.d

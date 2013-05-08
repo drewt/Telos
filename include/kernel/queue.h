@@ -98,345 +98,311 @@
 #ifndef	_KERNEL_QUEUE_H_
 #define	_KERNEL_QUEUE_H_
 
+#include <kernel/common.h>
 #include <kernel/macro_help.h>
 
 /*
- *	Queue of abstract objects.  Queue is maintained
- *	within that object.
+ *      Queue of abstract objects.  Queue is maintained
+ *      within that object.
  *
- *	Supports fast removal from within the queue.
+ *      Supports fast removal from within the queue.
  *
- *	How to declare a queue of elements of type "foo_t":
- *		In the "*foo_t" type, you must have a field of
- *		type "queue_chain_t" to hold together this queue.
- *		There may be more than one chain through a
- *		"foo_t", for use by different queues.
+ *      How to declare a queue of elements of type "foo_t":
+ *              In the "*foo_t" type, you must have a field of
+ *              type "queue_chain_t" to hold together this queue.
+ *              There may be more than one chain through a
+ *              "foo_t", for use by different queues.
  *
- *		Declare the queue as a "queue_t" type.
+ *              Declare the queue as a "queue_t" type.
  *
- *		Elements of the queue (of type "foo_t", that is)
- *		are referred to by reference, and cast to type
- *		"queue_entry_t" within this module.
+ *              Elements of the queue (of type "foo_t", that is)
+ *              are referred to by reference, and cast to type
+ *              "queue_entry_t" within this module.
  */
 
 /*
- *	A generic doubly-linked list (queue).
+ * A generic doubly-linked list (queue).
  */
 
 struct queue_entry {
-	struct queue_entry	*next;		/* next element */
-	struct queue_entry	*prev;		/* previous element */
+    struct queue_entry *next;
+    struct queue_entry *prev;
 };
 
-typedef struct queue_entry	*queue_t;
-typedef	struct queue_entry	queue_head_t;
-typedef	struct queue_entry	queue_chain_t;
-typedef	struct queue_entry	*queue_entry_t;
+typedef struct queue_entry      *queue_t;
+typedef	struct queue_entry      queue_head_t;
+typedef	struct queue_entry      queue_chain_t;
+typedef	struct queue_entry      *queue_entry_t;
 
 /*
- *	enqueue puts "elt" on the "queue".
- *	dequeue returns the first element in the "queue".
- *	remqueue removes the specified "elt" from the specified "queue".
+ * enqueue puts "elt" on the "queue".
+ * dequeue returns the first element in the "queue".
+ * remqueue removes the specified "elt" from the specified "queue".
  */
 
-#define enqueue(queue,elt)	enqueue_tail(queue, elt)
-#define	dequeue(queue)		dequeue_head(queue)
+#define enqueue(queue,elt)  enqueue_tail(queue, elt)
+#define	dequeue(queue)      dequeue_head(queue)
 
-void		enqueue_head(queue_t que, queue_entry_t elt);
-void		enqueue_tail(queue_t que, queue_entry_t elt);
-queue_entry_t	dequeue_head(queue_t que);
-queue_entry_t	dequeue_tail(queue_t que);
-void		remqueue(queue_t que, queue_entry_t elt);
+/* Initialize the given queue */
+static inline void queue_init (queue_t q)
+{
+    q->next = q->prev = q;
+}
+
+/* Tests whether a queue is empty */
+static inline int queue_empty (queue_t q)
+{
+    return q == q->next;
+}
+
+/* Returns the first entry in the queue */
+static inline queue_entry_t queue_first (queue_t q)
+{
+    return q->next;
+}
+
+/* Returns the first entry in the queue, or NULL if the queue is empty. */
+static inline queue_entry_t queue_first_safe (queue_t q)
+{
+    return queue_empty (q) ? (queue_entry_t) 0 : q->next;
+}
+
+/* Returns the entry after an item in the queue */
+static inline queue_entry_t queue_next (queue_entry_t qe)
+{
+    return qe->next;
+}
+
+/* Returns the last entry in the queue */
+static inline queue_entry_t queue_last (queue_t q)
+{
+    return q->prev;
+}
+
+/* Returns the entry before an item in the queue */
+static inline queue_entry_t queue_prev (queue_entry_t qe)
+{
+    return qe->prev;
+}
+
+/* Tests whether a new entry it really the end of the queue */
+static inline int queue_end(queue_t q, queue_entry_t qe)
+{
+    return q == qe;
+}
+
+/* Adds the element at the tail of the queue */
+static inline void enqueue_tail (queue_t q, queue_entry_t elt)
+{
+    elt->next = q;
+    elt->prev = q->prev;
+    q->prev->next = elt;
+    q->prev = elt;
+}
+
+/* Adds the element at the head of the queue */
+static inline void enqueue_head (queue_t q, queue_entry_t elt)
+{
+    elt->next = q->next;
+    elt->prev = q;
+    elt->next->prev = elt;
+    q->next = elt;
+}
+
+/* Removes and returns the element at the head of the queue. */
+static inline queue_entry_t dequeue_head (queue_t q)
+{
+    queue_entry_t elt;
+
+    if (queue_empty (q))
+        return (queue_entry_t) 0;
+    
+    elt = q->next;
+    elt->next->prev = q;
+    q->next = elt->next;
+    return elt;
+}
+
+/* Removes and returns the element at the tail of the queue. */
+static inline queue_entry_t dequeue_tail (queue_t q)
+{
+    queue_entry_t elt;
+
+    if (queue_empty (q))
+        return (queue_entry_t) 0;
+
+    elt = q->prev;
+    elt->prev->next = q;
+    q->prev = elt->prev;
+    return elt;
+}
+
+/* Removes an arbitrary element from the queue.
+ * Assumes that the element is on the queue.    */
+static inline void remqueue (queue_t q, queue_entry_t elt)
+{
+    elt->next->prev = elt->prev;
+    elt->prev->next = elt->next;
+}
+
+/* Insert 'elt' after 'pred' in the queue. */
+static inline void insqueue (queue_entry_t elt, queue_entry_t pred)
+{
+    elt->next = pred->next;
+    elt->prev = pred;
+    (pred->next)->prev = elt;
+    pred->next = elt;
+}
+
+/*---------------------------------------------------------------------------*/
+/*
+ * Macros that operate on generic structures.  The queue chain may be at any
+ * location within the structure, and there may be more than one chain.
+ */
 
 /*
- *	Macro:		queue_init
- *	Function:
- *		Initialize the given queue.
- *	Header:
- *		void queue_init(q)
- *			queue_t		q;	*MODIFIED*
+ * Insert a new element at the tail of the queue.
+ *
+ *      void queue_enter(queue_t q, <type> elt, <type>, <chain field>)
  */
-#define	queue_init(q)	((q)->next = (q)->prev = q)
-
-/*
- *	Macro:		queue_first
- *	Function:
- *		Returns the first entry in the queue,
- *	Header:
- *		queue_entry_t queue_first(q)
- *			queue_t	q;		*IN*
- */
-#define	queue_first(q)	((q)->next)
-
-/*
- *	Macro:		queue_next
- *	Function:
- *		Returns the entry after an item in the queue.
- *	Header:
- *		queue_entry_t queue_next(qc)
- *			queue_t qc;
- */
-#define	queue_next(qc)	((qc)->next)
-
-/*
- *	Macro:		queue_last
- *	Function:
- *		Returns the last entry in the queue.
- *	Header:
- *		queue_entry_t queue_last(q)
- *			queue_t	q;		 *IN*
- */
-#define	queue_last(q)	((q)->prev)
-
-/*
- *	Macro:		queue_prev
- *	Function:
- *		Returns the entry before an item in the queue.
- *	Header:
- *		queue_entry_t queue_prev(qc)
- *			queue_t qc;
- */
-#define	queue_prev(qc)	((qc)->prev)
-
-/*
- *	Macro:		queue_end
- *	Function:
- *		Tests whether a new entry is really the end of
- *		the queue.
- *	Header:
- *		boolean_t queue_end(q, qe)
- *			queue_t q;
- *			queue_entry_t qe;
- */
-#define	queue_end(q, qe)	((q) == (qe))
-
-/*
- *	Macro:		queue_empty
- *	Function:
- *		Tests whether a queue is empty.
- *	Header:
- *		boolean_t queue_empty(q)
- *			queue_t q;
- */
-#define	queue_empty(q)		queue_end((q), queue_first(q))
-
-
-/*
- *	Macro:		enqueue_tail_macro
- *	Function:
- *		Adds the element at the tail of the queue.
- *	Header:
- *		void enqueue_tail_macro(queue_t que, queue_entry_t elt)
- */
-#define	enqueue_tail_macro(que, elt) \
-    MACRO_BEGIN \
-	(elt)->next = (que); \
-	((elt)->prev = (que)->prev)->next = (elt); \
-	(que)->prev = (elt); \
+#define queue_enter(head, elt, type, field)\
+    MACRO_BEGIN                                             \
+        queue_entry_t prev;                                 \
+                                                            \
+        prev = (head)->prev;                                \
+        if ((head) == prev) {                               \
+            (head)->next = (queue_entry_t) (elt);           \
+        }                                                   \
+        else {                                              \
+            ((type)prev)->field.next = (queue_entry_t)(elt);\
+	}                                                   \
+        (elt)->field.prev = prev;                           \
+        (elt)->field.next = head;                           \
+        (head)->prev = (queue_entry_t) elt;                 \
     MACRO_END
 
 /*
- *	Macro:		dequeue_head_macro
- *	Function:
- *		Removes the element at the head of the queue.
- *		Assumes that the queue is not empty.
- *	Header:
- *		void dequeue_tail_macro(queue_t que, queue_entry_t& elt)
- *		(elt is an lvalue)
+ * Insert a new element at the head of the queue.
+ *
+ *      void queue_enter_first(queue_t q, <type> elt, <type>, <chain field>)
  */
-#define	dequeue_head_macro(que, elt) \
-    MACRO_BEGIN \
-	(elt) = (que)->next; \
-	((que)->next = (elt)->next)->prev = (que); \
+#define queue_enter_first(head, elt, type, field)           \
+    MACRO_BEGIN                                             \
+        queue_entry_t next;                                 \
+                                                            \
+        next = (head)->next;                                \
+        if ((head) == next) {                               \
+            (head)->prev = (queue_entry_t) (elt);           \
+        }                                                   \
+        else {                                              \
+            ((type)next)->field.prev = (queue_entry_t)(elt);\
+        }                                                   \
+        (elt)->field.next = next;                           \
+        (elt)->field.prev = head;                           \
+        (head)->next = (queue_entry_t) elt;                 \
     MACRO_END
 
 /*
- *	Macro:		remqueue_macro
- *	Function:
- *		Removes an arbitrary element from the queue.
- *		Assumes that the element is on the queue.
- *	Header:
- *		void remqueue_macro(queue_t que, queue_entry_t elt)
+ * [internal use only]
+ *
+ * Find the queue_chain_t (or queue_t) for the given element (thing) in the
+ * given queue (head).
  */
-#define	remqueue_macro(que, elt) \
-    MACRO_BEGIN \
-	(elt)->next->prev = (elt)->prev; \
-	(elt)->prev->next = (elt)->next; \
-    MACRO_END
-
-/*----------------------------------------------------------------*/
-/*
- * Macros that operate on generic structures.  The queue
- * chain may be at any location within the structure, and there
- * may be more than one chain.
- */
+#define	queue_field(head, thing, type, field) \
+        (((head) == (thing)) ? (head) : &((type)(thing))->field)
 
 /*
- *	Macro:		queue_enter
- *	Function:
- *		Insert a new element at the tail of the queue.
- *	Header:
- *		void queue_enter(q, elt, type, field)
- *			queue_t q;
- *			<type> elt;
- *			<type> is what's in our queue
- *			<field> is the chain field in (*<type>)
+ * Remove an arbitrary item from the queue.
+ *
+ *      void queue_remove(queue_t q, <type> elt, <type>, <chain field>)
  */
-#define queue_enter(head, elt, type, field)			\
-    MACRO_BEGIN							\
-	register queue_entry_t prev;				\
-								\
-	prev = (head)->prev;					\
-	if ((head) == prev) {					\
-		(head)->next = (queue_entry_t) (elt);		\
-	}							\
-	else {							\
-		((type)prev)->field.next = (queue_entry_t)(elt);\
-	}							\
-	(elt)->field.prev = prev;				\
-	(elt)->field.next = head;				\
-	(head)->prev = (queue_entry_t) elt;			\
+#define	queue_remove(head, elt, type, field)                \
+    MACRO_BEGIN                                             \
+        queue_entry_t next, prev;                           \
+                                                            \
+        next = (elt)->field.next;                           \
+        prev = (elt)->field.prev;                           \
+                                                            \
+        if ((head) == next)                                 \
+            (head)->prev = prev;                            \
+        else                                                \
+            ((type)next)->field.prev = prev;                \
+                                                            \
+        if ((head) == prev)                                 \
+            (head)->next = next;                            \
+        else                                                \
+            ((type)prev)->field.next = next;                \
     MACRO_END
 
 /*
- *	Macro:		queue_enter_first
- *	Function:
- *		Insert a new element at the head of the queue.
- *	Header:
- *		void queue_enter_first(q, elt, type, field)
- *			queue_t q;
- *			<type> elt;
- *			<type> is what's in our queue
- *			<field> is the chain field in (*<type>)
+ * Remove and return the entry at the head of the queue.
+ *
+ *      void queue_remove_first(queue_t head, <type> entry, <type>, <chain>)
  */
-#define queue_enter_first(head, elt, type, field)		\
-    MACRO_BEGIN							\
-	register queue_entry_t next;				\
-								\
-	next = (head)->next;					\
-	if ((head) == next) {					\
-		(head)->prev = (queue_entry_t) (elt);		\
-	}							\
-	else {							\
-		((type)next)->field.prev = (queue_entry_t)(elt);\
-	}							\
-	(elt)->field.next = next;				\
-	(elt)->field.prev = head;				\
-	(head)->next = (queue_entry_t) elt;			\
+#define	queue_remove_first(head, entry, type, field)        \
+    MACRO_BEGIN                                             \
+        queue_entry_t next;                                 \
+                                                            \
+        (entry) = (type) ((head)->next);                    \
+        next = (entry)->field.next;                         \
+                                                            \
+        if ((head) == next)                                 \
+            (head)->prev = (head);                          \
+        else                                                \
+            ((type)(next))->field.prev = (head);            \
+        (head)->next = next;                                \
     MACRO_END
 
-/*
- *	Macro:		queue_field [internal use only]
- *	Function:
- *		Find the queue_chain_t (or queue_t) for the
- *		given element (thing) in the given queue (head)
+/* 
+ * Remove and return the entry at the tail of the queue.
+ *
+ *      void queue_remove_last(queue_t head, <type> entry, <type>, <chain>)
  */
-#define	queue_field(head, thing, type, field)			\
-		(((head) == (thing)) ? (head) : &((type)(thing))->field)
-
-/*
- *	Macro:		queue_remove
- *	Function:
- *		Remove an arbitrary item from the queue.
- *	Header:
- *		void queue_remove(q, qe, type, field)
- *			arguments as in queue_enter
- */
-#define	queue_remove(head, elt, type, field)			\
-    MACRO_BEGIN							\
-	register queue_entry_t	next, prev;			\
-								\
-	next = (elt)->field.next;				\
-	prev = (elt)->field.prev;				\
-								\
-	if ((head) == next)					\
-		(head)->prev = prev;				\
-	else							\
-		((type)next)->field.prev = prev;		\
-								\
-	if ((head) == prev)					\
-		(head)->next = next;				\
-	else							\
-		((type)prev)->field.next = next;		\
+#define	queue_remove_last(head, entry, type, field)         \
+    MACRO_BEGIN                                             \
+        queue_entry_t prev;                                 \
+                                                            \
+        (entry) = (type) ((head)->prev);                    \
+        prev = (entry)->field.prev;                         \
+                                                            \
+        if ((head) == prev)                                 \
+            (head)->next = (head);                          \
+        else                                                \
+            ((type)(prev))->field.next = (head);            \
+        (head)->prev = prev;                                \
     MACRO_END
 
-/*
- *	Macro:		queue_remove_first
- *	Function:
- *		Remove and return the entry at the head of
- *		the queue.
- *	Header:
- *		queue_remove_first(head, entry, type, field)
- *		entry is returned by reference
+/* 
+ * Assign to a link in the queue.
+ *
+ *      void queue_assign(queue_entry_t to, queue_entry_t from,
+ *                        <type>, <chain field>)
  */
-#define	queue_remove_first(head, entry, type, field)		\
-    MACRO_BEGIN							\
-	register queue_entry_t	next;				\
-								\
-	(entry) = (type) ((head)->next);			\
-	next = (entry)->field.next;				\
-								\
-	if ((head) == next)					\
-		(head)->prev = (head);				\
-	else							\
-		((type)(next))->field.prev = (head);		\
-	(head)->next = next;					\
+#define	queue_assign(to, from, type, field)                 \
+    MACRO_BEGIN                                             \
+        ((type)((from)->prev))->field.next = (to);          \
+        ((type)((from)->next))->field.prev = (to);          \
+        *to = *from;                                        \
     MACRO_END
 
-/*
- *	Macro:		queue_remove_last
- *	Function:
- *		Remove and return the entry at the tail of
- *		the queue.
- *	Header:
- *		queue_remove_last(head, entry, type, field)
- *		entry is returned by reference
+/* Iterate over each item in the queue.  Generates a 'for' loop, setting
+ * elt to each item in turn (by reference).
+ *
+ *      queue_iterate(queue_t head, <type> elt, <type>, <chain field>)
  */
-#define	queue_remove_last(head, entry, type, field)		\
-    MACRO_BEGIN							\
-	register queue_entry_t	prev;				\
-								\
-	(entry) = (type) ((head)->prev);			\
-	prev = (entry)->field.prev;				\
-								\
-	if ((head) == prev)					\
-		(head)->next = (head);				\
-	else							\
-		((type)(prev))->field.next = (head);		\
-	(head)->prev = prev;					\
-    MACRO_END
+#define queue_iterate(head, elt, type, field)               \
+        for ((elt) = (type) queue_first(head);              \
+             !queue_end((head), (queue_entry_t)(elt));      \
+             (elt) = (type) queue_next(&(elt)->field))
 
-/*
- *	Macro:		queue_assign
+/* Iterate over each item in the queue, deqeuing after each iteration.
+ * Generates a 'for' loop, setting elt to each item in turn (by reference).
+ *
+ *      dequeue_iterate(queue_t head, <type> elt, <type>)
  */
-#define	queue_assign(to, from, type, field)			\
-    MACRO_BEGIN							\
-	((type)((from)->prev))->field.next = (to);		\
-	((type)((from)->next))->field.prev = (to);		\
-	*to = *from;						\
-    MACRO_END
-
-/*
- *	Macro:		queue_iterate
- *	Function:
- *		iterate over each item in the queue.
- *		Generates a 'for' loop, setting elt to
- *		each item in turn (by reference).
- *	Header:
- *		queue_iterate(q, elt, type, field)
- *			queue_t q;
- *			<type> elt;
- *			<type> is what's in our queue
- *			<field> is the chain field in (*<type>)
- */
-#define queue_iterate(head, elt, type, field)			\
-	for ((elt) = (type) queue_first(head);			\
-	     !queue_end((head), (queue_entry_t)(elt));		\
-	     (elt) = (type) queue_next(&(elt)->field))
-
-#define dequeue_iterate(head, elt, type) \
-    for ((elt) = (type) dequeue(head);   \
-         (elt);                          \
-         (elt) = (type) dequeue(head))
+#define dequeue_iterate(head, elt, type)                    \
+        for ((elt) = (type) dequeue(head);                  \
+            (elt);                                          \
+            (elt) = (type) dequeue(head))
 
 #endif /* _KERNEL_QUEUE_H_ */
