@@ -157,7 +157,7 @@ static inline int syscall5 (int call, void *arg0, void *arg1, void *arg2,
         : [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
           [arg2] "g" (arg2), [arg3] "g" (arg3), [arg4] "g" (arg4),
           [xnum] "i" (SYSCALL_INTR)
-        : "%eax", "%ebx", "%ecx", "%edx"
+        : "%eax", "%ebx", "%ecx", "%edx", "%edi", "%esi"
     );
     return rc;
 }
