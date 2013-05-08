@@ -31,6 +31,9 @@
 /* signals which cannot be ignored by the user */
 #define SIG_NOIGNORE (BIT(SIGKILL) | BIT(SIGSTOP))
 
+#define SIGNO_INVALID(signo) ((signo) < 0 || (signo) > 31)
+#define SIG_UNBLOCKABLE(signo) ((signo) == SIGKILL || (signo) == SIGSTOP)
+
 /* trampoline code */
 static void sigtramp0 (void(*handler)(int), void *osp, int signo) {
     handler (signo);
@@ -136,7 +139,7 @@ void sys_sigwait (void) {
 //-----------------------------------------------------------------------------
 void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
 
-    if (sig < 0 || sig > 31) {
+    if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
         current->rc = EINVAL;
         return;
     }
@@ -157,7 +160,7 @@ void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
 //-----------------------------------------------------------------------------
 void sys_signal (int sig, void(*func)(int)) {
 
-    if (sig < 0 || sig > 31) {
+    if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
         current->rc = EINVAL;
         return;
     }
@@ -214,7 +217,8 @@ void sys_kill (int pid, int sig_no) {
         current->rc = ESRCH;
         return;
     }
-    if (sig_no < 0 || !sig_bit) {
+
+    if (SIGNO_INVALID(sig_no)) {
         current->rc = EINVAL;
         return;
     }
