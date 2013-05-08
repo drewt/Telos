@@ -48,7 +48,8 @@
 /*-----------------------------------------------------------------------------
  * Initializes the 8259 Programmable Interrupt Controller */
 //-----------------------------------------------------------------------------
-void pic_init (uint16_t off1, uint16_t off2) {
+void pic_init (u16 off1, u16 off2)
+{
     // master PIC
     outb (PIC1_CMD, 0x11);
     outb (PIC1_DAT, off1);
@@ -69,7 +70,8 @@ void pic_init (uint16_t off1, uint16_t off2) {
 /*-----------------------------------------------------------------------------
  * Signals end of interrupt to the PIC */
 //-----------------------------------------------------------------------------
-void pic_eoi (void) {
+void pic_eoi (void)
+{
     outb (PIC1_CMD, PIC_EOI);
     outb (PIC2_CMD, PIC_EOI);
 }
@@ -77,9 +79,10 @@ void pic_eoi (void) {
 /*-----------------------------------------------------------------------------
  * Enables/disables IRQ line */
 //-----------------------------------------------------------------------------
-void enable_irq (uint8_t irq, int disable) {
-    uint16_t port;
-    uint8_t val;
+void enable_irq (unsigned char irq, bool disable)
+{
+    unsigned short port;
+    unsigned char val;
 
     // select PIC
     if (irq < 8) {

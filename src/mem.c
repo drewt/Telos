@@ -28,7 +28,7 @@
 #define SANITY_OK   0x12
 #define SANITY_FREE 0x0
 
-extern uint32_t kend; // start of free memory
+extern unsigned long kend; // start of free memory
 static struct mem_header *free_list; // head of the free list
 
 /*-----------------------------------------------------------------------------
@@ -37,7 +37,7 @@ static struct mem_header *free_list; // head of the free list
 void mem_init (void) {
 
     // XXX: there is more free memory below this
-    uint32_t freemem = ((uint32_t) &kend + 0x1000) & PAGE_MASK;
+    unsigned long freemem = ((unsigned long) &kend + 0x1000) & PAGE_MASK;
     free_list = (struct mem_header*) freemem;
     free_list->size = 0x2F0000; // TODO: use non-arbitrary value
     free_list->next = NULL;
@@ -89,7 +89,8 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
             free_list = p->next;
     } else {
         // split p into adjacent segments p and r
-        r = (struct mem_header*) ((uint32_t)p+size+sizeof(struct mem_header));
+        r = (struct mem_header*)
+            ((unsigned long)p + size + sizeof (struct mem_header));
         *r = *p;
 
         // set mem_header fields

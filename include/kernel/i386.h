@@ -22,8 +22,6 @@
 #ifndef __I386_H_
 #define __I386_H_
 
-#include <stdint.h>
-
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
 
@@ -41,107 +39,113 @@
 
 /* general purpose registers (pusha ordering) */
 struct gp_regs {
-    uint32_t edi;
-    uint32_t esi;
-    uint32_t ebp;
-    uint32_t esp;
-    uint32_t ebx;
-    uint32_t edx;
-    uint32_t ecx;
-    uint32_t eax;
-    uint32_t stack[0];
+    unsigned long edi;
+    unsigned long esi;
+    unsigned long ebp;
+    unsigned long esp;
+    unsigned long ebx;
+    unsigned long edx;
+    unsigned long ecx;
+    unsigned long eax;
+    unsigned long stack[0];
 }; 
 
 /* process context before iret (in the kernel) */
 struct ctxt {
     struct gp_regs reg;
-    uint32_t iret_eip;
-    uint32_t iret_cs;
-    uint32_t eflags;
-    uint32_t iret_esp;
-    uint32_t iret_ss;
-    uint32_t stack[0];
+    unsigned long iret_eip;
+    unsigned long iret_cs;
+    unsigned long eflags;
+    unsigned long iret_esp;
+    unsigned long iret_ss;
+    unsigned long stack[0];
 };
 
 struct tss_entry {
-    uint32_t prev;
-    uint32_t esp0;
-    uint32_t ss0;
-    uint32_t esp1;
-    uint32_t ss1;
-    uint32_t esp2;
-    uint32_t ss2;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t ebx;
-    uint32_t esp;
-    uint32_t ebp;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t es;
-    uint32_t cs;
-    uint32_t ss;
-    uint32_t ds;
-    uint32_t fs;
-    uint32_t gs;
-    uint32_t ldt;
-    uint16_t trap;
-    uint16_t iomap_base;
+    unsigned long prev;
+    unsigned long esp0;
+    unsigned long ss0;
+    unsigned long esp1;
+    unsigned long ss1;
+    unsigned long esp2;
+    unsigned long ss2;
+    unsigned long cr3;
+    unsigned long eip;
+    unsigned long eflags;
+    unsigned long eax;
+    unsigned long ecx;
+    unsigned long edx;
+    unsigned long ebx;
+    unsigned long esp;
+    unsigned long ebp;
+    unsigned long esi;
+    unsigned long edi;
+    unsigned long es;
+    unsigned long cs;
+    unsigned long ss;
+    unsigned long ds;
+    unsigned long fs;
+    unsigned long gs;
+    unsigned long ldt;
+    unsigned short trap;
+    unsigned short iomap_base;
 } __attribute__((packed));
 
 extern struct tss_entry tss;
 
 /* wrapper for outb instruction */
-static inline void outb (uint16_t port, uint8_t data) {
+static inline void outb (unsigned short port, unsigned char data)
+{
     asm volatile ("outb %1, %0" : : "d" (port), "a" (data));
 }
 
 /* wrapper for inb instruction */
-static inline unsigned char inb (uint16_t port) {
-    uint8_t ret;
+static inline unsigned char inb (unsigned short port)
+{
+    unsigned char ret;
     asm volatile ("inb %1, %0" : "=a" (ret) : "d" (port));
     return ret;
 }
 
 /* get the code segment selector */
-static inline uint16_t get_cs (void) {
-    uint16_t cs;
+static inline unsigned short get_cs (void)
+{
+    unsigned short cs;
     asm volatile ("movw %%cs, %0   \n" : "=g" (cs) : : );
     return cs;
 }
 
 /* get the data segment selector */
-static inline uint16_t get_ds (void) {
-    uint16_t ds;
+static inline unsigned short get_ds (void)
+{
+    unsigned short ds;
     asm volatile ("movw %%ds, %0   \n" : "=g" (ds) : : );
     return ds;
 }
 
 /* get the task register */
-static inline uint16_t get_tr (void) {
-    uint16_t tr;
+static inline unsigned short get_tr (void)
+{
+    unsigned short tr;
     asm volatile ("str %0" : "=g" (tr) : : );
     return tr;
 }
 
-static inline void halt (void) {
+static inline void halt (void)
+{
     asm volatile ("_halt: hlt\njmp _halt");
 }
 
-extern int kprintf (const char *c, ...);
 /* from osdev.org wiki inline asm examples */
 /*-----------------------------------------------------------------------------
  * Loads the interrupt descriptor table given by (base,size) */
 //-----------------------------------------------------------------------------
-static inline void load_idt (void *base, uint16_t size) {
+static inline void load_idt (void *base, unsigned short size)
+{
     volatile struct {
-        uint16_t length;
-        uint32_t base;
-    } __attribute__((__packed__)) idtr = { size, (uint32_t) base };
+        u16 length;
+        u32 base;
+    } __attribute__((__packed__)) idtr = { size, (u32) base };
     asm volatile ("lidt (%0)" : : "g" (&idtr));
 }
 
@@ -150,11 +154,12 @@ static inline void load_idt (void *base, uint16_t size) {
  * Loads the global descriptor table given by (base,size) and updates the
  * segment selectors */
 //-----------------------------------------------------------------------------
-static inline void load_gdt (void *base, uint16_t size) {
+static inline void load_gdt (void *base, unsigned short size)
+{
     volatile struct {
-        uint16_t length;
-        uint32_t base;
-    } __attribute__((__packed__)) gdtr = { size, (uint32_t) base };
+        u16 length;
+        u32 base;
+    } __attribute__((__packed__)) gdtr = { size, (u32) base };
     asm volatile (
             "lgdt (%0)         \n"
             "ljmp %1,   $setcs \n"
@@ -172,7 +177,8 @@ static inline void load_gdt (void *base, uint16_t size) {
 /*-----------------------------------------------------------------------------
  * Loads the TSS register with a given value */
 //-----------------------------------------------------------------------------
-static inline void load_tss (uint16_t val) {
+static inline void load_tss (unsigned short val)
+{
     asm volatile (
         "movw %0, %%ax \n"
         "ltr  %%ax     \n"
@@ -182,9 +188,10 @@ static inline void load_tss (uint16_t val) {
 
 extern void gdt_install (void);
 extern void idt_install (void);
-extern void set_gate (uint8_t num, unsigned long handler, int selector);
-extern void pic_init (uint16_t off1, uint16_t off2);
-extern void enable_irq (uint8_t irq, int disable);
+extern void set_gate (unsigned int num, unsigned long handler,
+        unsigned short selector);
+extern void pic_init (u16 off1, u16 off2);
+extern void enable_irq (unsigned char irq, bool disable);
 extern void pic_eoi (void);
 extern void pit_init (int div);
 

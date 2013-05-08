@@ -35,19 +35,22 @@
 #define SIG_UNBLOCKABLE(signo) ((signo) == SIGKILL || (signo) == SIGSTOP)
 
 /* trampoline code */
-static void sigtramp0 (void(*handler)(int), void *osp, int signo) {
+static void sigtramp0 (void(*handler)(int), void *osp, int signo)
+{
     handler (signo);
     syscall1 (SYS_SIGRETURN, osp);
 }
 
 /* trampoline code for sigaction signal handling */
 static void sigtramp1 (void(*handler)(int,siginfo_t*,void*), void *osp,
-        siginfo_t info) {
+        siginfo_t info)
+{
     handler (info.si_signo, &info, osp);
     syscall1 (SYS_SIGRETURN, osp);
 }
 
-static void sig_err (void) {
+static void sig_err (void)
+{
     kprintf ("SIG ERROR\n");
     for (;;);
 }
@@ -56,7 +59,8 @@ static void sig_err (void) {
  * Prepares a process to switch contexts into the signal handler for the given
  * signal */
 //-----------------------------------------------------------------------------
-int send_signal (pid_t pid, int sig_no) {
+int send_signal (pid_t pid, int sig_no)
+{
     int i = PT_INDEX (pid);
     if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
         return -1;
@@ -78,27 +82,27 @@ int send_signal (pid_t pid, int sig_no) {
 
     // set up signal context
     sig_ctxt->iret_cs  = SEG_UCODE | 3;
-    sig_ctxt->iret_eip = (siginfo ? (uint32_t) sigtramp1 :
-                                    (uint32_t) sigtramp0);
+    sig_ctxt->iret_eip = (siginfo ? (unsigned long) sigtramp1 :
+                                    (unsigned long) sigtramp0);
     sig_ctxt->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
-    sig_ctxt->iret_esp = (uint32_t) 
-        ((uint32_t*) old_ctxt->iret_esp - (siginfo ? 13 : 6));
+    sig_ctxt->iret_esp = (unsigned long) 
+        ((unsigned long*) old_ctxt->iret_esp - (siginfo ? 13 : 6));
     sig_ctxt->iret_ss  = SEG_UDATA | 3;
 
     // set up sigtramp frame
-    uint32_t *args = (uint32_t*) sig_ctxt->iret_esp;
-    args[0] = (uint32_t) sig_err;
-    args[1] = (uint32_t) act->sa_handler;
-    args[2] = (uint32_t) old_ctxt;
-    args[3] = (uint32_t) sig_no;
+    unsigned long *args = (unsigned long*) sig_ctxt->iret_esp;
+    args[0] = (unsigned long) sig_err;
+    args[1] = (unsigned long) act->sa_handler;
+    args[2] = (unsigned long) old_ctxt;
+    args[3] = (unsigned long) sig_no;
     if (siginfo) {
         args[4]  = info->si_errno;
         args[5]  = info->si_code;;
         args[6]  = info->si_pid;
-        args[7]  = (uint32_t) info->si_addr;
+        args[7]  = (unsigned long) info->si_addr;
         args[8]  = info->si_status;
         args[9]  = info->si_band;
-        args[10] = (uint32_t) info->si_value.sigval_ptr;
+        args[10] = (unsigned long) info->si_value.sigval_ptr;
         args[11] = p->rc;
     } else {
         args[4]  = p->rc;
@@ -106,7 +110,7 @@ int send_signal (pid_t pid, int sig_no) {
     old_ctxt->reg.eax = p->sig_ignore;
     
     p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask) :
-                              (uint32_t) (~0 << (sig_no + 1));
+                              (u32) (~0 << (sig_no + 1));
 
     return 0;
 }
@@ -114,8 +118,8 @@ int send_signal (pid_t pid, int sig_no) {
 /*-----------------------------------------------------------------------------
  * Restore CPU & signal context that was active before the current signal */
 //-----------------------------------------------------------------------------
-void sig_restore (void *osp) {
-
+void sig_restore (void *osp)
+{
     // TODO: verify that osp is in valid range and properly aligned
     struct ctxt *cx = osp;
     current->esp = cx;
@@ -123,13 +127,14 @@ void sig_restore (void *osp) {
 
     // restore old signal mask and return value
     current->sig_ignore = cx->reg.eax;
-    current->rc         = ((uint32_t*) cx->iret_esp)[-2];
+    current->rc         = ((unsigned long*) cx->iret_esp)[-2];
 }
 
 /*-----------------------------------------------------------------------------
  * Wait for a signal */
 //-----------------------------------------------------------------------------
-void sys_sigwait (void) {
+void sys_sigwait (void)
+{
     current->state = STATE_SIGWAIT;
     new_process ();
 }
@@ -137,8 +142,8 @@ void sys_sigwait (void) {
 /*-----------------------------------------------------------------------------
  * Registers a signal action */
 //-----------------------------------------------------------------------------
-void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
-
+void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact)
+{
     if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
         current->rc = EINVAL;
         return;
@@ -158,14 +163,14 @@ void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
 /*-----------------------------------------------------------------------------
  * Registers a signal handling function for a given signal */
 //-----------------------------------------------------------------------------
-void sys_signal (int sig, void(*func)(int)) {
-
+void sys_signal (int sig, void(*func)(int))
+{
     if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
         current->rc = EINVAL;
         return;
     }
 
-    current->rc = (int) current->sigactions[sig].sa_handler;
+    current->rc = (long) current->sigactions[sig].sa_handler;
 
     if (func == SIG_IGN) {
        current->sig_accept &= ~(1 << sig);
@@ -182,7 +187,8 @@ void sys_signal (int sig, void(*func)(int)) {
 /*-----------------------------------------------------------------------------
  * Alters the signal mask */
 //-----------------------------------------------------------------------------
-void sys_sigprocmask (int how, uint32_t *set, uint32_t *oset) {
+void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset)
+{
     if (oset)
         *oset = ~(current->sig_ignore);
     if (set) {
@@ -208,9 +214,9 @@ void sys_sigprocmask (int how, uint32_t *set, uint32_t *oset) {
 /*-----------------------------------------------------------------------------
  * Function to register that a signal has been sent to a process */
 //-----------------------------------------------------------------------------
-void sys_kill (int pid, int sig_no) {
-
-    uint32_t sig_bit = 1 << sig_no;
+void sys_kill (int pid, int sig_no)
+{
+    u32 sig_bit = 1 << sig_no;
     int pti = PT_INDEX (pid);
 
     if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {

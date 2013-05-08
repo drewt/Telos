@@ -20,9 +20,9 @@
 #define __KERNEL_H_
 
 /* GLOBAL DATA */
-extern unsigned int stack;
-extern unsigned int kstart;
-extern unsigned int kend;
+extern unsigned long stack;
+extern unsigned long kstart;
+extern unsigned long kend;
 extern void(*dfl_sighandlers[])(int);
 
 /* initialization procedures */

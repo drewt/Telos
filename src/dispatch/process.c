@@ -87,18 +87,18 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     // set up the context stack
     struct ctxt *f = (struct ctxt*) pstack + 32;
     f->iret_cs  = SEG_UCODE | 3;
-    f->iret_eip = (uint32_t) func;
+    f->iret_eip = (unsigned long) func;
     f->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
-    f->iret_esp = (uint32_t) ((char*) pstack + STACK_SIZE - 256);
+    f->iret_esp = (unsigned long) ((char*) pstack + STACK_SIZE - 256);
     f->iret_ss  = SEG_UDATA | 3;
     p->esp = f;
     p->ifp = f + 1;
 
     // pass arguments to process
-    uint32_t *args = (uint32_t*) f->iret_esp;
-    args[0] = (uint32_t) sysstop; // return address
-    args[1] = (uint32_t) argc;
-    args[2] = (uint32_t) argv;
+    unsigned long *args = (unsigned long*) f->iret_esp;
+    args[0] = (unsigned long) sysstop; // return address
+    args[1] = (unsigned long) argc;
+    args[2] = (unsigned long) argv;
 
     ready (p);
 

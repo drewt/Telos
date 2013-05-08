@@ -16,8 +16,6 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
-
 char *itoa (int val, char *str, int base);
 
 /* mem.c */

@@ -53,7 +53,7 @@ void sig_restore (void *osp);
 void sys_sigaction (int sig, struct sigaction *act,
         struct sigaction *oact);
 void sys_signal (int sig, void(*func)(int));
-void sys_sigprocmask (int how, uint32_t *set, uint32_t *oset);
+void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset);
 void sys_kill (int pid, int sig_no);
 void sys_sigwait (void);
 void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);

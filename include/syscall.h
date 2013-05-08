@@ -19,14 +19,13 @@
 #ifndef __SYSCALL_H_
 #define __SYSCALL_H_
 
-#include <stdint.h>
-
 #ifndef SYSCALL_INTR
 #define SYSCALL_INTR 0x80
 #endif
 
 enum syscall_id {
-    SYS_CREATE = 48, // 0-47 reserved for hardware interrupts
+    /* 0-47 reserved for hardware interrupts */
+    SYS_CREATE = 48,
     SYS_YIELD,
     SYS_STOP,
     SYS_GETPID,
@@ -54,13 +53,13 @@ enum syscall_id {
 
 /* structure of arguments on the stack during a system call */
 struct sys_args {
-    uint32_t arg3;
-    uint32_t arg4;
-    uint64_t pad0; // unused
-    uint32_t arg0;
-    uint32_t arg2;
-    uint32_t arg1;
-    uint32_t call; // call type
+    unsigned long arg3;
+    unsigned long arg4;
+    unsigned long long _pad0; // unused
+    unsigned long arg0;
+    unsigned long arg2;
+    unsigned long arg1;
+    unsigned long call; // call type
 };
 
 static inline int syscall0 (int call) {

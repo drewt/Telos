@@ -22,9 +22,10 @@
 #ifndef _KERNEL_PROCESS_H_
 #define _KERNEL_PROCESS_H_
 
-#include <signal.h>
+#include <kernel/common.h>
 #include <kernel/device.h>
 #include <kernel/queue.h>
+#include <signal.h>
 
 #define PT_SIZE  256
 #define PID_MASK (PT_SIZE - 1)
@@ -57,8 +58,8 @@ struct pcb {
     /* metadata */
     int          pid;                // process ID
     int          parent_pid;         // parent process's pid
-    uint32_t     state;              // state
-    unsigned int rc;                 // return value for system calls
+    unsigned int state;              // state
+    long         rc;                 // return value for system calls
     /* stacks */
     void         *stack_mem;         // beginning of stack memory
     void         *int_stack;         // stack for interrupts
@@ -70,15 +71,15 @@ struct pcb {
     /* signals */
     struct sigaction sigactions[_TELOS_SIGMAX]; // signal handlers
     struct siginfo   siginfos[_TELOS_SIGMAX];   // signal information
-    uint32_t     sig_pending;        // bitmask for pending signals
-    uint32_t     sig_accept;         // bitmask for accepted signals
-    uint32_t     sig_ignore;         // bitmask for ignored signals
+    u32          sig_pending;        // bitmask for pending signals
+    u32          sig_accept;         // bitmask for accepted signals
+    u32          sig_ignore;         // bitmask for ignored signals
     /* message passing IPC */
     struct pbuf  pbuf;               // saved buffer
     struct pbuf  reply_blk;
-    queue_head_t  send_q;            // processes waiting to send
-    queue_head_t  recv_q;            // processes waiting to receive
-    queue_head_t  repl_q;            // processes waiting for a reply
+    queue_head_t send_q;             // processes waiting to send
+    queue_head_t recv_q;             // processes waiting to receive
+    queue_head_t repl_q;             // processes waiting for a reply
     /* */
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors

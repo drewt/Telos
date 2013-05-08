@@ -35,17 +35,18 @@ void timer_entry_point (void);
 void kbd_entry_point (void);
 void syscall_entry_point (void);
 
-void isr_init (void) {
+void isr_init (void)
+{
     set_gate (TIMER_INTR, (unsigned long) timer_entry_point, SEG_KCODE);
     set_gate (KBD_INTR, (unsigned long) kbd_entry_point, SEG_KCODE);
     set_gate (SYSCALL_INTR, (unsigned long) syscall_entry_point, SEG_KCODE);
     ksp = 0;
 }
 
-unsigned int context_switch (struct pcb *p) {
-
+unsigned int context_switch (struct pcb *p)
+{
     // make sure TSS points to the right part of the stack
-    tss.esp0 = (uint32_t) p->ifp;
+    tss.esp0 = (unsigned long) p->ifp;
 
     rc  = p->rc;
     psp = p->esp;

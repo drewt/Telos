@@ -19,9 +19,9 @@
 #ifndef __COMMON_H_
 #define __COMMON_H_
 
-#include <kernel/types.h>
-
 #define __KERNEL__
+
+#include <kernel/types.h>
 
 #define SYSERR (-1)
 

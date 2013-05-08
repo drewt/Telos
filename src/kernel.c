@@ -47,7 +47,7 @@ extern int console_init (void);
 /*-----------------------------------------------------------------------------
  * Kernel entry point, where it all begins... */
 //-----------------------------------------------------------------------------
-void kmain (struct multiboot_info *mbd, uint32_t magic) {
+void kmain (struct multiboot_info *mbd, unsigned long magic) {
 
     // initialize console so we can print boot status
     console_init ();

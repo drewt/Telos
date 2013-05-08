@@ -30,14 +30,14 @@
 extern void(*int_errs[48])(void);
 
 struct idt_entry {
-    uint16_t off_low;
-    uint16_t selector;
-    uint32_t reserved : 5;
-    uint32_t zero : 3;
-    uint32_t type : 5;
-    uint32_t dpl : 2;
-    uint32_t present : 1;
-    uint16_t off_high;
+    unsigned int off_low : 16;
+    unsigned int selector : 16;
+    unsigned int reserved : 5;
+    unsigned int zero : 3;
+    unsigned int type : 5;
+    unsigned int dpl : 2;
+    unsigned int present : 1;
+    unsigned int off_high : 16;
 };
 
 struct idt_entry idt[256];
@@ -45,7 +45,9 @@ struct idt_entry idt[256];
 /*-----------------------------------------------------------------------------
  * Installs a trap gate at vector [num] with the given handler */
 //-----------------------------------------------------------------------------
-void set_gate (uint8_t num, unsigned long handler, int selector) {
+void set_gate (unsigned int num, unsigned long handler,
+        unsigned short selector)
+{
     idt[num].off_low  = handler;
     idt[num].selector = selector;
     idt[num].zero     = 0;
@@ -59,7 +61,8 @@ void set_gate (uint8_t num, unsigned long handler, int selector) {
  * Installs an interrupt descriptor table in which all exceptions and hardware
  * interrupts signal an error and halt the kernel */
 //-----------------------------------------------------------------------------
-void idt_install (void) {
+void idt_install (void)
+{
     memset (idt, 0, sizeof (struct idt_entry) * 256);
     for (int i = 0; i < 48; i++)
         set_gate (i, (unsigned long) int_errs[i], SEG_KCODE);

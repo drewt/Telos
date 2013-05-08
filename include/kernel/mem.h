@@ -19,14 +19,12 @@
 #ifndef __MEM_H_
 #define __MEM_H_
 
-#include <stdint.h>
-
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
-    uint32_t          size;         // size of an allocated block
+    unsigned long      size;         // size of an allocated block
     struct mem_header *prev;        // previous node in the free list
     struct mem_header *next;        // next node in the free list
-    uint32_t          sanity_check; // padding/sanity check
+    unsigned long     sanity_check; // padding/sanity check
     unsigned char data_start[0];    // start of allocated block
 };
 

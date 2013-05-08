@@ -19,8 +19,6 @@
 #ifndef __MULTIBOOT_H_
 #define __MULTIBOOT_H_
 
-#include <stdint.h>
-
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
 
 struct aout_symbol_table {
@@ -54,12 +52,12 @@ struct multiboot_info {
 };
 
 struct multiboot_mmap_entry {
-    uint32_t size;
-    uint32_t addr_low;
-    uint32_t addr_high;
-    uint32_t len_low;
-    uint32_t len_high;
-    uint32_t type;
+    unsigned long size;
+    unsigned long addr_low;
+    unsigned long addr_high;
+    unsigned long len_low;
+    unsigned long len_high;
+    unsigned long type;
 } __attribute__((packed));
 
 #endif // __MULTIBOOT_H_

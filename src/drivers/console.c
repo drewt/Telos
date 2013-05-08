@@ -83,9 +83,9 @@ int console_close (enum dev_id devno) {
 int console_init (void) {
     // TODO: probe for colour/monochrome display
     unsigned char *buf = (unsigned char*) CLR_BUF;
+    u16 cpos;
 
     // get cursor position
-    uint32_t cpos;
     outb (CLR_BASE, 14);
     cpos = inb (CLR_BASE+1) << 8;
     outb (CLR_BASE, 15);
@@ -165,7 +165,8 @@ static void console_putc (unsigned char c, unsigned char attr,
     case '\n':
         constab[cno].pos += COL * 2; //        |
     case '\r':               // <------'
-        constab[cno].pos -= ((uint32_t) constab[cno].pos - CLR_BUF) % (COL * 2);
+        constab[cno].pos -= ((unsigned long) constab[cno].pos - CLR_BUF)
+            % (COL * 2);
         break;
     case '\t':
         for (int i = 0; i < TAB_WIDTH; i++)
