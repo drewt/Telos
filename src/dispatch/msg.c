@@ -65,6 +65,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
         // send message
         tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
         memcpy (dest->pbuf.buf, obuf, tmp);
+        dest->rc = tmp;
 
         // if sender expects reply, block in receiver's reply queue
         if (ibuf) {
