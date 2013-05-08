@@ -95,16 +95,20 @@ void sys_recv (int *src_pid, void *buffer, int length) {
         return;
     }
 
-    // block if recvall and no processes waiting to send
-    if (!(*src_pid) && !(src = (struct pcb*) queue_first (&current->send_q))) {
-        current->pbuf = (struct pbuf)
-            { .buf = buffer, .len = length, .id = 0 };
-        current->state = STATE_BLOCKED;
-        current->parg = src_pid;
-        new_process ();
-        return;
-    } else if (src) {
-        *src_pid = src->pid; // just set src_pid and proceed as usual
+    if (*src_pid == 0) {
+        if (queue_empty (&current->send_q)) {
+            /* no process waiting to send: block */
+            current->pbuf.buf = buffer;
+            current->pbuf.len = length;
+            current->pbuf.id  = 0;
+            current->state = STATE_BLOCKED;
+            current->parg = src_pid;
+            new_process ();
+            return;
+        } else {
+            /* set *src_pid and pretend it was set all along... */
+            *src_pid = ((struct pcb*) queue_first (&current->send_q))->pid;
+        }
     }
 
     tmp = PT_INDEX (*src_pid);
