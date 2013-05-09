@@ -43,6 +43,7 @@ char *strpbrk (const char *s, const char *accept);
 size_t strspn (const char *s, const char *accept);
 size_t strcspn (const char *s, const char *reject);
 char *strtok (char *restrict str, const char *restrict delim);
+char *strtok_r(char *restrict s, const char *restrict delim, char **restrict last);
 char *telos_strtok (char *restrict str, const char *restrict delim, char *d);
 
 #endif // __STRING_H_
