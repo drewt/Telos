@@ -88,7 +88,7 @@ static funcptr lookup (char *in)
 static size_t read_line (char *buf, size_t len)
 {
     int c;
-    int pos = 0;
+    size_t pos = 0;
 
     len--;
     while ((c = getchar ()) != '\n' && pos < len) {
@@ -98,6 +98,38 @@ static size_t read_line (char *buf, size_t len)
             buf[pos++] = c;
     }
     buf[pos] = '\0';
+    return pos;
+}
+
+#define skip_ws(str) \
+    for (;*(str) == ' ' || *(str) == '\t'; (str)++)
+#define skip_nonws(str) \
+    for (;*(str) != '\0' && *(str) != ' ' && *(str) != '\t'; (str)++)
+
+static char *consume_argument (char *s)
+{
+    static char *tokp;
+
+    if (s != NULL)
+        tokp = s;
+
+    skip_ws (tokp);
+    if (*tokp == '\0')
+        return NULL;
+    s = tokp;
+
+    if (*tokp == '\'') {
+        s = ++tokp;
+        while (*tokp != '\0' && *tokp != '\'')
+            tokp++;
+    } else {
+        skip_nonws(tokp);
+    }
+
+    if (*tokp != '\0')
+        *tokp++ = '\0';
+
+    return s;
 }
 
 static int parse_input (char *in, char **name, char *(*args)[])
@@ -106,8 +138,18 @@ static int parse_input (char *in, char **name, char *(*args)[])
     int bg = 0;
     char *tmp;
 
-    *name = strtok (in, " \t");
-    for (i = 0; (tmp = strtok (NULL, " \t")) != NULL; i++) {
+    /* get program name */
+    skip_ws (in);
+    *name = in;
+    skip_nonws (in);
+
+    if (*in != '\0')
+        *in++ = '\0';
+
+    /* get arguments */
+    for (i = 0, tmp = consume_argument (in); tmp != NULL;
+            tmp = consume_argument (NULL), i++)
+    {
         if (*tmp == '&' && *(tmp+1) == '\0')
             bg = 1;
         else
