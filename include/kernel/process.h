@@ -24,7 +24,7 @@
 
 #include <kernel/common.h>
 #include <kernel/device.h>
-#include <kernel/queue.h>
+#include <kernel/list.h>
 #include <signal.h>
 
 #define PT_SIZE  256
@@ -54,7 +54,7 @@ struct pbuf {
 
 /* process control block */
 struct pcb {
-    queue_chain_t chain;
+    list_chain_t chain;
     /* metadata */
     int          pid;                // process ID
     int          parent_pid;         // parent process's pid
@@ -76,13 +76,13 @@ struct pcb {
     /* message passing IPC */
     struct pbuf  pbuf;               // saved buffer
     struct pbuf  reply_blk;
-    queue_head_t send_q;             // processes waiting to send
-    queue_head_t recv_q;             // processes waiting to receive
-    queue_head_t repl_q;             // processes waiting for a reply
+    list_head_t send_q;              // processes waiting to send
+    list_head_t recv_q;              // processes waiting to receive
+    list_head_t repl_q;              // processes waiting for a reply
     /* */
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
-    queue_head_t heap_mem;           // heap allocated memory
+    list_head_t heap_mem;            // heap allocated memory
 };
 
 extern struct pcb proctab[];

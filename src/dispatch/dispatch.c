@@ -23,6 +23,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 #include <kernel/interrupt.h>
+#include <kernel/list.h>
 #include <syscall.h>
 
 /* routines defined in other files */
@@ -31,7 +32,7 @@ extern int send_signal (int pid, int sig_no);
 extern void tick (void);
 
 struct pcb *current = NULL; /* the running process      */
-queue_head_t ready_queue;   /* queue of ready processes */
+list_head_t ready_queue;   /* queue of ready processes */
 
 #define next() ((struct pcb*) dequeue (&ready_queue))
 
@@ -78,7 +79,7 @@ static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
  * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
-    queue_init (&ready_queue);
+    list_init (&ready_queue);
 
     // initialize actions that can't be initialized statically
     set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
@@ -140,7 +141,7 @@ void dispatch (void) {
 //-----------------------------------------------------------------------------
 void ready (struct pcb *p) {
     p->state = STATE_READY;
-    enqueue (&ready_queue, (queue_entry_t) p);
+    enqueue (&ready_queue, (list_entry_t) p);
 }
 
 /*-----------------------------------------------------------------------------
@@ -151,7 +152,7 @@ void new_process (void) {
     current = next ();
 
     // skip idle process if possible
-    if (current->pid == idle_pid && !queue_empty (&ready_queue)) {
+    if (current->pid == idle_pid && !list_empty (&ready_queue)) {
         ready (current);
         current = next ();
     }

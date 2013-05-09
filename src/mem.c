@@ -20,7 +20,7 @@
  */
 
 #include <kernel/common.h>
-#include <kernel/queue.h>
+#include <kernel/list.h>
 #include <kernel/mem.h>
 
 #define PARAGRAPH_MASK (~(0xF))
@@ -30,7 +30,7 @@
 #define SANITY_FREE 0x0
 
 extern unsigned long kend; // start of free memory
-static queue_head_t free_list;
+static list_head_t free_list;
 
 /*-----------------------------------------------------------------------------
  * Initializes the memory system */
@@ -42,8 +42,8 @@ void mem_init (void) {
     struct mem_header *head = (struct mem_header*) freemem;
     head->size = 0x2F0000; // TODO: use a non-arbitrary value
     head->sanity_check = SANITY_FREE;
-    queue_init (&free_list);
-    enqueue (&free_list, (queue_entry_t) head);
+    list_init (&free_list);
+    list_insert_tail (&free_list, (list_entry_t) head);
 }
 
 /*-----------------------------------------------------------------------------
@@ -73,12 +73,12 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
         size = (size + 0x10) & PARAGRAPH_MASK;
 
     // find a large enough segment of free memory
-    queue_iterate (&free_list, p, struct mem_header*, chain) {
+    list_iterate (&free_list, p, struct mem_header*, chain) {
         if (p->size >= size)
             break;
     }
 
-    if (queue_end (&free_list, (queue_entry_t) p))
+    if (list_end (&free_list, (list_entry_t) p))
         return NULL;
 
     // if p is just barely big enough...
@@ -86,7 +86,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
         p->sanity_check = SANITY_OK;
 
         // remove p from the free list
-        remqueue (&free_list, (queue_entry_t) p);
+        list_remove (&free_list, (list_entry_t) p);
     } else {
         // split p into adjacent segments p and r
         r = (struct mem_header*)
@@ -100,7 +100,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
         p->sanity_check = SANITY_OK;
 
         // replace p with r in the free list
-        queue_replace_entry ((queue_entry_t) p, (queue_entry_t) r);
+        list_replace_entry ((list_entry_t) p, (list_entry_t) r);
     }
 
     if (hdr)
@@ -132,5 +132,5 @@ void hfree (struct mem_header *hdr) {
     }
 
     // insert freed at the beginning of the free list
-    enqueue (&free_list, (queue_entry_t) hdr);
+    list_insert_tail (&free_list, (list_entry_t) hdr);
 }

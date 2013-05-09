@@ -25,7 +25,7 @@
 #include <kernel/time.h>
 #include <kernel/mem.h>
 #include <kernel/device.h>
-#include <kernel/queue.h>
+#include <kernel/list.h>
 
 #include <signal.h>
 
@@ -82,10 +82,10 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
 
-    queue_init (&p->send_q);
-    queue_init (&p->recv_q);
-    queue_init (&p->repl_q);
-    queue_init (&p->heap_mem);
+    list_init (&p->send_q);
+    list_init (&p->recv_q);
+    list_init (&p->repl_q);
+    list_init (&p->heap_mem);
 
     sig_init (p);
     files_init (p);

@@ -19,11 +19,11 @@
 #ifndef __MEM_H_
 #define __MEM_H_
 
-#include <kernel/queue.h>
+#include <kernel/list.h>
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
-    queue_chain_t      chain;       // chain for free/allocated lists
+    list_chain_t      chain;        // chain for free/allocated lists
     unsigned long      size;        // size of an allocated block
     unsigned long     sanity_check; // padding/sanity check
     unsigned char data_start[0];    // start of allocated block

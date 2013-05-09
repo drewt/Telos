@@ -21,6 +21,7 @@
 
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
+#include <kernel/list.h>
 
 #include <string.h>
 
@@ -59,7 +60,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
             *((int*) dest->parg) = current->pid;
 
         // unblock receiver
-        remqueue (&current->recv_q, (queue_entry_t) dest);
+        list_remove (&current->recv_q, (list_entry_t) dest);
         ready (dest);
 
         // send message
@@ -69,7 +70,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 
         // if sender expects reply, block in receiver's reply queue
         if (ibuf) {
-            enqueue (&dest->repl_q, (queue_entry_t) current);
+            enqueue (&dest->repl_q, (list_entry_t) current);
             current->state = STATE_BLOCKED;
             new_process ();
         }
@@ -77,7 +78,7 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
         // block sender on receiver's recv queue
         current->pbuf = (struct pbuf)
             { .buf = obuf, .len = olen, .id = dest_pid };
-        enqueue (&dest->send_q, (queue_entry_t) current);
+        enqueue (&dest->send_q, (list_entry_t) current);
         current->state = STATE_BLOCKED;
         new_process ();
     }
@@ -97,7 +98,7 @@ void sys_recv (int *src_pid, void *buffer, int length) {
     }
 
     if (*src_pid == 0) {
-        if (queue_empty (&current->send_q)) {
+        if (list_empty (&current->send_q)) {
             /* no process waiting to send: block */
             current->pbuf.buf = buffer;
             current->pbuf.len = length;
@@ -108,7 +109,7 @@ void sys_recv (int *src_pid, void *buffer, int length) {
             return;
         } else {
             /* set *src_pid and pretend it was set all along... */
-            *src_pid = ((struct pcb*) queue_first (&current->send_q))->pid;
+            *src_pid = ((struct pcb*) list_first (&current->send_q))->pid;
         }
     }
 
@@ -125,15 +126,15 @@ void sys_recv (int *src_pid, void *buffer, int length) {
         current->pbuf = (struct pbuf)
             { .buf = buffer, .len = length, .id = src->pid };
         current->state = STATE_BLOCKED;
-        enqueue (&src->recv_q, (queue_entry_t) current);
+        enqueue (&src->recv_q, (list_entry_t) current);
         new_process ();
     } else {
         // unblock sender if no-reply send, otherwise move to reply queue
-        remqueue (&current->send_q, (queue_entry_t) src);
+        list_remove (&current->send_q, (list_entry_t) src);
         if (!src->reply_blk.id)
             ready (src);
         else
-            enqueue (&current->repl_q, (queue_entry_t) src);
+            enqueue (&current->repl_q, (list_entry_t) src);
 
         // receive message
         tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
@@ -177,6 +178,6 @@ void sys_reply (int src_pid, void *buffer, int length) {
 
     // unblock sender
     src->reply_blk.id = 0;
-    remqueue (&current->repl_q, (queue_entry_t) src);
+    list_remove (&current->repl_q, (list_entry_t) src);
     ready (src);
 }

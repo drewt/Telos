@@ -24,8 +24,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 #include <kernel/drivers/kbd.h>
-
-#include <kernel/queue.h>
+#include <kernel/list.h>
 
 #include <klib.h>
 
@@ -38,7 +37,7 @@
 
 #define NOCHAR 256
 
-static queue_head_t work_q;
+static list_head_t work_q;
 
 static char kbd_eof;
 
@@ -142,7 +141,7 @@ int kbd_read (int fd, void *buf, int buf_len) {
     if (reading) {
         current->pbuf = (struct pbuf)
             { .buf = buf, .len = buf_len, .id = fd };
-        enqueue (&work_q, (queue_entry_t) current);
+        enqueue (&work_q, (list_entry_t) current);
         new_process ();
         return 0;
     }
@@ -177,7 +176,7 @@ int kbd_close (enum dev_id devno) {
  * */
 //-----------------------------------------------------------------------------
 int kbd_init (void) {
-    queue_init (&work_q);
+    list_init (&work_q);
     enable_irq (1, 0);
     return 0;
 }

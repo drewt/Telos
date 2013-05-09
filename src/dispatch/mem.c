@@ -18,13 +18,13 @@
 
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
-#include <kernel/queue.h>
+#include <kernel/list.h>
 #include <kernel/mem.h>
 
 #define MAX_ALLOC 0x4000
 
-void sys_malloc (unsigned int size, void **p) {
-    
+void sys_malloc (unsigned int size, void **p)
+{    
     struct mem_header *h;
 
     // TODO: limit memory use in a more `global' way
@@ -38,17 +38,17 @@ void sys_malloc (unsigned int size, void **p) {
         return;
     }
 
-    // put h at head of heap_mem list
-    enqueue (&current->heap_mem, (queue_entry_t) h);
+    // add h to list of allocated memory for current process
+    list_insert_tail (&current->heap_mem, (list_entry_t) h);
 
     current->rc = 0;
 }
 
-void sys_free (void *ptr) {
-
+void sys_free (void *ptr)
+{
     struct mem_header *m = (struct mem_header*)
         ((unsigned long) ptr - sizeof (struct mem_header));
 
-    remqueue (&current->heap_mem, (queue_entry_t) m);
+    list_remove (&current->heap_mem, (list_entry_t) m);
     kfree (ptr);
 }
