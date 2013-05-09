@@ -28,7 +28,8 @@
 
 #define WRITE_SIZE 200
 
-int vsnprintf (char *str, size_t size, const char *fmt, va_list ap) {
+int vsnprintf (char *str, size_t size, const char *fmt, va_list ap)
+{
     size_t count;
     char *s;
     char buf[33];
@@ -68,7 +69,8 @@ int vsnprintf (char *str, size_t size, const char *fmt, va_list ap) {
     return count;
 }
 
-int snprintf (char *str, size_t size, const char *fmt, ...) {
+int snprintf (char *str, size_t size, const char *fmt, ...)
+{
     int rv;
     va_list ap;
     va_start (ap, fmt);
@@ -77,7 +79,8 @@ int snprintf (char *str, size_t size, const char *fmt, ...) {
     return rv;
 }
 
-int vsprintf (char *str, const char *fmt, va_list ap) {
+int vsprintf (char *str, const char *fmt, va_list ap)
+{
     char *s;
     char buf[33];
     char *wpos = str;
@@ -115,7 +118,8 @@ int vsprintf (char *str, const char *fmt, va_list ap) {
     return wpos - str;
 }
 
-int sprintf (char *str, const char *fmt, ...) {
+int sprintf (char *str, const char *fmt, ...)
+{
     int rv;
     va_list ap;
     va_start (ap, fmt);
@@ -124,7 +128,8 @@ int sprintf (char *str, const char *fmt, ...) {
     return rv;
 }
 
-static int fmt_print (int fd, const char *fmt, va_list *ap, int *count) {
+static int fmt_print (int fd, const char *fmt, va_list *ap, int *count)
+{
     char c;
     char *s;
     char buf[33];
@@ -166,7 +171,8 @@ static int fmt_print (int fd, const char *fmt, va_list *ap, int *count) {
     return rv;
 }
 
-int printf (const char *fmt, ...) {
+int printf (const char *fmt, ...)
+{
     int rv;
     va_list ap;
     va_start (ap, fmt);
@@ -175,11 +181,13 @@ int printf (const char *fmt, ...) {
     return rv;
 }
 
-int vprintf (const char *fmt, va_list ap) {
+int vprintf (const char *fmt, va_list ap)
+{
     return vfprintf (stdout, fmt, ap);
 }
 
-int fprintf (FILE *stream, const char *fmt, ...) {
+int fprintf (FILE *stream, const char *fmt, ...)
+{
     int rv;
     va_list ap;
     va_start (ap, fmt);
@@ -188,7 +196,8 @@ int fprintf (FILE *stream, const char *fmt, ...) {
     return rv;
 }
 
-int vfprintf (FILE *stream, const char *fmt, va_list ap) {
+int vfprintf (FILE *stream, const char *fmt, va_list ap)
+{
     int rv = 0, tmp;
     const char *pos = fmt;
 
@@ -206,10 +215,18 @@ int vfprintf (FILE *stream, const char *fmt, va_list ap) {
     return rv;
 }
 
-int puts (const char *s) {
+int puts (const char *s)
+{
     int rv;
     while ((rv = write (STDOUT_FILENO, s, WRITE_SIZE)) != 0)
         s += rv;
     write (STDOUT_FILENO, "\n", 1);
     return 1;
+}
+
+int putchar(int c)
+{
+    if (write (STDOUT_FILENO, &c, 1) == -1)
+        return EOF;
+    return c;
 }
