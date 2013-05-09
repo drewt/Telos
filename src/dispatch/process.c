@@ -85,6 +85,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     queue_init (&p->send_q);
     queue_init (&p->recv_q);
     queue_init (&p->repl_q);
+    queue_init (&p->heap_mem);
 
     sig_init (p);
     files_init (p);
@@ -122,18 +123,15 @@ void sys_yield (void)
 void sys_stop (void)
 {
     struct pcb *pit;
-    struct mem_header *hit, *tmp;
+    struct mem_header *hit;
 
     // TODO: see what POSIX requires vis-a-vis process data in handler
     sys_kill (current->parent_pid, SIGCHLD);
 
     // free memory allocated to process
     kfree (current->stack_mem);
-    for (hit = current->heap_mem; hit;) {
-        tmp = hit;
-        hit = hit->next;
-        kfree (tmp->data_start);
-    }
+    dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
+        kfree (hit->data_start);
 
     current->state = STATE_STOPPED;
 

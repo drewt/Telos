@@ -18,6 +18,7 @@
 
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
+#include <kernel/queue.h>
 #include <kernel/mem.h>
 
 #define MAX_ALLOC 0x4000
@@ -38,11 +39,7 @@ void sys_malloc (unsigned int size, void **p) {
     }
 
     // put h at head of heap_mem list
-    h->prev = NULL;
-    h->next = current->heap_mem;
-    current->heap_mem = h;
-    if (h->next)
-        h->next->prev = h;
+    enqueue (&current->heap_mem, (queue_entry_t) h);
 
     current->rc = 0;
 }
@@ -52,16 +49,6 @@ void sys_free (void *ptr) {
     struct mem_header *m = (struct mem_header*)
         ((unsigned long) ptr - sizeof (struct mem_header));
 
-    // remove ptr from heap_mem list
-    if (m == current->heap_mem) {
-        current->heap_mem = current->heap_mem->next;
-        if (current->heap_mem)
-            current->heap_mem->prev = NULL;
-    } else {
-        m->prev->next = m->next;
-        if (m->next)
-            m->next->prev = m->prev;
-    }
-
+    remqueue (&current->heap_mem, (queue_entry_t) m);
     kfree (ptr);
 }

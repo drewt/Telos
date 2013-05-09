@@ -67,7 +67,6 @@ struct pcb {
     void         *ifp;               // interrupt frame pointer
     /* time */
     unsigned int timestamp;          // creation time
-    int          sleep_delta;        // delta for sleeping queue
     /* signals */
     struct sigaction sigactions[_TELOS_SIGMAX]; // signal handlers
     struct siginfo   siginfos[_TELOS_SIGMAX];   // signal information
@@ -83,7 +82,7 @@ struct pcb {
     /* */
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
-    struct mem_header *heap_mem;     // heap-allocated memory
+    queue_head_t heap_mem;           // heap allocated memory
 };
 
 extern struct pcb proctab[];

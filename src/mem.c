@@ -20,6 +20,7 @@
  */
 
 #include <kernel/common.h>
+#include <kernel/queue.h>
 #include <kernel/mem.h>
 
 #define PARAGRAPH_MASK (~(0xF))
@@ -29,7 +30,7 @@
 #define SANITY_FREE 0x0
 
 extern unsigned long kend; // start of free memory
-static struct mem_header *free_list; // head of the free list
+static queue_head_t free_list;
 
 /*-----------------------------------------------------------------------------
  * Initializes the memory system */
@@ -38,11 +39,11 @@ void mem_init (void) {
 
     // XXX: there is more free memory below this
     unsigned long freemem = ((unsigned long) &kend + 0x1000) & PAGE_MASK;
-    free_list = (struct mem_header*) freemem;
-    free_list->size = 0x2F0000; // TODO: use non-arbitrary value
-    free_list->next = NULL;
-    free_list->prev = NULL;
-    free_list->sanity_check = SANITY_FREE;
+    struct mem_header *head = (struct mem_header*) freemem;
+    head->size = 0x2F0000; // TODO: use a non-arbitrary value
+    head->sanity_check = SANITY_FREE;
+    queue_init (&free_list);
+    enqueue (&free_list, (queue_entry_t) head);
 }
 
 /*-----------------------------------------------------------------------------
@@ -72,21 +73,20 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
         size = (size + 0x10) & PARAGRAPH_MASK;
 
     // find a large enough segment of free memory
-    for (p = free_list; p && (p->size < size); p = p->next);
+    queue_iterate (&free_list, p, struct mem_header*, chain) {
+        if (p->size >= size)
+            break;
+    }
 
-    if (!p) return NULL; // not enough memory
+    if (queue_end (&free_list, (queue_entry_t) p))
+        return NULL;
 
     // if p is just barely big enough...
     if ((p->size - size) < sizeof (struct mem_header)) {
         p->sanity_check = SANITY_OK;
 
         // remove p from the free list
-        if (p->next)
-            p->next->prev = p->prev;
-        if (p->prev)
-            p->prev->next = p->next;
-        else
-            free_list = p->next;
+        remqueue (&free_list, (queue_entry_t) p);
     } else {
         // split p into adjacent segments p and r
         r = (struct mem_header*)
@@ -100,12 +100,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
         p->sanity_check = SANITY_OK;
 
         // replace p with r in the free list
-        if (p->next)
-            p->next->prev = r;
-        if (p->prev)
-            p->prev->next = r;
-        else
-            free_list = r;
+        queue_replace_entry ((queue_entry_t) p, (queue_entry_t) r);
     }
 
     if (hdr)
@@ -137,9 +132,5 @@ void hfree (struct mem_header *hdr) {
     }
 
     // insert freed at the beginning of the free list
-    hdr->next = free_list;
-    hdr->prev = NULL;
-    if (free_list)
-        free_list->prev = hdr;
-    free_list = hdr;
+    enqueue (&free_list, (queue_entry_t) hdr);
 }

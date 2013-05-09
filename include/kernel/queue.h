@@ -237,6 +237,15 @@ static inline queue_entry_t dequeue_tail (queue_t q)
     return elt;
 }
 
+static inline void queue_replace_entry (queue_entry_t from, queue_entry_t to)
+{
+    from->prev->next = to;
+    from->next->prev = to;
+
+    to->next = from->next;
+    to->prev = from->prev;
+}
+
 /* Removes an arbitrary element from the queue.
  * Assumes that the element is on the queue.    */
 static inline void remqueue (queue_t q, queue_entry_t elt)
