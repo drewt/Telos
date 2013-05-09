@@ -41,6 +41,7 @@ typedef void(*funcptr)(int, char**);
 void tsh ();
 
 static void help (int argc, char *argv[]);
+extern void echo (int argc, char *argv[]);
 extern void printserver (int argc, char *argv[]);
 extern void printclient (int argc, char *argv[]);
 
@@ -60,6 +61,7 @@ static struct program progtab[] = {
     { event_test,  "eventtest"   },
     { msg_test,    "msgtest"     },
     { memtest,     "memtest"     },
+    { echo,        "echo"        },
     { printserver, "printserver" },
     { printclient, "printclient" },
     { tsh,         "tsh"         }
