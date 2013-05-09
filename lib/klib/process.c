@@ -1,9 +1,6 @@
-/* syscall.c : system calls
- */
-
 /*  Copyright 2013 Drew T.
  *
- *  This file is part of Telos.
+ *  This file is part of the Telos C Library.
  *  
  *  Telos is free software: you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software
@@ -24,30 +21,26 @@
 
 typedef int pid_t;
 
-/* PROCESS.H */
-
 /*-----------------------------------------------------------------------------
- * */
+ * Create a process */
 //-----------------------------------------------------------------------------
 pid_t syscreate (void(*func)(int,char**), int argc, char *argv[]) {
     return syscall3 (SYS_CREATE, func, (void*) argc, argv);
 }
 
 /*-----------------------------------------------------------------------------
- * */
+ * Yield the processor */
 //-----------------------------------------------------------------------------
 void sysyield (void) {
     syscall0 (SYS_YIELD);
 }
 
 /*-----------------------------------------------------------------------------
- * */
+ * Terminate */
 //-----------------------------------------------------------------------------
 void sysstop (void) {
     syscall0 (SYS_STOP);
 }
-
-/* PRINT.H */
 
 /*-----------------------------------------------------------------------------
  * */
