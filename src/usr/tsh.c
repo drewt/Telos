@@ -17,27 +17,24 @@
  */
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <signal.h>
-#include <unistd.h>
 
 #include <telos/process.h>
 #include <telos/console.h>
 
-#include <klib.h>
-
 #include <usr/test.h>
 
-#define N_CMDS   (sizeof (progtab) / sizeof (*progtab))
+#define N_CMDS   (sizeof progtab / sizeof *progtab)
 #define IN_LEN   512
 #define MAX_ARGS 100
 
-#define SHELL_EXIT  ((void*) -1)
-#define SHELL_CLEAR ((void*) -2)
+#define SHELL_EXIT  ((void*)-1)
+#define SHELL_CLEAR ((void*)-2)
 
-static const char const *prompt = "TELOS> ";
+#define PROMPT "TELOS> "
 
 typedef void(*funcptr)(int, char**);
 
@@ -68,23 +65,17 @@ static struct program progtab[] = {
     { tsh,         "tsh"         }
 };
 
-enum shellrc {
-    RC_ARGS,
-    RC_LEN,
-    RC_EOF,
-    RC_FG,
-    RC_BG,
-};
-
 static void sigchld_handler (int signo) {}
 
-static void help (int argc, char *argv[]) {
+static void help (int argc, char *argv[])
+{
     puts ("Valid commands are:");
     for (size_t i = 0; i < N_CMDS; i++)
         printf ("\t%s\n", progtab[i].name);
 }
 
-static funcptr lookup (char *in) {
+static funcptr lookup (char *in)
+{
     size_t i;
     for (i = 0; i < N_CMDS; i++)
         if (!strcmp (in, progtab[i].name))
@@ -92,69 +83,59 @@ static funcptr lookup (char *in) {
     return NULL;
 }
 
-static enum shellrc get_cmd (char *in, int in_len, char *(*args)[], int nargs) {
-    int i, c, arg = 0;
-    enum shellrc rc = RC_LEN;
-    bool in_space = false, bg = false;
-    for (i = 0; i < in_len-1; i++) {
-        c = getchar ();
-        switch (c) {
-        case '\b':
-            if (i > 0)
-                i -= 2;
-            break;
-        case '\t':
-        case ' ':
-            if (in_space) {
-                i--;
-            } else {
-                in[i] = '\0';
-                in_space = true;
-            }
-            break;
-        case '&':
-            i--;
-            bg = true;
-            break;
-        case '\n':
-            rc = bg ? RC_BG : RC_FG;
-            goto end;
-        case EOF:
-            rc = RC_EOF;
-            goto end;
-        default:
-            if (in_space) {
-                if (arg >= nargs - 1) {
-                    rc = RC_ARGS;
-                    goto end;
-                }
-                in_space = false;
-                (*args)[arg] = &in[i];
-                arg++;
-            }
-            in[i] = (char) c;
-            break;
-        }
+static size_t read_line (char *buf, size_t len)
+{
+    int c;
+    int pos = 0;
+
+    len--;
+    while ((c = getchar ()) != '\n' && pos < len) {
+        if (c == '\b' && pos > 0)
+            pos--;
+        else
+            buf[pos++] = c;
     }
-end:
-    in[i] = '\0';
-    (*args)[arg] = NULL;
-    return rc;
+    buf[pos] = '\0';
 }
 
-void tsh () {
-    int sig, argc;
+static int parse_input (char *in, char **name, char *(*args)[])
+{
+    int i;
+    int bg = 0;
+    char *tmp;
+
+    *name = strtok (in, " \t");
+    for (i = 0; (tmp = strtok (NULL, " \t")) != NULL; i++) {
+        if (*tmp == '&' && *(tmp+1) == '\0')
+            bg = 1;
+        else
+            (*args)[i] = tmp;
+    }
+
+    (*args)[i] = NULL;
+    return bg;
+}
+
+void tsh ()
+{
+    funcptr p;
+    char *name;
     char in[IN_LEN];
     char *argv[MAX_ARGS];
-    enum shellrc rc;
-    funcptr p;
+    int argc;
+    int sig;
+    int bg;
 
     signal (SIGCHLD, sigchld_handler);
 
-    for (;;) {
-        printf ("%s", prompt);
-        rc = get_cmd (in, IN_LEN, &argv, MAX_ARGS);
-        if (!(p = lookup (in))) {
+    while (1) {
+        printf (PROMPT);
+        read_line (in, IN_LEN);
+        if (*in == '\0')
+            continue;
+
+        bg = parse_input (in, &name, &argv);
+        if (!(p = lookup (name))) {
             printf ("tsh: '%s' not found\n", in);
             continue;
         }
@@ -168,7 +149,7 @@ void tsh () {
 
         for (argc = 0; argv[argc] != NULL; argc++);
         syscreate (p, argc, argv);
-        if (rc != RC_BG)
+        if (!bg)
             for (sig = 0; sig != SIGCHLD; sig = sigwait ());
     }
 }
