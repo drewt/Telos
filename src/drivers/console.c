@@ -25,7 +25,6 @@
 #include <kernel/device.h>
 #include <kernel/drivers/console.h>
 
-#include <errnodefs.h>
 #include <string.h>
 #include <klib.h>
 

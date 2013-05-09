@@ -23,7 +23,6 @@
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 
-#include <errnodefs.h>
 #include <syscall.h>
 #include <signal.h>
 #include <bit.h>

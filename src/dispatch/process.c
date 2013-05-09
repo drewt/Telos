@@ -27,9 +27,7 @@
 #include <kernel/device.h>
 #include <kernel/queue.h>
 
-#include <errnodefs.h>
 #include <signal.h>
-#include <unistd.h>
 
 extern void sysstop (void);
 

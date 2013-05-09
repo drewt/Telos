@@ -19,10 +19,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <kernel/common.h>
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 
-#include <errnodefs.h>
 #include <string.h> // pseudo-fs hack
 
 #define FD_VALID(fd) (fd >= 0 && fd < FDT_SIZE && current->fds[fd] != FD_NONE)

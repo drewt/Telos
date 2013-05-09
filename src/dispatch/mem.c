@@ -16,10 +16,9 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <kernel/common.h>
 #include <kernel/dispatch.h>
 #include <kernel/mem.h>
-
-#include <errnodefs.h>
 
 #define MAX_ALLOC 0x4000
 

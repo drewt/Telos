@@ -22,6 +22,7 @@
 #define __KERNEL__
 
 #include <kernel/types.h>
+#include <errnodefs.h>
 
 #define SYSERR (-1)
 
