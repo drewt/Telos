@@ -41,59 +41,52 @@ struct gdt_entry {
     unsigned int base_high : 8;
 };
 
-struct gdt_entry gdt[GDT_N_ENTRIES]; /* global descriptor table */
-struct tss_entry tss;                /* task state segment      */
+#define SEG_NULL { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
-/*-----------------------------------------------------------------------------
- * Sets a descriptor in the GDT with the given values.  attr is bits 40 -> 47;
- * bits 48->63 are set to default values. */
-//-----------------------------------------------------------------------------
-static void set_descriptor (int num, unsigned long base, unsigned long limit,
-        unsigned char attr)
-{
-    gdt[num].limit_low = limit & 0xFFFF;
-    gdt[num].base_low = base & 0xFFFF;
-    gdt[num].base_mid = (base >> 16) & 0xFF;
-    gdt[num].type = attr & 0xF;
-    gdt[num].sys = (attr >> 4) & 0x1;
-    gdt[num].dpl = (attr >> 5) & 0x3;
-    gdt[num].present = (attr >> 7) & 0x1;
-    gdt[num].limit_high = (limit >> 16) & 0xF;
-    gdt[num].avl = 0;
-    gdt[num].l = 0;
-    gdt[num].db = 1;
-    gdt[num].gran = 1;
-    gdt[num].base_high = (base >> 24) & 0xFF;
+#define SEG(base,limit,attr)                \
+{                                           \
+    .limit_low  = (limit) & 0xFFFF,         \
+    .base_low   = (base) & 0xFFFF,          \
+    .base_mid   = ((base) >> 16) & 0xFF,    \
+    .type       = (attr) & 0xF,             \
+    .sys        = ((attr) >> 4) & 0x1,      \
+    .dpl        = ((attr) >> 5) & 0x3,      \
+    .present    = ((attr) >> 7) & 0x1,      \
+    .limit_high = ((limit) >> 16) & 0xF,    \
+    .avl        = 0,                        \
+    .l          = 0,                        \
+    .db         = 1,                        \
+    .gran       = 1,                        \
+    .base_high  = ((base) >> 24) & 0xFF     \
 }
 
-/*-----------------------------------------------------------------------------
- * Initializes the task state segment */
-//-----------------------------------------------------------------------------
-static void init_tss (void)
-{
-    memset (&tss, 0, sizeof (struct tss_entry));
-    tss.ss0  = SEG_KDATA;
-    tss.esp0 = 0;
-    tss.cs = SEG_KCODE | 3;
-    tss.ss = tss.ds = tss.es = tss.fs = tss.gs = SEG_KDATA | 3;
-}
+struct gdt_entry gdt[GDT_N_ENTRIES] = {
+    [0] =          SEG_NULL,
+    [KCODE_SEGN] = SEG (0, 0xFFFFFFFF, 0x9A),
+    [KDATA_SEGN] = SEG (0, 0xFFFFFFFF, 0x92),
+    [UCODE_SEGN] = SEG (0, 0xFFFFFFFF, 0xFA),
+    [UDATA_SEGN] = SEG (0, 0xFFFFFFFF, 0xF2)
+};
+
+struct tss_entry tss = {
+    .ss0  = SEG_KDATA,
+    .esp0 = 0,
+    .cs = SEG_KCODE | 3,
+    .ss = SEG_KDATA | 3,
+    .ds = SEG_KDATA | 3,
+    .es = SEG_KDATA | 3,
+    .fs = SEG_KDATA | 3,
+    .gs = SEG_KDATA | 3
+};
 
 /*-----------------------------------------------------------------------------
  * Routine to create and load the kernel's global descriptor table */
 //-----------------------------------------------------------------------------
 void gdt_install (void)
 {
-    unsigned long tss_base = (unsigned long) &tss;
-
-    init_tss ();
-
-    // set up a basic, flat address space
-    set_descriptor (0,          0, 0x00000000, 0x00); // null descriptor
-    set_descriptor (KCODE_SEGN, 0, 0xFFFFFFFF, 0x9A); // kernel code
-    set_descriptor (KDATA_SEGN, 0, 0xFFFFFFFF, 0x92); // kernel data
-    set_descriptor (UCODE_SEGN, 0, 0xFFFFFFFF, 0xFA); // user code
-    set_descriptor (UDATA_SEGN, 0, 0xFFFFFFFF, 0xF2); // user data
-    set_descriptor (TSS_SEGN, tss_base, tss_base + sizeof tss, 0xE9);
+    unsigned long tss_base  = (unsigned long) &tss;
+    unsigned long tss_limit = tss_base + sizeof tss;
+    gdt[TSS_SEGN] = (struct gdt_entry) SEG (tss_base, tss_limit, 0xE9);
 
     load_gdt (&gdt, sizeof gdt); // -1?
     load_tss (SEG_TSS | 3); // load tss with RPL 3
