@@ -16,6 +16,14 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * dispatch/mem.c
+ *
+ * System calls for memory allocation.  Currently these allocate memory in a
+ * shared heap.  Eventually these should be replaced by a brk syscall and
+ * user-space malloc routines.
+ */
+
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
@@ -27,14 +35,19 @@ void sys_malloc (unsigned int size, void **p)
 {    
     struct mem_header *h;
 
+    if (size == 0) {
+        current->rc = -EINVAL;
+        return;
+    }
+
     // TODO: limit memory use in a more `global' way
     if (size > MAX_ALLOC) {
-        current->rc = ENOMEM;
+        current->rc = -ENOMEM;
         return;
     }
 
     if (!(*p = hmalloc (size, &h))) {
-        current->rc = ENOMEM;
+        current->rc = -ENOMEM;
         return;
     }
 
@@ -46,9 +59,9 @@ void sys_malloc (unsigned int size, void **p)
 
 void sys_free (void *ptr)
 {
-    struct mem_header *m = (struct mem_header*)
-        ((unsigned long) ptr - sizeof (struct mem_header));
+    struct mem_header *h = mem_ptoh (ptr);
 
-    list_remove (&current->heap_mem, (list_entry_t) m);
-    kfree (ptr);
+    // XXX: unsafe!  Memory might be unallocated or allocated to another process
+    list_remove (&current->heap_mem, (list_entry_t) h);
+    hfree (h);
 }

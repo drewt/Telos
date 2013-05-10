@@ -16,23 +16,35 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MEM_H_
-#define __MEM_H_
+#ifndef _KERNEL_MEM_H_
+#define _KERNEL_MEM_H_
 
 #include <kernel/list.h>
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
-    list_chain_t      chain;        // chain for free/allocated lists
-    unsigned long      size;        // size of an allocated block
-    unsigned long     sanity_check; // padding/sanity check
-    unsigned char data_start[0];    // start of allocated block
+    list_chain_t    chain;        // chain for free/allocated lists
+    unsigned long   size;         // size of an allocated block
+    unsigned long   magic;        // padding/sanity check
+    unsigned char   data_start[]; // start of allocated block
 };
 
-void kprintmem (void);
-void *kmalloc (unsigned int size);
 void *hmalloc (unsigned int size, struct mem_header **hdr);
-void kfree (void *addr);
 void hfree (struct mem_header *hdr);
 
-#endif // __MEM_H_
+static inline struct mem_header *mem_ptoh (void *addr)
+{
+    return (struct mem_header*) addr - 1;
+}
+
+static inline void *kmalloc (unsigned int size)
+{
+    return hmalloc (size, NULL);
+}
+
+static inline void kfree (void *addr)
+{
+    hfree (mem_ptoh (addr));
+}
+
+#endif /* _KERNEL_MEM_H_ */

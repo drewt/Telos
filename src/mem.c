@@ -1,6 +1,3 @@
-/* mem.c : memory allocation
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,15 +16,35 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * mem.c
+ *
+ * Simple memory manager for shared heap.
+ *
+ */
+
 #include <kernel/common.h>
 #include <kernel/list.h>
 #include <kernel/mem.h>
 
+/*
+ * unsigned long PARAGRAPH_ALIGN (unsigned long a)
+ *      Takes an address and rounds it up to the nearest paragraph boundary.
+ */
 #define PARAGRAPH_MASK (~(0xF))
-#define PAGE_MASK (~(0xFFF))
+#define PARAGRAPH_ALIGN(a) \
+    ((a) & PARAGRAPH_MASK ? ((a) + 0x10) & PARAGRAPH_MASK : (a))
 
-#define SANITY_OK   0x12
-#define SANITY_FREE 0x0
+/*
+ * unsigned long PAGE_ALIGN (unsigned long a)
+ *      Takes an address and rounds it up to the nearest paragraph boundary.
+ */
+#define PAGE_MASK (~(0xFFF))
+#define PAGE_ALIGN(a) \
+    ((a) & PAGE_MASK ? ((a) + 0x1000) & PAGE_MASK : (a))
+
+#define MAGIC_OK   0x600DC0DE
+#define MAGIC_FREE 0xF2EEB10C
 
 extern unsigned long kend; // start of free memory
 static list_head_t free_list;
@@ -35,23 +52,15 @@ static list_head_t free_list;
 /*-----------------------------------------------------------------------------
  * Initializes the memory system */
 //-----------------------------------------------------------------------------
-void mem_init (void) {
-
+void mem_init (void)
+{
     // XXX: there is more free memory below this
-    unsigned long freemem = ((unsigned long) &kend + 0x1000) & PAGE_MASK;
+    unsigned long freemem = PAGE_ALIGN ((unsigned long) &kend);
     struct mem_header *head = (struct mem_header*) freemem;
-    head->size = 0x2F0000; // TODO: use a non-arbitrary value
-    head->sanity_check = SANITY_FREE;
+    head->size = 0x400000 - freemem; // TODO: don't assume 4MB
+    head->magic = MAGIC_FREE;
     list_init (&free_list);
     list_insert_tail (&free_list, (list_entry_t) head);
-}
-
-/*-----------------------------------------------------------------------------
- * Allocates size bytes of memory, returning a pointer to the start of the
- * allocated block */
-//-----------------------------------------------------------------------------
-void *kmalloc (unsigned int size) {
-    return hmalloc (size, NULL);
 }
 
 /*-----------------------------------------------------------------------------
@@ -60,17 +69,11 @@ void *kmalloc (unsigned int size) {
  * size bytes of memory, *hdr will point to the struct mem_header corresponding
  * to the allocated block when this function returns */
 //-----------------------------------------------------------------------------
-void *hmalloc (unsigned int size, struct mem_header **hdr) {
-
+void *hmalloc (unsigned int size, struct mem_header **hdr)
+{
     struct mem_header *p, *r;
 
-    // don't waste space on empty mem_headers
-    if (!size)
-        return NULL;
-
-    // round up to the nearest paragraph boundary
-    if (size & 0xF)
-        size = (size + 0x10) & PARAGRAPH_MASK;
+    size = PARAGRAPH_ALIGN (size);
 
     // find a large enough segment of free memory
     list_iterate (&free_list, p, struct mem_header*, chain) {
@@ -78,26 +81,25 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
             break;
     }
 
+    // not enough memory
     if (list_end (&free_list, (list_entry_t) p))
         return NULL;
 
-    // if p is just barely big enough...
-    if ((p->size - size) < sizeof (struct mem_header)) {
-        p->sanity_check = SANITY_OK;
 
-        // remove p from the free list
+
+    // if p is a perfect fit...
+    if (p->size - size <= sizeof (struct mem_header)) {
+        p->magic = MAGIC_OK;
         list_remove (&free_list, (list_entry_t) p);
     } else {
         // split p into adjacent segments p and r
-        r = (struct mem_header*)
-            ((unsigned long)p + size + sizeof (struct mem_header));
+        r = (struct mem_header*) (p->data_start + size);
         *r = *p;
 
-        // set mem_header fields
         r->size = p->size - size - sizeof (struct mem_header);
         p->size = size;
-        r->sanity_check = SANITY_FREE;
-        p->sanity_check = SANITY_OK;
+        r->magic = MAGIC_FREE;
+        p->magic = MAGIC_OK;
 
         // replace p with r in the free list
         list_replace_entry ((list_entry_t) p, (list_entry_t) r);
@@ -105,32 +107,26 @@ void *hmalloc (unsigned int size, struct mem_header **hdr) {
 
     if (hdr)
         *hdr = p;
-    return &(p->data_start);
-}
 
-/*-----------------------------------------------------------------------------
- * Returns a segment of previously allocated memory to the free list, given a
- * pointer to the segment */
-//-----------------------------------------------------------------------------
-void kfree (void *addr) {
-    // compute header location and pass it to hfree
-    struct mem_header *h = (struct mem_header*) 
-        ((unsigned long) addr - sizeof (struct mem_header));
-    hfree (h);
+    return p->data_start;
 }
 
 /*-----------------------------------------------------------------------------
  * Returns a segment of previously allocated memory to the free list, given the
  * header for the segment */
 //-----------------------------------------------------------------------------
-void hfree (struct mem_header *hdr) {
-    
+void hfree (struct mem_header *hdr)
+{
     // check that the supplied address is sane
-    if (hdr->sanity_check != SANITY_OK) {
+    if (hdr->magic == MAGIC_FREE) {
+        kprintf ("kfree(): detected double free\n");
+        return;
+    }
+    if (hdr->magic != MAGIC_OK) {
         kprintf ("kfree(): detected double free or corruption\n");
         return;
     }
 
     // insert freed at the beginning of the free list
-    list_insert_tail (&free_list, (list_entry_t) hdr);
+    list_insert_head (&free_list, (list_entry_t) hdr);
 }

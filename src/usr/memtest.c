@@ -23,12 +23,17 @@
 #define M 100
 #define A 144
 
-void memtest (int argc, char *argv[]) {
+void memtest (int argc, char *argv[])
+{
     void *mem[N];
 
     puts ("Testing malloc()...");
-    for (int i = 0; i < N; i++)
-        mem[i] = malloc (i*M+A);
+    for (int i = 0; i < N; i++) {
+        if ((mem[i] = malloc (i*M+A)) == NULL) {
+            puts ("memtest: malloc returned NULL");
+            return;
+        }
+    }
 
     puts ("Testing free()...");
     for (int i = N-1; i >= 0; i--)
