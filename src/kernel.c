@@ -29,8 +29,6 @@
 
 #include <string.h>
 
-#define BOOT_CLR 0xA
-
 pid_t idle_pid;
 pid_t root_pid;
 
@@ -52,6 +50,9 @@ extern int console_init (void);
 //-----------------------------------------------------------------------------
 void kmain (struct multiboot_info *info, unsigned long magic)
 {
+    #define bprintf(fmt, ...) kprintf_clr(0xA, fmt, __VA_ARGS__)
+    #define bprints(str)      kprintf_clr(0xA, str)
+
     unsigned long memtotal;
 
     // initialize console so we can print boot status
@@ -64,29 +65,33 @@ void kmain (struct multiboot_info *info, unsigned long magic)
         return;
     }
 
-    kprintf_clr (BOOT_CLR, "32 bit Telos 0.2\n");
+    bprints ("32 bit Telos 0.2\n");
 
-    kprintf_clr (BOOT_CLR, "Initializing machine state...\n");
+    bprints ("Initializing machine state...\n");
     idt_install ();
     gdt_install ();
     pic_init (0x20, 0x28); // map IRQs after reserved interrupts
     pit_init (100);        // 10ms timer
 
-    kprintf_clr (BOOT_CLR, "Initializing kernel subsystems...\n");
+    bprints ("Initializing kernel subsystems...\n");
     memtotal = mem_init (info);
     isr_init ();
     proctab_init ();
     dev_init ();
     dispatch_init ();
 
-    kprintf_clr (BOOT_CLR, "\n----------- MEMORY -----------\n");
-    kprintf_clr (BOOT_CLR, "Kernel:    %x - %x\n", &kstart, &kend);
-    kprintf_clr (BOOT_CLR, "Userspace: %x - %x\n", &ustart, &uend);
-    kprintf_clr (BOOT_CLR, "Total:     %d bytes\n\n", memtotal);
+    bprints ("\n----------- MEMORY -----------\n");
+    bprintf ("Kernel:    %x - %x\n", &kstart, &kend);
+    bprintf ("Userspace: %x - %x\n", &ustart, &uend);
+    bprintf ("Total:     %d bytes\n", MULTIBOOT_MEM_MAX (info));
+    bprintf ("Available: %d bytes\n\n", memtotal);
 
-    kprintf_clr (BOOT_CLR, "Starting Telos...\n\n");
+    bprints ("Starting Telos...\n\n");
 
     idle_pid = sys_create (idle_proc, 0, NULL);
     root_pid = sys_create (root_proc, 0, NULL);
     dispatch ();
+
+    #undef bprintf
+    #undef bprints
 }
