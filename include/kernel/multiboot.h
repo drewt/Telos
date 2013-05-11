@@ -16,10 +16,15 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __MULTIBOOT_H_
-#define __MULTIBOOT_H_
+#ifndef _KERNEL_MULTIBOOT_H_
+#define _KERNEL_MULTIBOOT_H_
 
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
+
+#define MULTIBOOT_MMAP_FREE 1
+
+#define MULTIBOOT_MEM_MAX(info) \
+    ((unsigned long) (0x100000 + (info)->mem_upper * 1024))
 
 struct aout_symbol_table {
     unsigned long tabsize;
@@ -46,12 +51,14 @@ struct multiboot_info {
     union {
         struct aout_symbol_table aout_sym;
         struct elf_section_header_table elf_sec;
-    } u;
+    } _u;
     unsigned long mmap_length;
     unsigned long mmap_addr;
 };
+#define aout_sym _u.aout_sym
+#define elf_sec  _u.elf_sec
 
-struct multiboot_mmap_entry {
+struct multiboot_mmap {
     unsigned long size;
     unsigned long addr_low;
     unsigned long addr_high;
@@ -60,4 +67,44 @@ struct multiboot_mmap_entry {
     unsigned long type;
 } __attribute__((packed));
 
-#endif // __MULTIBOOT_H_
+/*
+ * Returns the next entry in a memory map
+ */
+static inline struct multiboot_mmap *
+multiboot_mmap_next (struct multiboot_mmap* mmap)
+{
+    return (struct multiboot_mmap*)
+        ((unsigned long) mmap + mmap->size + sizeof (mmap->size));
+}
+
+/*
+ * Returns the first mmap entry in a memory map
+ */
+static inline struct multiboot_mmap *
+multiboot_mmap_first (struct multiboot_info *info)
+{
+    return (struct multiboot_mmap*) info->mmap_addr;
+}
+
+/*
+ * Tests whether a given mmap entry is the last
+ */
+static inline int
+multiboot_mmap_end (struct multiboot_info *info,
+                    struct multiboot_mmap *mmap)
+{
+    return (unsigned long) mmap >= info->mmap_addr + info->mmap_length;
+}
+
+/*
+ * multiboot_mmap_iterate (info, mmap)
+ *
+ *      Generates a for loop, setting mmap to
+ *      each entry in the memory map in turn.
+ */
+#define multiboot_mmap_iterate(info,mmap)       \
+    for (mmap = multiboot_mmap_first(info);     \
+            !multiboot_mmap_end(info,mmap);     \
+            mmap = multiboot_mmap_next(mmap))
+
+#endif /* _KERNEL_MULTIBOOT_H_ */

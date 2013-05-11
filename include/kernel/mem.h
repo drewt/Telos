@@ -35,7 +35,9 @@ struct mem_header {
     unsigned char   data_start[]; // start of allocated block
 };
 
-void mem_init (void);
+struct multiboot_info;
+
+unsigned long mem_init (struct multiboot_info *info);
 void *hmalloc (unsigned int size, struct mem_header **hdr);
 void hfree (struct mem_header *hdr);
 
