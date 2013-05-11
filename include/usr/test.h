@@ -27,5 +27,6 @@ void proc_test (int argc, char *argv[]);
 void event_test (int argc, char *argv[]);
 void msg_test (int argc, char *argv[]);
 void memtest (int argc, char *argv[]);
+void consoletest (int argc, char *argv[]);
 
 #endif // __USR_TEST_H_

@@ -45,7 +45,7 @@
 
 struct console {
     unsigned char mem[CBUF_SIZE];
-    volatile unsigned char *pos;
+    unsigned int offset;
     unsigned int opened;
 };
 
@@ -81,8 +81,7 @@ int console_close (enum dev_id devno) {
 
 int console_init (void) {
     // TODO: probe for colour/monochrome display
-    unsigned char *buf = (unsigned char*) CLR_BUF;
-    u16 cpos;
+    unsigned short cpos;
 
     // get cursor position
     outb (CLR_BASE, 14);
@@ -91,9 +90,7 @@ int console_init (void) {
     cpos |= inb (CLR_BASE+1);
 
     // set initial cursor positions
-    constab[0].pos = (cpos > COL * ROW) ? buf : buf + cpos*2;
-    for (int i = 1; i < N_CONSOLES; i++)
-        constab[i].pos  = constab[i].mem;
+    constab[0].offset = (cpos > COL * ROW) ? 0 : cpos * 2;
 
     return 0;
 }
@@ -105,6 +102,8 @@ int console_switch (unsigned int to) {
 
     if (to >= N_CONSOLES)
         return -EINVAL;
+    if (to == visible)
+        return 0;
 
     // swap current console to driver memory and load new console to vga memory
     memcpy (constab[visible].mem, (void*) CLR_BUF, ROW*COL*CHR);
@@ -121,7 +120,7 @@ void clear_console (void) {
     for (int i = 0; i < ROW; i++)
         console_putc ('\n', TXT_CLR, visible);
     cursor (0);
-    constab[visible].pos = (unsigned char*) CLR_BUF;
+    constab[visible].offset = 0;
 }
 
 /*-----------------------------------------------------------------------------
@@ -141,12 +140,12 @@ int console_ioctl (int fd, unsigned long command, va_list vargs) {
 }
 
 /*-----------------------------------------------------------------------------
- * updates cursor position */
+ * Update the cursor position */
 //-----------------------------------------------------------------------------
 static void cursor (int pos) {
-    outb (CLR_BASE, 14);
+    outb (CLR_BASE,   14);
     outb (CLR_BASE+1, pos >> 8);
-    outb (CLR_BASE, 15);
+    outb (CLR_BASE,   15);
     outb (CLR_BASE+1, pos & 0xFF);
 }
 
@@ -158,40 +157,42 @@ static void console_putc (unsigned char c, unsigned char attr,
 
     unsigned char *base = (cno==visible) ? (unsigned char*) CLR_BUF :
                                            constab[cno].mem;
-
     // print the character
     switch (c) {
     case '\n':
-        constab[cno].pos += COL * 2; //        |
-    case '\r':               // <------'
-        constab[cno].pos -= ((unsigned long) constab[cno].pos - CLR_BUF)
-            % (COL * 2);
+        constab[cno].offset += COL * CHR;
+        /* fallthrough */
+    case '\r':
+        constab[cno].offset -= constab[cno].offset % (COL * CHR);
         break;
     case '\t':
         for (int i = 0; i < TAB_WIDTH; i++)
             console_putc (' ', attr, cno);
         break;
     case '\b':
-        constab[cno].pos -= 2;
-        if ((void*) constab[cno].pos < (void*) CLR_BUF)
-            constab[cno].pos = (void*) CLR_BUF;
-        *constab[cno].pos = ' ';
+        if (constab[cno].offset <= CHR)
+            constab[cno].offset = 0;
+        else
+            constab[cno].offset -= CHR;
+        *(base + constab[cno].offset) = ' ';
         break;
     default:
-        *constab[cno].pos++ = c;
-        *constab[cno].pos++ = attr & 0xF;
+        *(base + constab[cno].offset)     = c;
+        *(base + constab[cno].offset + 1) = attr & 0xF;
+        constab[cno].offset += CHR;
         break;
     }
 
     // scroll down
-    if (constab[cno].pos >= base + (COL*ROW*CHR)) {
+    if (constab[cno].offset >= CBUF_SIZE) {
+        unsigned char *i;
         memcpy (base, base + (COL*CHR), COL*(ROW-1)*CHR);
-        for (unsigned char *i = base + (COL*(ROW-1)*CHR);
-                i < base + (COL*ROW*CHR); i += CHR)
-            i[0] = ' ';
-        constab[cno].pos -= COL*CHR;
+        for (i = base + (COL*(ROW-1)*CHR); i < base + CBUF_SIZE; i += CHR)
+            *i = ' ';
+        constab[cno].offset -= COL*CHR;
     }
-    cursor ((constab[cno].pos - base) / 2);
+    if (cno == visible)
+        cursor (constab[cno].offset / 2);
 }
 
 /* KERNEL INTERFACE */
@@ -215,7 +216,7 @@ int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
         if (fmt[i] == '%') {
             i++;
             switch (fmt[i]) {
-            // numbers
+            /* numbers */
             case 'b':
                 kputs (itoa (va_arg (ap, int), buf, 2), NUM_CLR);
             case 'd':
@@ -228,7 +229,7 @@ int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
                 kputs ("0x", NUM_CLR);
                 kputs (itoa (va_arg (ap, int), buf, 16), NUM_CLR);
                 break;
-            // strings n chars
+            /* strings n chars */
             case 'c':
                 console_putc (va_arg (ap, int), clr, visible);
                 break;
@@ -239,9 +240,7 @@ int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
                 console_putc ('%', clr, visible);
                 break;
             default:
-                // bad/unsupported format string; abort
                 goto end;
-                break;
             }
         } else {
             console_putc (fmt[i], clr, visible);
