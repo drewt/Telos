@@ -20,14 +20,10 @@
 #define __KERNEL_H_
 
 /* GLOBAL DATA */
-extern unsigned long stack;
-extern unsigned long kstart;
-extern unsigned long kend;
 extern void(*dfl_sighandlers[])(int);
 
 /* initialization procedures */
 extern void dev_init (void); /* devinit.c */
-extern void mem_init (void); /* mem.c */
 extern void isr_init (void); /* ctsw.c */
 extern void paging_init (void);
 

@@ -23,8 +23,11 @@
 #include <kernel/common.h>
 #include <kernel/multiboot.h>
 #include <kernel/i386.h>
+#include <kernel/mem.h>
 #include <kernel/dispatch.h>
 #include <kernel/drivers/console.h>
+
+#include <string.h>
 
 #define BOOT_CLR 0xA
 
@@ -60,7 +63,8 @@ void kmain (struct multiboot_info *mbd, unsigned long magic) {
     }
 
     kprintf_clr (BOOT_CLR, "32 bit Telos 0.2\n");
-    kprintf_clr (BOOT_CLR, "Located from %x to %x\n", &kstart, &kend);
+    kprintf_clr (BOOT_CLR, "Kernel:    %x - %x\n", &kstart, &kend);
+    kprintf_clr (BOOT_CLR, "Userspace: %x - %x\n", &ustart, &uend);
 
     kprintf_clr (BOOT_CLR, "Initializing machine state... ");
     idt_install ();

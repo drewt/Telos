@@ -31,22 +31,23 @@
  * unsigned long PARAGRAPH_ALIGN (unsigned long a)
  *      Takes an address and rounds it up to the nearest paragraph boundary.
  */
-#define PARAGRAPH_MASK (~(0xF))
 #define PARAGRAPH_ALIGN(a) \
-    ((a) & PARAGRAPH_MASK ? ((a) + 0x10) & PARAGRAPH_MASK : (a))
+    ((a) & 0xF ? ((a) + 0x10) & ~0xF : (a))
 
 /*
  * unsigned long PAGE_ALIGN (unsigned long a)
- *      Takes an address and rounds it up to the nearest paragraph boundary.
+ *      Takes an address and rounds it up to the nearest page boundary.
  */
-#define PAGE_MASK (~(0xFFF))
 #define PAGE_ALIGN(a) \
-    ((a) & PAGE_MASK ? ((a) + 0x1000) & PAGE_MASK : (a))
+    ((a) & 0xFFF ? ((a) + 0x1000) & ~0xFFF : (a))
 
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
 extern unsigned long kend; // start of free memory
+extern unsigned long ustart;
+extern unsigned long uend;
+
 static list_head_t free_list;
 
 /*-----------------------------------------------------------------------------
@@ -55,12 +56,19 @@ static list_head_t free_list;
 void mem_init (void)
 {
     // XXX: there is more free memory below this
-    unsigned long freemem = PAGE_ALIGN ((unsigned long) &kend);
-    struct mem_header *head = (struct mem_header*) freemem;
-    head->size = 0x400000 - freemem; // TODO: don't assume 4MB
-    head->magic = MAGIC_FREE;
+    unsigned long headmem = PAGE_ALIGN ((unsigned long) &kend);
+    unsigned long usermem = (unsigned long) &ustart;
+    unsigned long tailmem = PAGE_ALIGN ((unsigned long) &uend);
+    struct mem_header *head = (struct mem_header*) headmem;
+    struct mem_header *tail = (struct mem_header*) tailmem;
+
+    head->size = usermem - headmem;
+    tail->size = 0x400000 - tailmem;
+    head->magic = tail->magic = MAGIC_FREE;
+
     list_init (&free_list);
     list_insert_tail (&free_list, (list_entry_t) head);
+    list_insert_tail (&free_list, (list_entry_t) tail);
 }
 
 /*-----------------------------------------------------------------------------
@@ -84,8 +92,6 @@ void *hmalloc (unsigned int size, struct mem_header **hdr)
     // not enough memory
     if (list_end (&free_list, (list_entry_t) p))
         return NULL;
-
-
 
     // if p is a perfect fit...
     if (p->size - size <= sizeof (struct mem_header)) {

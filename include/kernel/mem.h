@@ -21,6 +21,12 @@
 
 #include <kernel/list.h>
 
+extern unsigned long stack;
+extern unsigned long kstart;
+extern unsigned long kend;
+extern unsigned long ustart;
+extern unsigned long uend;
+
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
     list_chain_t    chain;        // chain for free/allocated lists
@@ -29,6 +35,7 @@ struct mem_header {
     unsigned char   data_start[]; // start of allocated block
 };
 
+void mem_init (void);
 void *hmalloc (unsigned int size, struct mem_header **hdr);
 void hfree (struct mem_header *hdr);
 
