@@ -40,7 +40,7 @@
 
 static list_head_t work_q;
 
-static char kbd_eof;
+static char kbd_eof = 4;
 
 /* internal buffer */
 static char kbd_buf[KBD_BUF_SIZE]; /* the internal keyboard buffer */

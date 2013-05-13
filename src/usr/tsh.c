@@ -93,6 +93,8 @@ static size_t read_line (char *buf, size_t len)
 
     len--;
     while ((c = getchar ()) != '\n' && pos < len) {
+        if (c == EOF)
+            return EOF;
         if (c == '\b' && pos > 0)
             pos--;
         else
@@ -175,7 +177,8 @@ void tsh ()
 
     while (1) {
         printf (PROMPT);
-        read_line (in, IN_LEN);
+        if (read_line (in, IN_LEN) == EOF)
+            return;
         if (*in == '\0')
             continue;
 
