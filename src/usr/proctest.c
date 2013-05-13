@@ -20,6 +20,7 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -30,7 +31,7 @@ static void print_proc (int argc, char *argv[]) {
 }
 
 static void stop_proc () {
-    sysstop ();
+    exit (0);
     printf ("FAIL");
 }
 

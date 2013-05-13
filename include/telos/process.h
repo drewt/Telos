@@ -24,6 +24,5 @@
 
 int syscreate (void(*func)(int,char**), int argc, char *argv[]);
 void sysyield (void);
-void sysstop (void);
 
 #endif

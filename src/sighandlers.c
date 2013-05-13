@@ -18,6 +18,7 @@
 
 #include <telos/process.h>
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
@@ -25,11 +26,11 @@
 #define I SIG_IGN
 
 static void T (int signo) {
-    sysstop ();
+    exit (1);
 }
 
 static void A (int signo) {
-    sysstop ();
+    exit (1);
 }
 
 static void S (int signo) {

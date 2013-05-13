@@ -43,7 +43,7 @@ void sys_malloc (unsigned int size, void **p);
 void sys_free (void *ptr);
 int sys_create (void (*func)(int,char*), int argc, char **argv);
 void sys_yield (void);
-void sys_stop (void);
+void sys_exit (int status);
 void sys_getpid (void);
 void sys_puts (char *s);
 void sys_report (char *s);

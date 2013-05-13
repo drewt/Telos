@@ -29,7 +29,7 @@
 
 #include <signal.h>
 
-extern void sysstop (void);
+extern void exit (int status);
 
 static void sig_init (struct pcb *p)
 {
@@ -98,7 +98,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
 
     /* pass arguments to process */
     unsigned long *args = (unsigned long*) f->iret_esp;
-    args[0] = (unsigned long) sysstop;
+    args[0] = (unsigned long) exit;
     args[1] = (unsigned long) argc;
     args[2] = (unsigned long) argv;
 
@@ -120,7 +120,7 @@ void sys_yield (void)
 /*-----------------------------------------------------------------------------
  * Stop the current process and free all resources associated with it */
 //-----------------------------------------------------------------------------
-void sys_stop (void)
+void sys_exit (int status)
 {
     struct pcb *pit;
     struct mem_header *hit;
