@@ -24,6 +24,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 #include <kernel/drivers/kbd.h>
+#include <kernel/drivers/console.h>
 #include <kernel/list.h>
 
 #include <klib.h>
@@ -76,9 +77,13 @@ static inline bool put_char (char c) {
  * */
 //-----------------------------------------------------------------------------
 void kbd_interrupt (void) {
-    unsigned int c;
+    unsigned int c, s;
 
-    if ((c = kbtoa (inb (KBD_DAT))) != NOCHAR) {
+    s = inb (KBD_DAT);
+
+    if (s >= 59 && s <= 60) {
+        console_switch (s - 59);
+    } else if ((c = kbtoa (s)) != NOCHAR) {
         if (reading) {
             if (put_char (c)) {
                 reader->rc = cpy_buf_next;

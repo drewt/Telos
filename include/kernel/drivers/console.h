@@ -30,4 +30,6 @@ int console_open (enum dev_id devno);
 int console_close (enum dev_id devno);
 int console_ioctl (int fd, unsigned long command, va_list vargs);
 
+int console_switch (unsigned int to);
+
 #endif // __CONSOLE_H_
