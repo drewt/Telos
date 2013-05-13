@@ -99,7 +99,7 @@ typedef	struct list_entry      *list_entry_t;
  * Stack interface
  */
 #define stack_push(stack,elt)   list_insert_head(stack, elt)
-#define stack_pop(stack)        list_remove_head(stack, elt)
+#define stack_pop(stack)        list_remove_head(stack)
 #define stack_peek(stack)       list_first(stack)
 
 /* Initialize the given list */
