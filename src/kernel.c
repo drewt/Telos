@@ -22,6 +22,7 @@
 #include <kernel/kernel.h>
 #include <kernel/common.h>
 #include <kernel/multiboot.h>
+#include <kernel/elf.h>
 #include <kernel/i386.h>
 #include <kernel/mem.h>
 #include <kernel/dispatch.h>
@@ -70,7 +71,7 @@ void kmain (struct multiboot_info *info, unsigned long magic)
     bprints ("Initializing machine state...\n");
     idt_install ();
     gdt_install ();
-    pic_init (0x20, 0x28); // map IRQs after reserved interrupts
+    pic_init (0x20, 0x28); // map IRQs after exceptions/reserved vectors
     pit_init (100);        // 10ms timer
 
     bprints ("Initializing kernel subsystems...\n");

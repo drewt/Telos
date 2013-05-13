@@ -28,6 +28,9 @@
 
 #define STACK_SIZE (1024*16)
 
+#define wprintf(fmt, ...) kprintf_clr (0xC, "WARNING: "fmt"\n", __VA_ARGS__)
+#define wprints(str) kprintf_clr (0xC, "WARNING: "str"\n")
+
 extern int kprintf (const char *fmt, ...);
 extern int kprintf_clr (unsigned char clr, const char *fmt, ...);
 extern void clear_console (void);
