@@ -40,7 +40,7 @@ enum scan_state_flags {
 static int state; /* the state of the keyboard */
 
 /*  Normal table to translate scan code  */
-static unsigned char kbcode[] = { 0,
+static const unsigned char kbcode[] = { 0,
           27,  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',
          '0',  '-',  '=', '\b', '\t',  'q',  'w',  'e',  'r',  't',
          'y',  'u',  'i',  'o',  'p',  '[',  ']', '\n',    0,  'a',
@@ -50,7 +50,7 @@ static unsigned char kbcode[] = { 0,
 };
 
 /* captialized ascii code table to tranlate scan code */
-static unsigned char kbshift[] = { 0,
+static const unsigned char kbshift[] = { 0,
           0,  '!',  '@',  '#',  '$',  '%',  '^',  '&',  '*',  '(',
         ')',  '_',  '+', '\b', '\t',  'Q',  'W',  'E',  'R',  'T',
         'Y',  'U',  'I',  'O',  'P',  '{',  '}', '\n',    0,  'A',
@@ -60,7 +60,7 @@ static unsigned char kbshift[] = { 0,
 };
 
 /* extended ascii code table to translate scan code */
-static unsigned char kbctl[] = { 0,
+static const unsigned char kbctl[] = { 0,
          0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
          0,   31,    0, '\b', '\t',   17,   23,    5,   18,   20,
         25,   21,    9,   15,   16,   27,   29, '\n',    0,    1,
