@@ -57,6 +57,11 @@ int vsnprintf (char *str, size_t size, const char *fmt, va_list ap)
                 for (int i = 0; count < size && buf[i] != '\0'; i++)
                     str[count++] = buf[i];
                 break;
+            case 'x':
+                itoa (va_arg (ap, int), buf, 16);
+                for (int i = 0; count < size && buf[i] != '\0'; i++)
+                    str[count++] = buf[i];
+                break;
             default:
                 break;
             }
@@ -149,6 +154,11 @@ static int fmt_print (int fd, const char *fmt, va_list *ap, int *count)
         case 'd':
         case 'i':
             itoa (va_arg (*ap, int), buf, 10);
+            rv = write (fd, buf, 33);
+            (*count)++;
+            return rv;
+        case 'x':
+            itoa (va_arg (*ap, int), buf, 16);
             rv = write (fd, buf, 33);
             (*count)++;
             return rv;
