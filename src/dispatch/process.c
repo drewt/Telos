@@ -144,6 +144,10 @@ void sys_stop (void)
     CLEAR_MSG_QUEUE (&current->recv_q)
     CLEAR_MSG_QUEUE (&current->repl_q)
 
+    for (int i = 0; i < FDT_SIZE; i++)
+        if (current->fds[i] != FD_NONE)
+            sys_close (current->fds[i]);
+
     new_process ();
 }
 
