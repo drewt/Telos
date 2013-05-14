@@ -1,4 +1,4 @@
-INC = ../include
+ROOT = ..
 include ../config.mk
 
 OBJECTS = console.o kbd.o serial.o

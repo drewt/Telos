@@ -1,9 +1,10 @@
+ROOT = .
 include config.mk
 
 SUBMAKES = dispatch drivers kernel usr
 
 .SUFFIXES:
-.PHONY: $(SUBMAKES) clean
+.PHONY: $(SUBMAKES) clean depclean maintainer-clean
 
 FINDOBJ = find kernel dispatch drivers -name '*.o' | tr '\n' ' '
 
@@ -46,3 +47,9 @@ depclean:
 	cd drivers; $(MAKE) depclean
 	cd kernel; $(MAKE) depclean
 	cd usr; $(MAKE) depclean
+
+maintainer-clean:
+	cd dispatch; $(MAKE) maintainer-clean
+	cd drivers; $(MAKE) maintainer-clean
+	cd kernel; $(MAKE) maintainer-clean
+	cd usr; $(MAKE) maintainer-clean

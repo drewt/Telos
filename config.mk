@@ -6,10 +6,8 @@ AS = $(CCPREFIX)as #--32
 OBJCOPY = $(CCPREFIX)objcopy
 
 CFLAGS = -Wall -Wextra -Wno-unused-parameter -std=gnu99 -O \
-                -I $(INC) -fno-builtin -ffreestanding
+                -I $(ROOT)/include -fno-builtin -ffreestanding
 
 %d: %c
 	@echo "Generating dependencies for $<"
-	@$(CC) -MM -I $(INC) $(CPPFLAGS) $< > $@
-
-FINDSRC = find src -name *.c | tr '\n' ' '
+	@$(CC) -MM -I $(ROOT)/include $(CPPFLAGS) $< > $@

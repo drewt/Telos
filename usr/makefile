@@ -1,4 +1,4 @@
-INC = ../include
+ROOT = ..
 include ../config.mk
 
 OBJECTS = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
