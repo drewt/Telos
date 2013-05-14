@@ -25,7 +25,7 @@
 
 void memtest (int argc, char *argv[])
 {
-/*    void *mem[N];
+    void *mem[N];
 
     puts ("Testing malloc()...");
     for (int i = 0; i < N; i++) {
@@ -37,9 +37,5 @@ void memtest (int argc, char *argv[])
 
     puts ("Testing free()...");
     for (int i = N-1; i >= 0; i--)
-        free (mem[i]);*/
-    for (int i = 0; i < N; i++) {
-        int x = i*M+A;
-        printf ("dec=%d oct=%o hex=%x\n", x, x, x);
-    }
+        free (mem[i]);
 }

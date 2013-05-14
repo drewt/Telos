@@ -1,16 +1,19 @@
 include config.mk
 
-OBJECTS = dispatch/dispatch.a drivers/drivers.a kernel/kernel.a usr/usr.a
+SUBMAKES = dispatch drivers kernel usr
 
 .SUFFIXES:
-.PHONY: clean
-.PHONY: $(OBJECTS)
+.PHONY: $(SUBMAKES) clean
+
+FINDOBJ = find kernel dispatch drivers -name '*.o' | tr '\n' ' '
 
 all: kernel.img
 
-kernel.bin: $(OBJECTS)
-	$(LD) -T linker.ld $(OBJECTS) $(OBJECTS) \
-	    lib/klib.a -o $@
+kernel.bin: $(SUBMAKES)
+	@echo 'Generating linker script'
+	@printf 'INPUT ( %s )\n' "`$(FINDOBJ)` lib/klib.a usr/usr.a" > linker.ld
+	@cat sections.ld >> linker.ld
+	$(LD) -T linker.ld -o $@
 
 # make a bootable floppy image with grub legacy
 kernel.img: kernel.bin pad
@@ -19,16 +22,16 @@ kernel.img: kernel.bin pad
 pad:
 	dd if=/dev/zero of=$@ bs=1 count=750
 
-dispatch/dispatch.a:
+dispatch:
 	cd dispatch; $(MAKE)
 
-drivers/drivers.a:
+drivers:
 	cd drivers; $(MAKE)
 
-kernel/kernel.a:
+kernel:
 	cd kernel; $(MAKE)
 
-usr/usr.a:
+usr:
 	cd usr; $(MAKE)
 
 clean:

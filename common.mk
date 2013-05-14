@@ -1,10 +1,5 @@
 .PHONY: clean depclean maintainer-clean
 
-all: $(TARGET)
-
-$(TARGET): $(OBJECTS)
-	$(AR) rcs $@ $^
-
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 
