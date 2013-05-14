@@ -54,12 +54,12 @@ static struct program progtab[] = {
     { SHELL_EXIT,  "exit"        },
     { SHELL_CLEAR, "clear"       },
     { help,        "help"        },
-    { proc_test,   "proctest"    },
-    { sig_test,    "sigtest"     },
-    { kbd_test,    "kbdtest"     },
-    { str_test,    "strtest"     },
-    { event_test,  "eventtest"   },
-    { msg_test,    "msgtest"     },
+    { proctest,   "proctest"    },
+    { sigtest,    "sigtest"     },
+    { kbdtest,    "kbdtest"     },
+    { strtest,    "strtest"     },
+    { eventtest,  "eventtest"   },
+    { msgtest,    "msgtest"     },
     { memtest,     "memtest"     },
     { consoletest, "consoletest" },
     { echo,        "echo"        },
@@ -86,7 +86,7 @@ static funcptr lookup (char *in)
     return NULL;
 }
 
-static size_t read_line (char *buf, size_t len)
+static ssize_t read_line (char *buf, size_t len)
 {
     int c;
     size_t pos = 0;

@@ -1,70 +1,45 @@
-BIN = bin
-SRC = src
-LIB = lib
-INC = include
-DEP = make
-BOOT = boot
+include config.mk
 
-SHELL     = /bin/sh
-CCPREFIX  = i586-elf-
-CC        = $(CCPREFIX)gcc #-m32 -march=i386
-CFLAGS    = -Wall -Wextra -Wno-unused-parameter -std=gnu99 -O
-ALLCFLAGS = -I $(INC) -fno-builtin -ffreestanding $(CFLAGS)
-LD        = $(CCPREFIX)ld #-m elf_i386
-AR        = $(CCPREFIX)ar
-AS        = $(CCPREFIX)as #--32
-
-FINDSRC = find src -name *.c | tr '\n' ' '
+OBJECTS = dispatch/dispatch.a drivers/drivers.a kernel/kernel.a usr/usr.a
 
 .SUFFIXES:
-.PHONY: clean depclean maintainer-clean
+.PHONY: clean
+.PHONY: $(OBJECTS)
 
-USERSPACE = $(BIN)/userspace.a
+all: kernel.img
 
-all: $(BIN)/kernel.img
-
--include names.mk
--include $(DFILES)
-
-$(USERSPACE): $(UFILES)
-	$(AR) rcs $@ $(UFILES)
-
-# build binaries in $(BIN)
-$(BIN)/%.o: $(SRC)/%.c
-	$(CC) -c $(ALLCFLAGS) $(CPPFLAGS) $< -o $@
-
-# automatically generate dependencies
-$(DEP)/%.d: $(SRC)/%.c
-	@echo "Generating dependencies for $<"
-	@$(CC) -MM -MF $@ -MT "$@ $(subst $(DEP)/,$(BIN)/,$(basename $@)).o" \
-	    -I $(INC) $(CPPFLAGS) $<
-
-# make a multiboot-compliant ELF kernel
-$(BIN)/kernel.bin: $(BIN)/loader.o $(OFILES) $(USERSPACE) $(LIB)/klib.a
-	$(LD) -T $(BIN)/linker.ld $(BIN)/loader.o $(OFILES) $(USERSPACE) \
-	    $(LIB)/klib.a -o $@
+kernel.bin: $(OBJECTS)
+	$(LD) -T linker.ld $(OBJECTS) $(OBJECTS) \
+	    lib/klib.a -o $@
 
 # make a bootable floppy image with grub legacy
-$(BIN)/kernel.img: $(BIN)/kernel.bin $(BIN)/pad
-	cat $(BOOT)/stage1 $(BOOT)/stage2 $(BIN)/pad $(BIN)/kernel.bin \
-	    > $@
+kernel.img: kernel.bin pad
+	cat boot/stage1 boot/stage2 pad kernel.bin > $@
 
-$(BIN)/pad:
+pad:
 	dd if=/dev/zero of=$@ bs=1 count=750
 
-# assembly files
-$(BIN)/loader.o: $(BOOT)/loader.s
-	$(AS) -o $@ $<
+dispatch/dispatch.a:
+	cd dispatch; $(MAKE)
 
-$(LIB)/klib.a: $(LIB)/klib/string.c
-	(cd $(LIB)/klib; make install)
+drivers/drivers.a:
+	cd drivers; $(MAKE)
+
+kernel/kernel.a:
+	cd kernel; $(MAKE)
+
+usr/usr.a:
+	cd usr; $(MAKE)
 
 clean:
-	rm -f $(OFILES) $(UFILES) $(USERSPACE) $(BIN)/loader.o \
-	    $(BIN)/kernel.bin $(BIN)/kernel.img
+	rm -f boot/loader.o kernel.bin kernel.img
+	cd dispatch; $(MAKE) clean
+	cd drivers; $(MAKE) clean
+	cd kernel; $(MAKE) clean
+	cd usr; $(MAKE) clean
 
 depclean:
-	rm -f $(DFILES) 
-
-maintainer-clean: clean depclean
-	rm -f $(BIN)/pad
+	cd dispatch; $(MAKE) depclean
+	cd drivers; $(MAKE) depclean
+	cd kernel; $(MAKE) depclean
+	cd usr; $(MAKE) depclean

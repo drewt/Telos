@@ -22,6 +22,8 @@
 #ifndef __I386_H_
 #define __I386_H_
 
+#include <kernel/common.h>
+
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
 
@@ -107,34 +109,16 @@ static inline unsigned char inb (port_t port)
     return ret;
 }
 
-/* get the code segment selector */
-static inline unsigned short get_cs (void)
-{
-    unsigned short cs;
-    asm volatile ("movw %%cs, %0   \n" : "=g" (cs) : : );
-    return cs;
-}
-
-/* get the data segment selector */
-static inline unsigned short get_ds (void)
-{
-    unsigned short ds;
-    asm volatile ("movw %%ds, %0   \n" : "=g" (ds) : : );
-    return ds;
-}
-
-/* get the task register */
-static inline unsigned short get_tr (void)
-{
-    unsigned short tr;
-    asm volatile ("str %0" : "=g" (tr) : : );
-    return tr;
-}
-
 static inline void halt (void)
 {
     asm volatile ("_halt: hlt\njmp _halt");
 }
+
+#define GET_REG(reg,dst) \
+    asm volatile ("movl %%"reg", %0\n" : "=g" (dst) : : )
+
+#define GET_SELECTOR(sel,dst) \
+    asm volatile ("movw %%"sel", %0\n" : "=g" (dst) : : )
 
 /* from osdev.org wiki inline asm examples */
 /*-----------------------------------------------------------------------------

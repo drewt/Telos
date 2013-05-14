@@ -55,7 +55,7 @@ void send_proc () {
     }
 }
 
-void msg_test (void *arg) {
+void msgtest (void *arg) {
     pid_t pids[10];
     char buf[40];
     char *msg = "msg";

@@ -126,7 +126,7 @@ static void sigaction_test (void) {
         puts ("FAIL: rejected valid signo");
 }
 
-void sig_test (void *arg) {
+void sigtest (void *arg) {
     sigtest_pid = getpid ();
 
     kill_test ();

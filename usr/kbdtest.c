@@ -44,7 +44,7 @@ static void read_proc () {
 
 static void sigchld_handler (int signo) {}
 
-void kbd_test (void *arg) {
+void kbdtest (void *arg) {
 
     int sig;
 

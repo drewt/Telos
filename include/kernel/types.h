@@ -21,6 +21,8 @@ typedef int pid_t;
 
 typedef unsigned short port_t;
 
+typedef unsigned short dev_t;
+
 // XXX: arch/implementation dependent
 typedef signed   char      s8;
 typedef unsigned char      u8;

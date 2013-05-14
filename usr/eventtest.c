@@ -63,7 +63,7 @@ static void alarm_test (void) {
         puts ("error");
 }
 
-void event_test (int argc, char *argv[]) {
+void eventtest (int argc, char *argv[]) {
     sleep_test ();
     alarm_test ();
 }

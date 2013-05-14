@@ -132,7 +132,7 @@ static void strtok_test (void) {
         puts ("OK");
 }
 
-void str_test (int argc, char *argv[]) {
+void strtest (int argc, char *argv[]) {
     strcmp_test ();
     strcat_test ();
     strncat_test ();

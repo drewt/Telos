@@ -35,7 +35,7 @@ static void stop_proc () {
     printf ("FAIL");
 }
 
-void proc_test (void *arg) {
+void proctest (void *arg) {
     char *a = "a", *s = "s", *d = "d", *f = "f";
     printf ("Testing syscreate... asdf ?= ");
     syscreate (print_proc, 1, &a);

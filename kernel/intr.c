@@ -42,19 +42,24 @@ struct idt_entry {
 
 struct idt_entry idt[256];
 
+#define IDT_GATE(num,handler,selector)  \
+{                                       \
+    .off_low  = handler,                \
+    .selector = selector,               \
+    .zero     = 0,                      \
+    .type     = INTR_GATE,              \
+    .dpl      = 3,                      \
+    .present  = 1,                      \
+    .off_high = handler >> 16           \
+}
+
 /*-----------------------------------------------------------------------------
  * Installs a trap gate at vector [num] with the given handler */
 //-----------------------------------------------------------------------------
 void set_gate (unsigned int num, unsigned long handler,
         unsigned short selector)
 {
-    idt[num].off_low  = handler;
-    idt[num].selector = selector;
-    idt[num].zero     = 0;
-    idt[num].type     = INTR_GATE;
-    idt[num].dpl      = 3;
-    idt[num].present  = 1;
-    idt[num].off_high = handler >> 16;
+    idt[num] = (struct idt_entry) IDT_GATE (num, handler, selector);
 }
 
 /*-----------------------------------------------------------------------------

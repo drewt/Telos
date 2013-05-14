@@ -129,6 +129,9 @@ static void get_reserved_mem (struct multiboot_info *info, list_t res_list)
     /* GRUB doesn't mark this as reserved for some reason... */
     mark_reserved (res_list, 0xA0000, 0x60000);
 
+    /* XXX: testing area for page frame allocator */
+    mark_reserved (res_list, 0x400000, 0x400000);
+
     /* mark areas reported by BIOS */
     multiboot_mmap_iterate (info, mmap) {
         if (mmap->addr_low > MULTIBOOT_MEM_MAX (info))
@@ -309,4 +312,41 @@ void hfree (struct mem_header *hdr)
 
     // insert freed at the beginning of the free list
     list_insert_head (&free_list, (list_entry_t) hdr);
+}
+
+struct pf_info {
+    list_chain_t chain;
+    unsigned long addr;
+};
+
+list_head_t frame_pool;
+struct pf_info *frame_table;
+
+#define FRAME_POOL_ADDR 0x400000
+#define FRAME_POOL_SIZE 0x400000
+#define FRAME_SIZE 4096
+
+#define NR_FRAMES (FRAME_POOL_ADDR / FRAME_SIZE)
+
+void init_frame_pool (void)
+{
+    list_init (&frame_pool);
+    frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
+    for (int i = 0; i < NR_FRAMES; i++) {
+        frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
+        list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
+    }
+}
+
+struct pf_info *kalloc_page (void)
+{
+    if (list_empty (&frame_pool))
+        return NULL;
+
+    return (struct pf_info*) stack_pop (&frame_pool);
+}
+
+void kfree_page (void *addr)
+{
+
 }
