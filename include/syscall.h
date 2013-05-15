@@ -48,6 +48,7 @@ enum syscall_id {
     SYS_ALARM,
     SYS_MALLOC,
     SYS_FREE,
+    SYS_PALLOC,
     SYSCALL_MAX
 };
 

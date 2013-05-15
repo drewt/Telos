@@ -41,6 +41,7 @@ int sq_rm (struct pcb *p);
 /* service routines */
 void sys_malloc (unsigned int size, void **p);
 void sys_free (void *ptr);
+void sys_palloc (void **p);
 int sys_create (void (*func)(int,char*), int argc, char **argv);
 void sys_yield (void);
 void sys_exit (int status);

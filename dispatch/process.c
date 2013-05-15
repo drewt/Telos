@@ -86,6 +86,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     list_init (&p->recv_q);
     list_init (&p->repl_q);
     list_init (&p->heap_mem);
+    list_init (&p->page_mem);
 
     sig_init (p);
     files_init (p);
@@ -124,12 +125,15 @@ void sys_exit (int status)
 {
     struct pcb *pit;
     struct mem_header *hit;
+    struct pf_info *mit;
 
     // TODO: see what POSIX requires vis-a-vis process data in handler
     sys_kill (current->parent_pid, SIGCHLD);
 
     // free memory allocated to process
     kfree (current->stack_mem);
+    dequeue_iterate (&current->page_mem, mit, struct pf_info*)
+        kfree_page (mit);
     dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
         kfree (hit->data_start);
 

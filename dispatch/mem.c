@@ -65,3 +65,18 @@ void sys_free (void *ptr)
     list_remove (&current->heap_mem, (list_entry_t) h);
     hfree (h);
 }
+
+void sys_palloc (void **p)
+{
+    struct pf_info *page;
+
+    if ((page = kalloc_page ()) == NULL) {
+        current->rc = -ENOMEM;
+        return;
+    }
+
+    list_insert_tail (&current->page_mem, (list_entry_t) page);
+
+    *p = (void*) page->addr;
+    current->rc = 0;
+}

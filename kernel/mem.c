@@ -53,10 +53,24 @@
 #define PAGE_BASE(a) \
     ((a) & ~0xFFF)
 
+/* magic numbers for kernel heap headers */
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
+#define FRAME_POOL_ADDR 0x400000
+#define FRAME_POOL_SIZE 0x400000
+#define FRAME_POOL_END  (FRAME_POOL_ADDR+FRAME_POOL_SIZE)
+#define FRAME_SIZE 4096
+#define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
+
+/* free list for kernel heap */
 static list_head_t free_list;
+
+/* free list for page heap */
+static list_head_t frame_pool;
+
+/* page frame metadata */
+static struct pf_info *frame_table;
 
 struct mem_area {
     list_chain_t chain;
@@ -64,9 +78,7 @@ struct mem_area {
     unsigned long size;
 };
 
-/*
- * Statically allocated space for use by mem_init()
- */
+/* Statically allocated space for use by mem_init() */
 int rmem_i = 0;
 struct mem_area rmem[256];
 
@@ -75,6 +87,19 @@ struct mem_area rmem[256];
  */
 static struct elf32_shdr elf_shtab[32];
 static char elf_strtab[512];
+
+/*-----------------------------------------------------------------------------
+ * Initialize the frame pool */
+//-----------------------------------------------------------------------------
+static void init_frame_pool (void)
+{
+    list_init (&frame_pool);
+    frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
+    for (int i = 0; i < NR_FRAMES; i++) {
+        frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
+        list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
+    }
+}
 
 /*-----------------------------------------------------------------------------
  * Marks a memory area as reserved, inserting it into a sorted list of reserved
@@ -127,7 +152,8 @@ static void get_reserved_mem (struct multiboot_info *info, list_t res_list)
     struct mem_area *it;
 
     /* GRUB doesn't mark this as reserved for some reason... */
-    mark_reserved (res_list, 0xA0000, 0x60000);
+    //mark_reserved (res_list, 0xA0000, 0x60000);
+    mark_reserved (res_list, 0x0, 0x100000);
 
     /* XXX: testing area for page frame allocator */
     mark_reserved (res_list, 0x400000, 0x400000);
@@ -177,8 +203,9 @@ static void init_free_list (list_t res_list, unsigned long limit)
     struct mem_header *head;
     struct mem_area *rsv;
 
-    head = (struct mem_header*) 0;
-    head->size = limit;
+    rsv = (struct mem_area*) list_remove_head (res_list);
+    head = (struct mem_header*) (rsv->addr + rsv->size);
+    head->size = limit - (unsigned long) head;
     head->magic = MAGIC_FREE;
     list_insert_head (&free_list, (list_entry_t) head);
 
@@ -221,14 +248,18 @@ unsigned long mem_init (struct multiboot_info *info)
 
     if (!MULTIBOOT_MMAP_VALID (info) || !MULTIBOOT_ELFSEC_VALID (info)) {
         /* fall back to using linker variables */
-        struct mem_header *head;
+        struct mem_header *head, *tail;
         head = (struct mem_header*) PAGE_ALIGN ((unsigned long) &uend);
-        head->size = MULTIBOOT_MEM_MAX (info) - (unsigned long) &uend;
+        head->size = FRAME_POOL_ADDR - (unsigned long) &uend;
         head->magic = MAGIC_FREE;
+        tail = (struct mem_header*) FRAME_POOL_END;
+        tail->size = MULTIBOOT_MEM_MAX (info) - FRAME_POOL_END;
         list_insert_head (&free_list, (list_entry_t) head);
+        list_insert_tail (&free_list, (list_entry_t) tail);
         wprintf ("failed to detect reserved memory areas; "
                  "assuming %x to %x is usable",
                  head, MULTIBOOT_MEM_MAX (info));
+        init_frame_pool ();
         return head->size;
     }
 
@@ -240,11 +271,13 @@ unsigned long mem_init (struct multiboot_info *info)
 
     get_reserved_mem (info, &res_list);
     init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
+    init_frame_pool ();
 
     unsigned long count = 0;
     struct mem_header *it;
-    list_iterate (&free_list, it, struct mem_header*, chain)
+    list_iterate (&free_list, it, struct mem_header*, chain) {
         count += it->size + sizeof (struct mem_header);
+    }
     return count;
 }
 
@@ -314,30 +347,9 @@ void hfree (struct mem_header *hdr)
     list_insert_head (&free_list, (list_entry_t) hdr);
 }
 
-struct pf_info {
-    list_chain_t chain;
-    unsigned long addr;
-};
-
-list_head_t frame_pool;
-struct pf_info *frame_table;
-
-#define FRAME_POOL_ADDR 0x400000
-#define FRAME_POOL_SIZE 0x400000
-#define FRAME_SIZE 4096
-
-#define NR_FRAMES (FRAME_POOL_ADDR / FRAME_SIZE)
-
-void init_frame_pool (void)
-{
-    list_init (&frame_pool);
-    frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
-    for (int i = 0; i < NR_FRAMES; i++) {
-        frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
-        list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
-    }
-}
-
+/*-----------------------------------------------------------------------------
+ * Allocate a page from the frame pool */
+//-----------------------------------------------------------------------------
 struct pf_info *kalloc_page (void)
 {
     if (list_empty (&frame_pool))
@@ -346,7 +358,10 @@ struct pf_info *kalloc_page (void)
     return (struct pf_info*) stack_pop (&frame_pool);
 }
 
-void kfree_page (void *addr)
+/*-----------------------------------------------------------------------------
+ * Retrun a page to the frame pool */
+//-----------------------------------------------------------------------------
+void kfree_page (struct pf_info *page)
 {
-
+    stack_push (&frame_pool, (list_entry_t) page);
 }

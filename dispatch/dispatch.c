@@ -67,7 +67,8 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
     [SYS_RECV]      = { (void(*)()) sys_recv,        3 },
     [SYS_REPLY]     = { (void(*)()) sys_reply,       3 },
     [SYS_MALLOC]    = { (void(*)()) sys_malloc,      2 },
-    [SYS_FREE]      = { (void(*)()) sys_free,        1 }
+    [SYS_FREE]      = { (void(*)()) sys_free,        1 },
+    [SYS_PALLOC]    = { (void(*)()) sys_palloc,      1 }
 };
 
 static inline void set_action (unsigned int vector, void(*f)(), int nargs) {

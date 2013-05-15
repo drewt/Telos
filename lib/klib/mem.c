@@ -18,14 +18,31 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include <syscall.h>
+
+int errno;
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
 static inline int telos_malloc (size_t size, void **p) {
     return syscall2 (SYS_MALLOC, (void*) size, p);
+}
+
+/*-----------------------------------------------------------------------------
+ * */
+//-----------------------------------------------------------------------------
+void *palloc (void) {
+    void *rv;
+    int error;
+
+    if ((error = syscall1 (SYS_PALLOC, &rv)) != 0) {
+        errno = error * -1;
+        return NULL;
+    }
+    return rv;
 }
 
 /*-----------------------------------------------------------------------------

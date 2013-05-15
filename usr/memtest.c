@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define N 25
 #define M 100
@@ -27,7 +28,16 @@ void memtest (int argc, char *argv[])
 {
     void *mem[N];
 
-    puts ("Testing malloc()...");
+    puts ("Testing palloc()...");
+    for (int i = 0; i < N; i++) {
+        if ((mem[i] = palloc ()) == NULL) {
+            printf ("memtest[%d]: palloc returned NULL\n", i);
+            return;
+        }
+        memset (mem[i], 0xFF, 4096);
+    }
+
+    /*puts ("Testing malloc()...");
     for (int i = 0; i < N; i++) {
         if ((mem[i] = malloc (i*M+A)) == NULL) {
             puts ("memtest: malloc returned NULL");
@@ -37,5 +47,5 @@ void memtest (int argc, char *argv[])
 
     puts ("Testing free()...");
     for (int i = N-1; i >= 0; i--)
-        free (mem[i]);
+        free (mem[i]);*/
 }

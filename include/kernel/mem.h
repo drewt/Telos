@@ -35,11 +35,18 @@ struct mem_header {
     unsigned char   data_start[]; // start of allocated block
 };
 
+struct pf_info {
+    list_chain_t chain;
+    unsigned long addr;
+};
+
 struct multiboot_info;
 
 unsigned long mem_init (struct multiboot_info *info);
 void *hmalloc (unsigned int size, struct mem_header **hdr);
 void hfree (struct mem_header *hdr);
+struct pf_info *kalloc_page (void);
+void kfree_page (struct pf_info *page);
 
 static inline struct mem_header *mem_ptoh (void *addr)
 {

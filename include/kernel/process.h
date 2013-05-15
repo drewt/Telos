@@ -83,6 +83,7 @@ struct pcb {
     void         *parg;              // pointer to... something
     enum dev_id  fds[FDT_SIZE];      // file descriptors
     list_head_t heap_mem;            // heap allocated memory
+    list_head_t page_mem;
 };
 
 extern struct pcb proctab[];
