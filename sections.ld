@@ -12,19 +12,19 @@ SECTIONS
     utext ALIGN (0x1000) :
     {
         ustart = .;
-        bin/userspace.a:*(.text)
+        usr/usr.a:*(.text)
         lib/klib.a:*(.text)
     }
 
     urodata ALIGN (0x1000) :
     {
-        bin/userspace.a:*(.rodata)
+        usr/usr.a:*(.rodata)
         lib/klib.a:*(.rodata)
     }
 
     udata ALIGN (0x1000) :
     {
-        bin/userspace.a:*(.data .bss COMMON)
+        usr/usr.a:*(.data .bss COMMON)
         lib/klib.a:*(.data .bss COMMON)
         uend = .;
     }
@@ -37,21 +37,23 @@ SECTIONS
     .text ALIGN (0x1000) :
     {
         kstart = .;
+        _kro_start = .;
         *(.text)
-        *(.rodata*)
+        *(.rodata)
+        _kro_end = .;
     }
 
     .data ALIGN (0x1000) :
     {
+        _krw_start = .;
         *(.data)
     }
 
     .bss ALIGN (0x1000) :
     {
-        sbss = .;
         *(.bss)
-        scomm = .;
         *(COMMON)
+        _krw_end = .;
         kend = .;
     }
 
