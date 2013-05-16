@@ -21,6 +21,12 @@
 
 #include <kernel/list.h>
 
+#define FRAME_POOL_ADDR 0x400000
+#define FRAME_POOL_SIZE 0x400000
+#define FRAME_POOL_END  (FRAME_POOL_ADDR+FRAME_POOL_SIZE)
+#define FRAME_SIZE 4096
+#define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
+
 extern unsigned long stack;
 extern unsigned long kstart;
 extern unsigned long kend;

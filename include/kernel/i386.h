@@ -170,6 +170,31 @@ static inline void load_tss (unsigned short val)
     );
 }
 
+static inline void enable_paging (void)
+{
+    asm volatile (
+        "mov %%cr0, %%eax\n"
+        "or  %0,    %%eax\n"
+        "mov %%eax, %%cr0\n"
+        : : "i" (0x80000000) : "%eax"
+    );
+}
+
+static inline void disable_paging (void)
+{
+    asm volatile (
+        "mov %%cr0, %%eax\n"
+        "and %0,    %%eax\n"
+        "mov %%eax, %%cr0\n"
+        : : "i" (~0x80000000) : "%eax"
+    );
+}
+
+static inline void set_page_directory (void *addr)
+{
+    asm volatile ("mov %0, %%cr3" : : "r" (addr) :);
+}
+
 static inline void put_iret_frame (struct ctxt *f, unsigned long eip,
         unsigned long esp)
 {

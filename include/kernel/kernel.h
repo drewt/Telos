@@ -19,13 +19,15 @@
 #ifndef __KERNEL_H_
 #define __KERNEL_H_
 
+struct multiboot_info;
+
 /* GLOBAL DATA */
 extern void(*dfl_sighandlers[])(int);
 
 /* initialization procedures */
 extern void dev_init (void); /* devinit.c */
 extern void isr_init (void); /* ctsw.c */
-extern void paging_init (void);
+extern int paging_init (struct multiboot_info*);
 
 /* user.c */
 extern void root_proc ();

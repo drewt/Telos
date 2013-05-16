@@ -57,20 +57,8 @@
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
-#define FRAME_POOL_ADDR 0x400000
-#define FRAME_POOL_SIZE 0x400000
-#define FRAME_POOL_END  (FRAME_POOL_ADDR+FRAME_POOL_SIZE)
-#define FRAME_SIZE 4096
-#define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
-
 /* free list for kernel heap */
 static list_head_t free_list;
-
-/* free list for page heap */
-static list_head_t frame_pool;
-
-/* page frame metadata */
-static struct pf_info *frame_table;
 
 struct mem_area {
     list_chain_t chain;
@@ -82,24 +70,9 @@ struct mem_area {
 int rmem_i = 0;
 struct mem_area rmem[256];
 
-/*
- * ELF section headers
- */
+/* ELF section headers */
 static struct elf32_shdr elf_shtab[32];
 static char elf_strtab[512];
-
-/*-----------------------------------------------------------------------------
- * Initialize the frame pool */
-//-----------------------------------------------------------------------------
-static void init_frame_pool (void)
-{
-    list_init (&frame_pool);
-    frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
-    for (int i = 0; i < NR_FRAMES; i++) {
-        frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
-        list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
-    }
-}
 
 /*-----------------------------------------------------------------------------
  * Marks a memory area as reserved, inserting it into a sorted list of reserved
@@ -256,11 +229,9 @@ unsigned long mem_init (struct multiboot_info *info)
         tail->size = MULTIBOOT_MEM_MAX (info) - FRAME_POOL_END;
         list_insert_head (&free_list, (list_entry_t) head);
         list_insert_tail (&free_list, (list_entry_t) tail);
-        wprintf ("failed to detect reserved memory areas; "
-                 "assuming %x to %x is usable",
+        wprintf ("failed to detect memory; assuming %x to %x is usable",
                  head, MULTIBOOT_MEM_MAX (info));
-        init_frame_pool ();
-        return head->size;
+        return head->size + tail->size;
     }
 
     /* copy ELF section headers & string table into kernel memory */
@@ -271,7 +242,6 @@ unsigned long mem_init (struct multiboot_info *info)
 
     get_reserved_mem (info, &res_list);
     init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
-    init_frame_pool ();
 
     unsigned long count = 0;
     struct mem_header *it;
@@ -345,23 +315,4 @@ void hfree (struct mem_header *hdr)
 
     // insert freed at the beginning of the free list
     list_insert_head (&free_list, (list_entry_t) hdr);
-}
-
-/*-----------------------------------------------------------------------------
- * Allocate a page from the frame pool */
-//-----------------------------------------------------------------------------
-struct pf_info *kalloc_page (void)
-{
-    if (list_empty (&frame_pool))
-        return NULL;
-
-    return (struct pf_info*) stack_pop (&frame_pool);
-}
-
-/*-----------------------------------------------------------------------------
- * Retrun a page to the frame pool */
-//-----------------------------------------------------------------------------
-void kfree_page (struct pf_info *page)
-{
-    stack_push (&frame_pool, (list_entry_t) page);
 }
