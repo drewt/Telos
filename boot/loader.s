@@ -7,12 +7,14 @@
 .set STACKSIZE, 0x4000
 .set NR_LOW_PGTS, 16
 
-.section .data
+.section .bss
 
 .align 0x1000
 _kernel_pgd:      .space 0x1000
 _kernel_low_pgt:  .space (0x1000 * NR_LOW_PGTS)
 _kernel_high_pgt: .space 0x1000
+
+.section .data
 stack:            .space STACKSIZE
 
 .section .text
