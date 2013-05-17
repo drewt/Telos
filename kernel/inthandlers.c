@@ -52,7 +52,9 @@ void exn_err (unsigned int num, struct gp_regs reg) {
 
     kprintf ("\ntrap!\nException %d: %s\n", num,
             (num < 20) ? exns[num] : "Unknown");
-    kprintf ("Error code might be %x\n", reg.stack[1]);
+    kprintf ("stack[0]=%x\n", reg.stack[0]);
+    kprintf ("stack[1]=%x\n", reg.stack[1]);
+    kprintf ("stack[2]=%x\n", reg.stack[2]);
     kprintf ("Current process is %d\n", current->pid);
 
     kprintf ("Dumping registers...\n");
