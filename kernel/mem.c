@@ -174,15 +174,15 @@ static void init_free_list (list_t res_list, unsigned long limit)
         new = (struct mem_header*) (rsv->addr + rsv->size); // XXX: overflow!
 
         if ((unsigned long) new >= limit) {
-            tail->size = rsv->addr - (unsigned long) tail->data_start;
+            tail->size = rsv->addr - (unsigned long) tail->data;
             break;
         }
 
-        unsigned long diff = new->data_start - tail->data_start;
+        unsigned long diff = new->data - tail->data;
         new->size = tail->size - diff;
         new->magic = MAGIC_FREE;
 
-        tail->size = rsv->addr - (unsigned long) tail->data_start;
+        tail->size = rsv->addr - (unsigned long) tail->data;
 
         list_insert_tail (&free_list, (list_entry_t) new);
     }
@@ -265,7 +265,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr)
         list_remove (&free_list, (list_entry_t) p);
     } else {
         // split p into adjacent segments p and r
-        r = (struct mem_header*) (p->data_start + size);
+        r = (struct mem_header*) (p->data + size);
         *r = *p;
 
         r->size = p->size - size - sizeof (struct mem_header);
@@ -280,7 +280,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr)
     if (hdr)
         *hdr = p;
 
-    return p->data_start;
+    return p->data;
 }
 
 /*-----------------------------------------------------------------------------

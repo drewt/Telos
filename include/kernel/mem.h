@@ -56,10 +56,10 @@ extern unsigned long _kroend;   // end of kernel read-only memory
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
-    list_chain_t    chain;        // chain for free/allocated lists
-    unsigned long   size;         // size of an allocated block
-    unsigned long   magic;        // padding/sanity check
-    unsigned char   data_start[]; // start of allocated block
+    list_chain_t    chain;  // chain for free/allocated lists
+    unsigned long   size;   // size of an allocated block
+    unsigned long   magic;  // padding/sanity check
+    unsigned char   data[]; // start of allocated block
 };
 
 /* page frame info */

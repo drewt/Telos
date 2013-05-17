@@ -136,7 +136,7 @@ void sys_exit (int status)
     dequeue_iterate (&current->page_mem, mit, struct pf_info*)
         kfree_page (mit);
     dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
-        kfree (hit->data_start);
+        kfree (hit->data);
 
     current->state = STATE_STOPPED;
 
