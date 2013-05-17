@@ -81,7 +81,8 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     p->timestamp = tick_count;
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
-    p->pgdir = &_kernel_pgd;
+    p->pgdir = (unsigned long*)
+        ((unsigned long) &_kernel_pgd - (unsigned long) &KERNEL_PAGE_OFFSET);
 
     list_init (&p->send_q);
     list_init (&p->recv_q);

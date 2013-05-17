@@ -45,6 +45,7 @@
 extern unsigned long _kernel_pgd;
 
 /* linker variables */
+extern unsigned long KERNEL_PAGE_OFFSET;
 extern unsigned long kstart;    // start of the kernel
 extern unsigned long kend;      // end of the kernel
 extern unsigned long ustart;    // start of user-space

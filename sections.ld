@@ -34,25 +34,27 @@ SECTIONS
 
     loader ALIGN (0x1000) :
     {
-        kstart = .;
-        boot/loader.o
+        boot/loader.o(.text)
     }
 
-    .text ALIGN (0x1000) :
+    . += KERNEL_PAGE_OFFSET;
+
+    .text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_PAGE_OFFSET)
     {
+        kstart = .;
         _krostart = .;
         *(.text)
         *(.rodata)
         _kroend = .;
     }
 
-    .data ALIGN (0x1000) :
+    .data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_PAGE_OFFSET)
     {
         _krw_start = .;
         *(.data)
     }
 
-    .bss ALIGN (0x1000) :
+    .bss ALIGN (0x1000) : AT(ADDR(.bss) - KERNEL_PAGE_OFFSET)
     {
         *(.bss)
         *(COMMON)

@@ -32,13 +32,16 @@ stack:            .space STACKSIZE
 
 loader:
     mov  $(stack + STACKSIZE), %esp
-    mov  %esp, %ebp
+    subl $KERNEL_PAGE_OFFSET, %esp
 
     # save multiboot data
     push %eax
     push %ebx
 
     call boot_init_paging
+
+    addl $KERNEL_PAGE_OFFSET, %esp
+    mov  %esp, %ebp
     call kmain
     cli
 
@@ -50,6 +53,9 @@ boot_init_paging:
 
     mov  $_kernel_pgd, %eax
     mov  $_kernel_low_pgt, %ebx
+    sub  $KERNEL_PAGE_OFFSET, %eax
+    sub  $KERNEL_PAGE_OFFSET, %ebx
+
     or   $0x7, %ebx
     mov  $0x0, %edx
 
@@ -63,6 +69,7 @@ boot_init_paging:
     
     # initialize page tables
     mov  $_kernel_low_pgt, %eax
+    sub  $KERNEL_PAGE_OFFSET, %eax
     mov  $0x0, %ebx
     mov  $(0x400000 * NR_LOW_PGTS), %ecx
     call boot_direct_map
@@ -70,18 +77,22 @@ boot_init_paging:
     # map kernel in higher half
     mov  $_kernel_pgd, %eax
     mov  $_kernel_high_pgt, %ebx
+    sub  $KERNEL_PAGE_OFFSET, %eax
+    sub  $KERNEL_PAGE_OFFSET, %ebx
     or   $0x7, %ebx
     mov  $KERNEL_PAGE_OFFSET, %ecx
     shr  $22, %ecx
     mov  %ebx, (%eax, %ecx, 4)
 
     mov  $_kernel_high_pgt, %eax
+    sub  $KERNEL_PAGE_OFFSET, %eax
     mov  $0x0, %ebx
     mov  $0x400000, %ecx
     call boot_direct_map
 
     # enable paging
     mov  $_kernel_pgd, %eax
+    sub  $KERNEL_PAGE_OFFSET, %eax
     mov  %eax, %cr3
     mov  %cr0, %eax
     or   $((1 << 31) | (1 << 16)), %eax

@@ -100,60 +100,6 @@ static void mark_reserved (list_t memory, unsigned long addr,
 }
 
 /*-----------------------------------------------------------------------------
- * Reads a multiboot info structure in order to populate a list of reserved
- * memory areas */
-//-----------------------------------------------------------------------------
-static void get_reserved_mem (struct multiboot_info *info, list_t res_list)
-{
-    struct multiboot_mmap *mmap;
-    struct elf32_shdr *hdr, *shtab;
-    struct mem_area *it;
-
-    /* GRUB doesn't mark this as reserved for some reason... */
-    //mark_reserved (res_list, 0xA0000, 0x60000);
-    mark_reserved (res_list, 0x0, 0x100000);
-
-    /* XXX: testing area for page frame allocator */
-    mark_reserved (res_list, 0x400000, 0x400000);
-
-    /* mark areas reported by BIOS */
-    multiboot_mmap_iterate (info, mmap) {
-        if (mmap->addr_low > MULTIBOOT_MEM_MAX (info))
-            continue;
-        if (mmap->type != MULTIBOOT_MMAP_FREE)
-            mark_reserved (res_list, mmap->addr_low, mmap->len_low);
-    }
-
-    /* mark areas gleaned from ELF headers */
-    shtab = (struct elf32_shdr*) info->elf_sec.addr;
-    elf_shdr_iterate (shtab, hdr, info->elf_sec.num) {
-        if (hdr->sh_flags == 0)
-            continue;
-        mark_reserved (res_list, hdr->sh_addr, hdr->sh_size);
-    }
-
-    // TODO: below could probably be done in mark_reserved()
-    /* page align */
-    list_iterate (res_list, it, struct mem_area*, chain) {
-        it->addr = PAGE_BASE (it->addr);
-        it->size = PAGE_ALIGN (it->size);
-    }
-    /* coalesce */
-    list_iterate (res_list, it, struct mem_area*, chain) {
-        struct mem_area *next, *tmp;
-        next = (struct mem_area*) list_next ((list_entry_t) it);
-        while (next->addr - it->addr <= it->size) {
-            if (list_end (res_list, (list_entry_t) next))
-                break;
-            it->size += next->size;
-            tmp = next;
-            next = (struct mem_area*) list_next ((list_entry_t) tmp);
-            list_remove (res_list, (list_entry_t) tmp);
-        }
-    }
-}
-
-/*-----------------------------------------------------------------------------
  * Initializes the free list given a list of reserved memory areas */
 //-----------------------------------------------------------------------------
 static void init_free_list (list_t res_list, unsigned long limit)
@@ -196,6 +142,12 @@ unsigned long mem_init (struct multiboot_info *info)
     struct elf32_shdr *str_hdr;
     list_head_t res_list;
 
+    // copy ELF section headers & string table into kernel memory
+    memcpy (elf_shtab, (char*) info->elf_sec.addr,
+            info->elf_sec.num * info->elf_sec.size);
+    str_hdr = &elf_shtab[info->elf_sec.shndx];
+    memcpy (elf_strtab, (char*) str_hdr->sh_addr, str_hdr->sh_size);
+
     if (!MULTIBOOT_MEM_VALID (info)) {
         wprints ("failed to detect memory limits; assuming 8MB total");
         info->mem_upper = 0x800000;
@@ -204,37 +156,11 @@ unsigned long mem_init (struct multiboot_info *info)
     list_init (&res_list);
     list_init (&free_list);
 
-    if (!MULTIBOOT_MMAP_VALID (info) || !MULTIBOOT_ELFSEC_VALID (info)) {
-        /* fall back to using linker variables */
-        struct mem_header *head, *tail;
-        head = (struct mem_header*) PAGE_ALIGN ((unsigned long) &uend);
-        head->size = FRAME_POOL_ADDR - (unsigned long) &uend;
-        head->magic = MAGIC_FREE;
-        tail = (struct mem_header*) FRAME_POOL_END;
-        tail->size = MULTIBOOT_MEM_MAX (info) - FRAME_POOL_END;
-        list_insert_head (&free_list, (list_entry_t) head);
-        list_insert_tail (&free_list, (list_entry_t) tail);
-        wprintf ("failed to detect memory; assuming %x to %x is usable",
-                 head, MULTIBOOT_MEM_MAX (info));
-        return head->size + tail->size;
-    }
-
-    /* copy ELF section headers & string table into kernel memory */
-    memcpy (elf_shtab, (char*) info->elf_sec.addr,
-            info->elf_sec.num * info->elf_sec.size);
-    str_hdr = &elf_shtab[info->elf_sec.shndx];
-    memcpy (elf_strtab, (char*) str_hdr->sh_addr, str_hdr->sh_size);
-
-    get_reserved_mem (info, &res_list);
+    mark_reserved (&res_list, 0x00000000, PAGE_ALIGN((unsigned long) &uend));
+    mark_reserved (&res_list, 0x00400000, 0x00400000);
     init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
-    paging_init (0x400000, 0x800000);
-
-    unsigned long count = 0;
-    struct mem_header *it;
-    list_iterate (&free_list, it, struct mem_header*, chain) {
-        count += it->size + sizeof (struct mem_header);
-    }
-    return count;
+    paging_init (0x00400000, 0x00800000);
+    return MULTIBOOT_MEM_MAX (info) - (unsigned long) &uend;
 }
 
 /*-----------------------------------------------------------------------------
