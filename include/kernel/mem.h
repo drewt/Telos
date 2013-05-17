@@ -27,7 +27,22 @@
 #define FRAME_SIZE 4096
 #define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
 
-extern unsigned long stack;
+/*
+ * unsigned long PAGE_ALIGN (unsigned long a)
+ *      Takes an address and rounds it up to the nearest page boundary.
+ */
+#define PAGE_ALIGN(a) \
+    ((a) & 0xFFF ? ((a) + 0x1000) & ~0xFFF : (a))
+
+/*
+ * unsigned long PAGE_BASE (unsigned long a)
+ *      Takes an address and returns the base address of the page frame it
+ *      belongs to.
+ */
+#define PAGE_BASE(a) \
+    ((a) & ~0xFFF)
+
+extern unsigned long _kernel_pgd;
 extern unsigned long kstart;
 extern unsigned long kend;
 extern unsigned long ustart;

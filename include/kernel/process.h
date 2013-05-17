@@ -65,6 +65,7 @@ struct pcb {
     void         *int_stack;         // stack for interrupts
     void         *esp;               // stack pointer
     void         *ifp;               // interrupt frame pointer
+    unsigned long *pgdir;            // page directory
     /* time */
     unsigned int timestamp;          // creation time
     /* signals */

@@ -1,4 +1,6 @@
 ENTRY (loader)
+KERNEL_LOAD_ADDR   = 0x00100000;
+KERNEL_PAGE_OFFSET = 0xC0000000;
 
 SECTIONS
 {
@@ -32,11 +34,16 @@ SECTIONS
     /*
      * The kernel proper begins at 1MB.
      */
-    . = 0x00100000;
+    . = KERNEL_LOAD_ADDR;
+
+    loader ALIGN (0x1000) :
+    {
+        kstart = .;
+        boot/loader.o
+    }
 
     .text ALIGN (0x1000) :
     {
-        kstart = .;
         _kro_start = .;
         *(.text)
         *(.rodata)

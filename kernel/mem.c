@@ -38,21 +38,6 @@
 #define PARAGRAPH_ALIGN(a) \
     ((a) & 0xF ? ((a) + 0x10) & ~0xF : (a))
 
-/*
- * unsigned long PAGE_ALIGN (unsigned long a)
- *      Takes an address and rounds it up to the nearest page boundary.
- */
-#define PAGE_ALIGN(a) \
-    ((a) & 0xFFF ? ((a) + 0x1000) & ~0xFFF : (a))
-
-/*
- * unsigned long PAGE_BASE (unsigned long a)
- *      Takes an address and returns the base address of the page frame it
- *      belongs to.
- */
-#define PAGE_BASE(a) \
-    ((a) & ~0xFFF)
-
 /* magic numbers for kernel heap headers */
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C

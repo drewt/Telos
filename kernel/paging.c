@@ -33,18 +33,29 @@
 #define PE_RW 0x2
 #define PE_U  0x4
 
+#define ADDR_TO_PDI(addr) (((addr) & 0xFFC00000) >> 22)
+#define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
+
 /* free list for page heap */
 static list_head_t frame_pool;
 
 /* page frame metadata */
 static struct pf_info *frame_table;
 
-unsigned long *kernel_page_dir;
+unsigned long *addr_to_pte (unsigned long *pgdir, unsigned long frame)
+{
+    unsigned long *pgtab;
+    unsigned long pde;
+
+    pde = pgdir[ADDR_TO_PDI (frame)];
+    pgtab = (unsigned long*) (pde & ~0xFFF);
+    return pgtab + ADDR_TO_PTI (frame);
+}
 
 /*-----------------------------------------------------------------------------
  * Initialize the frame pool */
 //-----------------------------------------------------------------------------
-static int init_frame_pool (void)
+int paging_init (struct multiboot_info *info)
 {
     list_init (&frame_pool);
     frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
@@ -55,45 +66,6 @@ static int init_frame_pool (void)
         frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
         list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
     }
-    return 0;
-}
-
-/*-----------------------------------------------------------------------------
- * Set up the kernel's page tables */
-//-----------------------------------------------------------------------------
-int paging_init (struct multiboot_info *info)
-{
-    struct pf_info *kdir;
-    unsigned long address;
-
-    if (init_frame_pool () == -1)
-        return -1;
-
-    if ((kdir = kalloc_page ()) == NULL)
-        return -1;
-
-    kernel_page_dir = (unsigned long*) kdir->addr;
-
-    memset (kernel_page_dir, 0, 4096);
-
-    address = 0;
-    for (int tab = 0; tab < 4; tab++) {
-        struct pf_info *ktable;
-        unsigned long *page_table;
-
-        if ((ktable = kalloc_page ()) == NULL)
-            return -1;
-
-        page_table = (unsigned long*) ktable->addr;
-        for (int i = 0; i < 1024; i++, address += 4096)
-            page_table[i] = address | PE_U | PE_RW | PE_P;
-
-        kernel_page_dir[tab] = ktable->addr | PE_U | PE_RW | PE_P;
-    }
-
-    set_page_directory (kernel_page_dir);
-    enable_paging ();
-
     return 0;
 }
 

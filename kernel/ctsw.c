@@ -56,6 +56,7 @@ unsigned int context_switch (struct pcb *p)
         "movl  %%esp,  ksp       \n" // switch stacks
         "movl  psp,    %%esp     \n"
         "movl  rc,     %%eax     \n" // put return code in %eax
+        "mov   %[PGD], %%cr3     \n" // switch page directories
         "movl  %%eax,  28(%%esp) \n"
         "movw  %[UDS], %%ax      \n" // switch to user data segment
         "movw  %%ax,   %%ds      \n"
@@ -89,7 +90,8 @@ unsigned int context_switch (struct pcb *p)
         "popf                    \n"
         : [iid] "=g" (iid)
         : [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
-          [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR)
+          [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR),
+          [PGD] "b" (p->pgdir)
         : "%eax", "%ecx"
     );
     p->esp = psp;

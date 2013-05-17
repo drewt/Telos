@@ -66,13 +66,13 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++)
         /* nothing */;
     if (pti == PT_SIZE) {
-        current->rc = EAGAIN;
-        return EAGAIN;
+        current->rc = -EAGAIN;
+        return -EAGAIN;
     }
 
     if (!(pstack = kmalloc (STACK_SIZE))) {
-        current->rc = ENOMEM;
-        return ENOMEM;
+        current->rc = -ENOMEM;
+        return -ENOMEM;
     }
 
     /* set process metadata */
@@ -81,6 +81,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     p->timestamp = tick_count;
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
+    p->pgdir = &_kernel_pgd;
 
     list_init (&p->send_q);
     list_init (&p->recv_q);
