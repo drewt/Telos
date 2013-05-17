@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -43,10 +43,16 @@
     ((a) & ~0xFFF)
 
 extern unsigned long _kernel_pgd;
-extern unsigned long kstart;
-extern unsigned long kend;
-extern unsigned long ustart;
-extern unsigned long uend;
+
+/* linker variables */
+extern unsigned long kstart;    // start of the kernel
+extern unsigned long kend;      // end of the kernel
+extern unsigned long ustart;    // start of user-space
+extern unsigned long uend;      // end of user-space
+extern unsigned long _urostart; // start of user-space read-only memory
+extern unsigned long _uroend;   // end of user-space read-only memory
+extern unsigned long _krostart; // start of kernel read-only memory
+extern unsigned long _kroend;   // end of kernel read-only memory
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
@@ -56,6 +62,7 @@ struct mem_header {
     unsigned char   data_start[]; // start of allocated block
 };
 
+/* page frame info */
 struct pf_info {
     list_chain_t chain;
     unsigned long addr;
@@ -68,6 +75,7 @@ void *hmalloc (unsigned int size, struct mem_header **hdr);
 void hfree (struct mem_header *hdr);
 struct pf_info *kalloc_page (void);
 void kfree_page (struct pf_info *page);
+int paging_init (unsigned long start, unsigned long end);
 
 static inline struct mem_header *mem_ptoh (void *addr)
 {

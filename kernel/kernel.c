@@ -80,7 +80,6 @@ void kmain (struct multiboot_info *info, unsigned long magic)
     proctab_init ();
     dev_init ();
     dispatch_init ();
-    paging_init (info);
 
     bprints ("\n----------- MEMORY -----------\n");
     bprintf ("Kernel:    %x - %x\n", &kstart, &kend);

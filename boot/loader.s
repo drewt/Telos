@@ -84,7 +84,7 @@ boot_init_paging:
     mov  $_kernel_pgd, %eax
     mov  %eax, %cr3
     mov  %cr0, %eax
-    or   $(1 << 31), %eax
+    or   $((1 << 31) | (1 << 16)), %eax
     mov  %eax, %cr0
 
     ret

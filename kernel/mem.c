@@ -197,8 +197,8 @@ unsigned long mem_init (struct multiboot_info *info)
     list_head_t res_list;
 
     if (!MULTIBOOT_MEM_VALID (info)) {
-        wprints ("failed to detect memory limits; assuming 4MB total");
-        info->mem_upper = 0x300000;
+        wprints ("failed to detect memory limits; assuming 8MB total");
+        info->mem_upper = 0x800000;
     }
 
     list_init (&res_list);
@@ -227,6 +227,7 @@ unsigned long mem_init (struct multiboot_info *info)
 
     get_reserved_mem (info, &res_list);
     init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
+    paging_init (0x400000, 0x800000);
 
     unsigned long count = 0;
     struct mem_header *it;

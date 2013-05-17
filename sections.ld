@@ -14,14 +14,10 @@ SECTIONS
     utext ALIGN (0x1000) :
     {
         ustart = .;
-        usr/usr.a:*(.text)
-        lib/klib.a:*(.text)
-    }
-
-    urodata ALIGN (0x1000) :
-    {
-        usr/usr.a:*(.rodata)
-        lib/klib.a:*(.rodata)
+        _urostart = .;
+        usr/usr.a:*(.text .rodata)
+        lib/klib.a:*(.text .rodata)
+        _uroend = .;
     }
 
     udata ALIGN (0x1000) :
@@ -44,10 +40,10 @@ SECTIONS
 
     .text ALIGN (0x1000) :
     {
-        _kro_start = .;
+        _krostart = .;
         *(.text)
         *(.rodata)
-        _kro_end = .;
+        _kroend = .;
     }
 
     .data ALIGN (0x1000) :

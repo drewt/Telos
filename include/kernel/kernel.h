@@ -27,7 +27,6 @@ extern void(*dfl_sighandlers[])(int);
 /* initialization procedures */
 extern void dev_init (void); /* devinit.c */
 extern void isr_init (void); /* ctsw.c */
-extern int paging_init (struct multiboot_info*);
 
 /* user.c */
 extern void root_proc ();

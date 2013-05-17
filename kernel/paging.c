@@ -42,7 +42,7 @@ static list_head_t frame_pool;
 /* page frame metadata */
 static struct pf_info *frame_table;
 
-unsigned long *addr_to_pte (unsigned long *pgdir, unsigned long frame)
+static unsigned long *addr_to_pte (unsigned long *pgdir, unsigned long frame)
 {
     unsigned long *pgtab;
     unsigned long pde;
@@ -52,20 +52,43 @@ unsigned long *addr_to_pte (unsigned long *pgdir, unsigned long frame)
     return pgtab + ADDR_TO_PTI (frame);
 }
 
+void page_protect_disable (unsigned long *pgdir, unsigned long start,
+        unsigned long end, unsigned long flags)
+{
+    unsigned long *pte;
+    int nr_frames;
+
+    pte = addr_to_pte (pgdir, start);
+    nr_frames = (PAGE_ALIGN (end) - start) / FRAME_SIZE;
+    for (int i = 0; i < nr_frames; i++, pte++)
+        *pte &= ~flags;
+}
+
 /*-----------------------------------------------------------------------------
  * Initialize the frame pool */
 //-----------------------------------------------------------------------------
-int paging_init (struct multiboot_info *info)
+int paging_init (unsigned long start, unsigned long end)
 {
+    int nr_frames;
+
     list_init (&frame_pool);
-    frame_table = kmalloc (NR_FRAMES * sizeof (struct pf_info));
+
+    nr_frames = (end - start) / FRAME_SIZE;
+    frame_table = kmalloc (nr_frames * sizeof (struct pf_info));
     if (frame_table == NULL)
         return -1;
 
-    for (int i = 0; i < NR_FRAMES; i++) {
-        frame_table[i].addr = FRAME_POOL_ADDR + (i * FRAME_SIZE);
+    for (int i = 0; i < nr_frames; i++) {
+        frame_table[i].addr = start + (i * FRAME_SIZE);
         list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
     }
+
+    /* disable R/W flag for read-only sections */
+    page_protect_disable (&_kernel_pgd, (unsigned long) &_urostart,
+            (unsigned long) &_uroend, PE_RW);
+    page_protect_disable (&_kernel_pgd, (unsigned long) &_krostart,
+            (unsigned long) &_kroend, PE_RW);
+
     return 0;
 }
 
