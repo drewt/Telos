@@ -37,7 +37,7 @@
 #define CBUF_SIZE (COL*ROW*CHR)
 
 #define CLR_BASE 0x3D4
-#define CLR_BUF  0xB8000
+#define CLR_BUF  (0xB8000 + 0xC0000000)
 
 #define TXT_CLR   0x7
 #define NUM_CLR   0xF
@@ -218,7 +218,8 @@ int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
             switch (fmt[i]) {
             /* numbers */
             case 'b':
-                kputs (itoa (va_arg (ap, int), buf, 2), NUM_CLR);
+                kputs (itoa_2 (va_arg (ap, int), buf), NUM_CLR);
+                break;
             case 'd':
             case 'i':
                 kputs (itoa (va_arg (ap, int), buf, 10), NUM_CLR);
@@ -227,7 +228,7 @@ int kvprintf (unsigned char clr, const char *fmt, va_list ap) {
                 kputs (itoa (va_arg (ap, int), buf, 8), NUM_CLR);
             case 'x':
                 kputs ("0x", NUM_CLR);
-                kputs (itoa (va_arg (ap, int), buf, 16), NUM_CLR);
+                kputs (itoa_16 (va_arg (ap, int), buf), NUM_CLR);
                 break;
             /* strings n chars */
             case 'c':

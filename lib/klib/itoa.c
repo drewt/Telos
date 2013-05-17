@@ -1,6 +1,44 @@
-/* swiped from osdev.org wiki */
-// TODO: write a version of this that works
 
+
+char *itoa_16 (unsigned int val, char *buf)
+{
+    char *ptr, *rc;
+    rc = ptr = buf;
+
+    do {
+        *ptr++ = "0123456789abcdef"[val & 0xF];
+        val >>= 4;
+    } while (val);
+    *ptr-- = '\0';
+
+    while (buf < ptr) {
+        char tmp = *buf;
+        *buf++ = *ptr;
+        *ptr-- = tmp;
+    }
+    return rc;
+}
+
+char *itoa_2 (unsigned int val, char *buf)
+{
+    char *ptr, *rc;
+    rc = ptr = buf;
+
+    do {
+        *ptr++ = val & 1 ? '1' : '0';
+        val >>= 1;
+    } while (val);
+    *ptr-- = '\0';
+
+    while (buf < ptr) {
+        char tmp = *buf;
+        *buf++ = *ptr;
+        *ptr-- = tmp;
+    }
+    return rc;
+}
+
+/* swiped from osdev.org wiki */
 /*-----------------------------------------------------------------------------
  * Converts an integer in a given base to a string */
 //-----------------------------------------------------------------------------
