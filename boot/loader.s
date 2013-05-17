@@ -67,6 +67,19 @@ boot_init_paging:
     mov  $(0x400000 * NR_LOW_PGTS), %ecx
     call boot_direct_map
 
+    # map kernel in higher half
+    mov  $_kernel_pgd, %eax
+    mov  $_kernel_high_pgt, %ebx
+    or   $0x7, %ebx
+    mov  $KERNEL_PAGE_OFFSET, %ecx
+    shr  $22, %ecx
+    mov  %ebx, (%eax, %ecx, 4)
+
+    mov  $_kernel_high_pgt, %eax
+    mov  $0x0, %ebx
+    mov  $0x400000, %ecx
+    call boot_direct_map
+
     # enable paging
     mov  $_kernel_pgd, %eax
     mov  %eax, %cr3
@@ -76,9 +89,12 @@ boot_init_paging:
 
     ret
 
-# %eax: page table base address
-# %ebx: base physical address
-# %ecx: amount of memory to map
+#
+# void boot_direct_map (pgt, base, len)
+#
+#       %eax: page table base address
+#       %ebx: base physical address
+#       %ecx: amount of memory to map
 boot_direct_map:
 
     add  %ebx, %ecx
