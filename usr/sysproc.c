@@ -27,7 +27,7 @@
 void tsh (int argc, char **argv);
 
 void idle_proc () {
-    for(;;);
+    asm volatile ("halt: hlt\njmp halt" :::);
 }
 
 static void sigchld_handler(int signo) {}
