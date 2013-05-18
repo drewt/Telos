@@ -63,6 +63,14 @@ struct ctxt {
     unsigned long stack[0];
 };
 
+struct spr_ctxt {
+    struct gp_regs reg;
+    unsigned long iret_eip;
+    unsigned long iret_cs;
+    unsigned long eflags;
+    unsigned long stack[];
+};
+
 struct tss_entry {
     unsigned long prev;
     unsigned long esp0;
@@ -203,6 +211,13 @@ static inline void put_iret_frame (struct ctxt *f, unsigned long eip,
     f->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
     f->iret_esp = esp;
     f->iret_ss  = SEG_UDATA | 3;
+}
+
+static inline void put_iret_frame_super (struct spr_ctxt *f, unsigned long eip)
+{
+    f->iret_eip = eip;
+    f->iret_cs  = SEG_KCODE;
+    f->eflags   = 0x3200;
 }
 
 extern void gdt_install (void);

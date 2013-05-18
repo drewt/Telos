@@ -54,19 +54,53 @@ static void sig_err (void)
     for (;;);
 }
 
+static int send_signal_super (struct pcb *p, int sig_no)
+{
+    struct ctxt *old_ctxt;
+    struct spr_ctxt *sig_frame;
+
+    struct sigaction *act = &p->sigactions[sig_no];
+    struct siginfo *info = &p->siginfos[sig_no];
+    bool siginfo = act->sa_flags & SA_SIGINFO;
+
+    old_ctxt = p->esp;
+    sig_frame = (struct spr_ctxt*)
+        ((unsigned long) p->esp - sizeof (struct spr_ctxt) - 32);
+
+    sig_frame->iret_eip = siginfo ? (unsigned long) sigtramp1
+                                  : (unsigned long) sigtramp0;
+    sig_frame->iret_cs = SEG_KCODE;
+    sig_frame->eflags = 0x3200;
+    sig_frame->stack[0] = (unsigned long) sig_err;
+    sig_frame->stack[1] = (unsigned long) act->sa_handler;
+    sig_frame->stack[2] = (unsigned long) old_ctxt;
+    sig_frame->stack[3] = (unsigned long) sig_no;
+    if (siginfo) {
+        sig_frame->stack[4]  = info->si_errno;
+        sig_frame->stack[5]  = info->si_code;
+        sig_frame->stack[6]  = info->si_pid;
+        sig_frame->stack[7]  = (unsigned long) info->si_addr;
+        sig_frame->stack[8]  = info->si_status;
+        sig_frame->stack[9]  = info->si_band;
+        sig_frame->stack[10] = (unsigned long) info->si_value.sigval_ptr;
+        sig_frame->stack[11] = p->rc;
+    } else {
+        sig_frame->stack[4]  = p->rc;
+    }
+
+    old_ctxt->reg.eax = p->sig_ignore;
+
+    p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
+                            : (u32) (~0 << (sig_no + 1));
+    return 0;
+}
+
 /*-----------------------------------------------------------------------------
  * Prepares a process to switch contexts into the signal handler for the given
  * signal */
 //-----------------------------------------------------------------------------
-int send_signal (pid_t pid, int sig_no)
+static int send_signal_user (struct pcb *p, int sig_no)
 {
-    int i = PT_INDEX (pid);
-    if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
-        return -1;
-    if (sig_no < 0 || sig_no > 31)
-        return -2;
-
-    struct pcb *p = &proctab[i];
     struct sigaction *act = &(p->sigactions[sig_no]);
     struct siginfo *info  = &p->siginfos[sig_no];
     bool siginfo = act->sa_flags & SA_SIGINFO;
@@ -93,7 +127,7 @@ int send_signal (pid_t pid, int sig_no)
     args[3] = (unsigned long) sig_no;
     if (siginfo) {
         args[4]  = info->si_errno;
-        args[5]  = info->si_code;;
+        args[5]  = info->si_code;
         args[6]  = info->si_pid;
         args[7]  = (unsigned long) info->si_addr;
         args[8]  = info->si_status;
@@ -104,11 +138,24 @@ int send_signal (pid_t pid, int sig_no)
         args[4]  = p->rc;
     }
     old_ctxt->reg.eax = p->sig_ignore;
-    
+
     p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask) :
                               (u32) (~0 << (sig_no + 1));
 
     return 0;
+}
+
+int send_signal (pid_t pid, int sig_no)
+{
+    int i = PT_INDEX (pid);
+    if (i < 0 || i > PT_SIZE || proctab[i].pid != pid)
+        return -1;
+    if (sig_no < 0 || sig_no > 31)
+        return -2;
+
+    return proctab[i].flags & PFLAG_SUPER
+            ? send_signal_super (&proctab[i], sig_no)
+            : send_signal_user (&proctab[i], sig_no);
 }
 
 /*-----------------------------------------------------------------------------

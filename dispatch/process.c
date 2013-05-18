@@ -53,27 +53,30 @@ static void files_init (struct pcb *p)
         p->fds[i] = FD_NONE;
 }
 
+void sys_create (void (*func)(int,char*), int argc, char **argv)
+{
+    current->rc = create_process (func, argc, argv, 0);
+}
+
 /*-----------------------------------------------------------------------------
  * Create a new process */
 //-----------------------------------------------------------------------------
-int sys_create (void (*func)(int,char*), int argc, char **argv)
+int create_process (void (*func)(int,char*), int argc, char **argv,
+        unsigned long flags)
 {
     int pti;
     void *pstack;
     struct pcb *p;
+    unsigned long *args;
 
     /* find a free PCB */
     for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++)
         /* nothing */;
-    if (pti == PT_SIZE) {
-        current->rc = -EAGAIN;
+    if (pti == PT_SIZE)
         return -EAGAIN;
-    }
 
-    if (!(pstack = kmalloc (STACK_SIZE))) {
-        current->rc = -ENOMEM;
+    if (!(pstack = kmalloc (STACK_SIZE)))
         return -ENOMEM;
-    }
 
     /* set process metadata */
     p = &proctab[pti];
@@ -81,6 +84,7 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     p->timestamp = tick_count;
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
+    p->flags = flags;
     p->pgdir = (unsigned long*)
         ((unsigned long) &_kernel_pgd - (unsigned long) &KERNEL_PAGE_OFFSET);
 
@@ -93,21 +97,28 @@ int sys_create (void (*func)(int,char*), int argc, char **argv)
     sig_init (p);
     files_init (p);
 
-    struct ctxt *f = (struct ctxt*) pstack + 32;
-    put_iret_frame (f, (unsigned long) func,
-            (unsigned long) ((char *) pstack + STACK_SIZE - 256));
-    p->esp = f;
-    p->ifp = f + 1;
+    if (flags & PFLAG_SUPER) {
+        struct spr_ctxt *f = (struct spr_ctxt*)
+            ((char*) pstack + STACK_SIZE - sizeof (struct spr_ctxt) - 128);
+        put_iret_frame_super (f, (unsigned long) func);
+        p->esp = f;
+        args = (unsigned long*) (f + 1);
+    } else {
+        struct ctxt *f = (struct ctxt*) pstack + 32;
+        put_iret_frame (f, (unsigned long) func,
+                (unsigned long) ((char*) pstack + STACK_SIZE - 256));
+        p->esp = f;
+        p->ifp = f + 1;
+        args = (unsigned long*) f->iret_esp;
+    }
 
     /* pass arguments to process */
-    unsigned long *args = (unsigned long*) f->iret_esp;
     args[0] = (unsigned long) exit;
     args[1] = (unsigned long) argc;
     args[2] = (unsigned long) argv;
 
     ready (p);
 
-    current->rc = p->pid;
     return p->pid;
 }
 

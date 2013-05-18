@@ -89,8 +89,8 @@ void kmain (struct multiboot_info *info, unsigned long magic)
 
     bprints ("Starting Telos...\n\n");
 
-    idle_pid = sys_create (idle_proc, 0, NULL);
-    root_pid = sys_create (root_proc, 0, NULL);
+    idle_pid = create_process (idle_proc, 0, NULL, PFLAG_SUPER);
+    root_pid = create_process (root_proc, 0, NULL, PFLAG_SUPER);
     dispatch ();
 
     #undef bprintf

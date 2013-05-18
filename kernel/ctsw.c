@@ -58,11 +58,14 @@ unsigned int context_switch (struct pcb *p)
         "movl  rc,     %%eax     \n" // put return code in %eax
         "mov   %[PGD], %%cr3     \n" // switch page directories
         "movl  %%eax,  28(%%esp) \n"
+        "cmp   $0x0,   %[SPR]    \n"
+        "jne   skip_seg_set      \n"
         "movw  %[UDS], %%ax      \n" // switch to user data segment
         "movw  %%ax,   %%ds      \n"
         "movw  %%ax,   %%es      \n"
         "movw  %%ax,   %%fs      \n"
         "movw  %%ax,   %%gs      \n"
+    "skip_seg_set: "
         "popa                    \n" // restore user context
         "iret                    \n" // return to user process
     "timer_entry_point: "
@@ -76,11 +79,14 @@ unsigned int context_switch (struct pcb *p)
     "syscall_entry_point: "
         "pusha                   \n"
     "common_isr: "
+        "cmp   $0x0,      %[SPR] \n"
+        "jne   skip_seg_set0     \n"
         "movw  %[KDS],    %%cx   \n" // switch to kernel data segment
         "movw  %%cx,      %%ds   \n"
         "movw  %%cx,      %%es   \n"
         "movw  %%cx,      %%fs   \n"
         "movw  %%cx,      %%gs   \n"
+    "skip_seg_set0: "
         "movl  28(%%esp), %%ecx  \n"
         "movl  %%ecx,     rc     \n"
         "movl  %%esp,     psp    \n" // switch stacks
@@ -91,7 +97,7 @@ unsigned int context_switch (struct pcb *p)
         : [iid] "=g" (iid)
         : [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR),
-          [PGD] "b" (p->pgdir)
+          [PGD] "b" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER)
         : "%eax", "%ecx"
     );
     p->esp = psp;
