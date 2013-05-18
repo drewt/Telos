@@ -46,10 +46,10 @@ extern unsigned long _kernel_pgd;
 
 /* linker variables */
 extern unsigned long KERNEL_PAGE_OFFSET;
-extern unsigned long kstart;    // start of the kernel
-extern unsigned long kend;      // end of the kernel
-extern unsigned long ustart;    // start of user-space
-extern unsigned long uend;      // end of user-space
+extern unsigned long _kstart;    // start of the kernel
+extern unsigned long _kend;      // end of the kernel
+extern unsigned long _ustart;    // start of user-space
+extern unsigned long _uend;      // end of user-space
 extern unsigned long _urostart; // start of user-space read-only memory
 extern unsigned long _uroend;   // end of user-space read-only memory
 extern unsigned long _krostart; // start of kernel read-only memory

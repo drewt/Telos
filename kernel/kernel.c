@@ -82,8 +82,8 @@ void kmain (struct multiboot_info *info, unsigned long magic)
     dispatch_init ();
 
     bprints ("\n----------- MEMORY -----------\n");
-    bprintf ("Kernel:    %x - %x\n", &kstart, &kend);
-    bprintf ("Userspace: %x - %x\n", &ustart, &uend);
+    bprintf ("Kernel:    %x - %x\n", &_kstart, &_kend);
+    bprintf ("Userspace: %x - %x\n", &_ustart, &_uend);
     bprintf ("Total:     %d bytes\n", MULTIBOOT_MEM_MAX (info));
     bprintf ("Available: %d bytes\n\n", memtotal);
 

@@ -16,7 +16,7 @@ SECTIONS
 
     utext ALIGN (0x1000) : AT(ADDR(utext) - KERNEL_PAGE_OFFSET)
     {
-        ustart = .;
+        _ustart = .;
         _urostart = .;
         usr/usr.a:*(.text .rodata)
         lib/klib.a:*(.text .rodata)
@@ -27,12 +27,12 @@ SECTIONS
     {
         usr/usr.a:*(.data .bss COMMON)
         lib/klib.a:*(.data .bss COMMON)
-        uend = .;
+        _uend = .;
     }
 
     .text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_PAGE_OFFSET)
     {
-        kstart = .;
+        _kstart = .;
         _krostart = .;
         *(.text)
         *(.rodata)
@@ -50,7 +50,7 @@ SECTIONS
         *(.bss)
         *(COMMON)
         _krw_end = .;
-        kend = .;
+        _kend = .;
     }
 
     /DISCARD/ :
