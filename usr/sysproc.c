@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <telos/process.h>
 
@@ -32,6 +33,20 @@ void idle_proc () {
 
 static void sigchld_handler(int signo) {}
 
+static void reboot (void)
+{
+    asm volatile (
+        "cli                \n"
+        "rb_loop:           \n"
+            "inb $0x64, %al \n"
+            "and $0x2,  %al \n"
+            "cmp $0x0,  %al \n"
+            "jne  rb_loop   \n"
+        "mov $0xFE, %al      \n"
+        "out %al, $0x64     \n"
+    );
+}
+
 void root_proc () {
 
     int sig;
@@ -40,7 +55,7 @@ void root_proc () {
     
     syscreate (tsh, 0, NULL);
     for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
-    printf ("Goodbye!");
-
-    for(;;);
+    printf ("\nPress any key to reboot");
+    getchar ();
+    reboot ();
 }
