@@ -42,6 +42,9 @@
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
+#define KERNEL_END \
+    (PAGE_ALIGN((unsigned long)&kend) - (unsigned long) &KERNEL_PAGE_OFFSET)
+
 /* free list for kernel heap */
 static list_head_t free_list;
 
@@ -156,7 +159,7 @@ unsigned long mem_init (struct multiboot_info *info)
     list_init (&res_list);
     list_init (&free_list);
 
-    mark_reserved (&res_list, 0x00000000, PAGE_ALIGN((unsigned long) &uend));
+    mark_reserved (&res_list, 0x00000000, KERNEL_END);
     mark_reserved (&res_list, 0x00400000, 0x00400000);
     init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
     paging_init (0x00400000, 0x00800000);
