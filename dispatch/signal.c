@@ -65,7 +65,7 @@ static int send_signal_super (struct pcb *p, int sig_no)
 
     old_ctxt = p->esp;
     sig_frame = (struct spr_ctxt*)
-        ((unsigned long) p->esp - sizeof (struct spr_ctxt) - 32);
+            (((unsigned long*) p->esp) - (siginfo ? 12 : 5)) - 1;
 
     sig_frame->iret_eip = siginfo ? (unsigned long) sigtramp1
                                   : (unsigned long) sigtramp0;
@@ -90,6 +90,8 @@ static int send_signal_super (struct pcb *p, int sig_no)
 
     old_ctxt->reg.eax = p->sig_ignore;
 
+    p->esp = (void*) sig_frame;
+    p->sig_pending &= ~(BIT(sig_no));
     p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
                             : (u32) (~0 << (sig_no + 1));
     return 0;
@@ -168,9 +170,14 @@ void sig_restore (void *osp)
     current->esp = cx;
     current->ifp = cx + 1;
 
+    unsigned long *old_esp;
+    old_esp = current->flags & PFLAG_SUPER
+            ? (unsigned long*) osp
+            : (unsigned long*) cx->iret_esp;
+
     // restore old signal mask and return value
     current->sig_ignore = cx->reg.eax;
-    current->rc         = ((unsigned long*) cx->iret_esp)[-2];
+    current->rc         = old_esp[-2];
 }
 
 /*-----------------------------------------------------------------------------
