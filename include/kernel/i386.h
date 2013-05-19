@@ -58,17 +58,9 @@ struct ctxt {
     unsigned long iret_eip;
     unsigned long iret_cs;
     unsigned long eflags;
-    unsigned long iret_esp;
-    unsigned long iret_ss;
-    unsigned long stack[0];
-};
-
-struct spr_ctxt {
-    struct gp_regs reg;
-    unsigned long iret_eip;
-    unsigned long iret_cs;
-    unsigned long eflags;
     unsigned long stack[];
+    #define iret_esp stack[0]
+    #define iret_ss  stack[1]
 };
 
 struct tss_entry {
@@ -213,7 +205,7 @@ static inline void put_iret_frame (struct ctxt *f, unsigned long eip,
     f->iret_ss  = SEG_UDATA | 3;
 }
 
-static inline void put_iret_frame_super (struct spr_ctxt *f, unsigned long eip)
+static inline void put_iret_frame_super (struct ctxt *f, unsigned long eip)
 {
     f->iret_eip = eip;
     f->iret_cs  = SEG_KCODE;

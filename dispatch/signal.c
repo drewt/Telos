@@ -56,15 +56,15 @@ static void sig_err (void)
 
 static int send_signal_super (struct pcb *p, int sig_no)
 {
-    struct ctxt *old_ctxt;
-    struct spr_ctxt *sig_frame;
+    struct ctxt *old_ctxt, *sig_frame;
+//    struct spr_ctxt *sig_frame;
 
     struct sigaction *act = &p->sigactions[sig_no];
     struct siginfo *info = &p->siginfos[sig_no];
     bool siginfo = act->sa_flags & SA_SIGINFO;
 
     old_ctxt = p->esp;
-    sig_frame = (struct spr_ctxt*)
+    sig_frame = (struct ctxt*)
             (((unsigned long*) p->esp) - (siginfo ? 12 : 5)) - 1;
 
     sig_frame->iret_eip = siginfo ? (unsigned long) sigtramp1

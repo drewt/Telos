@@ -98,8 +98,8 @@ int create_process (void (*func)(int,char*), int argc, char **argv,
     files_init (p);
 
     if (flags & PFLAG_SUPER) {
-        struct spr_ctxt *f = (struct spr_ctxt*)
-            ((char*) pstack + STACK_SIZE - sizeof (struct spr_ctxt) - 128);
+        struct ctxt *f = (struct ctxt*)
+            ((char*) pstack + STACK_SIZE - sizeof (struct ctxt) - 128);
         put_iret_frame_super (f, (unsigned long) func);
         p->esp = f;
         args = (unsigned long*) (f + 1);
