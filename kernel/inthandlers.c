@@ -48,14 +48,8 @@ static char *exns[20] = {
     "SIMD Floating-Point Exception" //19
 };
 
-void print_cpu_context (struct ctxt *context)
+static void dump_registers (struct gp_regs *reg)
 {
-    struct gp_regs *reg = (struct gp_regs*) &context->reg;
-    kprintf ("stack[0]=%x\n", reg->stack[0]);
-    kprintf ("stack[1]=%x\n", reg->stack[1]);
-    kprintf ("stack[2]=%x\n", reg->stack[2]);
-    kprintf ("Current process is %d\n", current->pid);
-
     kprintf ("Dumping registers...\n");
     kprintf ("\t%%eax=%x\n", reg->eax);
     kprintf ("\t%%ecx=%x\n", reg->ecx);
@@ -67,19 +61,61 @@ void print_cpu_context (struct ctxt *context)
     kprintf ("\t%%ebp=%x\n", reg->ebp);
 }
 
+static void print_cpu_context (struct ctxt *context)
+{
+    struct gp_regs *reg = (struct gp_regs*) &context->reg;
+    kprintf ("stack[0]=%x\n", reg->stack[0]);
+    kprintf ("stack[1]=%x\n", reg->stack[1]);
+    kprintf ("stack[2]=%x\n", reg->stack[2]);
+    kprintf ("Current process is %d\n", current->pid);
+    dump_registers (reg);
+}
+
 void exn_page_fault (void)
 {
-    kprintf ("Page fault!\n");
-    print_cpu_context (current->esp);
+    ulong error, eip, addr;
+    
+    error = ((struct gp_regs*)current->esp)->stack[0];
+    eip   = ((struct gp_regs*)current->esp)->stack[1];
+    MOV ("cr2", addr);
+
+    kprintf ("\nPage fault!\n");
+    if (error & 1) {
+        kprintf ("\t%s-mode %s %x\n",
+                 error & 4 ? "user" : "supervisor",
+                 error & 2 ? "write to" : "read from",
+                 addr);
+    } else {
+        kprintf ("\tpage not present\n");
+    }
+    kprintf ("\teip=%x\n\n", eip);
+
+    dump_registers (current->esp);
 
     __kill (current, SIGSEGV);
     ready (current);
     new_process ();
 }
 
-/* prints a nice message when something goes wrong */
-void exn_err (unsigned int num, struct gp_regs reg) {
+void exn_fpe (void)
+{
+    kprintf ("Arithmetic error\n");
+    __kill (current, SIGFPE);
+    ready (current);
+    new_process ();
+}
 
+void exn_ill_instr (void)
+{
+    kprintf ("Illegal instruction\n");
+    __kill (current, SIGILL);
+    ready (current);
+    new_process ();
+}
+
+/* prints a nice message when something goes wrong */
+void exn_err (unsigned int num, struct gp_regs reg)
+{
     kprintf ("\ntrap!\nException %d: %s\n", num,
             (num < 20) ? exns[num] : "Unknown");
     print_cpu_context ((struct ctxt*) &reg);

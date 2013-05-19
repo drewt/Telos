@@ -122,6 +122,9 @@ static inline void halt (void)
     asm volatile ("_halt: hlt\njmp _halt");
 }
 
+#define MOV(reg,loc) \
+    asm volatile ("mov %%"reg", %0" : "=g" (loc) : : )
+
 #define GET_REG(reg,dst) \
     asm volatile ("movl %%"reg", %0\n" : "=g" (dst) : : )
 

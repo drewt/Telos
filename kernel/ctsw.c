@@ -31,14 +31,18 @@ static int  rc;          /* syscall return code   */
 static unsigned int iid; /* syscall/interrupt ID  */
 
 /* ISR entry points */
-void fault_entry_point (void);
+void fpe_entry_point (void);
+void ill_entry_point (void);
+void pgf_entry_point (void);
 void timer_entry_point (void);
 void kbd_entry_point (void);
 void syscall_entry_point (void);
 
 void isr_init (void)
 {
-    set_gate (PF_EXN,       (ulong) fault_entry_point,   SEG_KCODE);
+    set_gate (DBZ_EXN,      (ulong) fpe_entry_point,     SEG_KCODE);
+    set_gate (ILLOP_EXN,    (ulong) ill_entry_point,     SEG_KCODE);
+    set_gate (PF_EXN,       (ulong) pgf_entry_point,     SEG_KCODE);
     set_gate (TIMER_INTR,   (ulong) timer_entry_point,   SEG_KCODE);
     set_gate (KBD_INTR,     (ulong) kbd_entry_point,     SEG_KCODE);
     set_gate (SYSCALL_INTR, (ulong) syscall_entry_point, SEG_KCODE);
@@ -70,9 +74,17 @@ unsigned int context_switch (struct pcb *p)
     "skip_seg_set: "
         "popa                    \n" // restore user context
         "iret                    \n" // return to user process
-    "fault_entry_point: "
+    "pgf_entry_point: "
         "pusha                   \n"
         "movl  %[PFX], %%eax     \n"
+        "jmp   common_isr        \n"
+    "fpe_entry_point: "
+        "pusha                   \n"
+        "movl  %[FPE], %%eax     \n"
+        "jmp   common_isr        \n"
+    "ill_entry_point: "
+        "pusha                   \n"
+        "movl  %[ILL], %%eax     \n"
         "jmp   common_isr        \n"
     "timer_entry_point: "
         "pusha                   \n" // save user context
@@ -103,6 +115,7 @@ unsigned int context_switch (struct pcb *p)
         : [iid] "=g" (iid)
         : [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
+          [FPE] "i" (FPE_EXN), [ILL] "i" (ILL_EXN),
           [PGD] "b" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER)
         : "%eax", "%ecx"
     );

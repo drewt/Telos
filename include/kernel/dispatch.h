@@ -41,6 +41,8 @@ int sq_rm (struct pcb *p);
 void __kill (struct pcb *p, int sig_no);
 
 void exn_page_fault (void);
+void exn_fpe (void);
+void exn_ill_instr (void);
 
 /* service routines */
 void sys_malloc (unsigned int size, void **p);
