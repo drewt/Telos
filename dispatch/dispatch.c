@@ -28,7 +28,7 @@
 
 /* routines defined in other files */
 extern unsigned int context_switch (struct pcb *p);
-extern int send_signal (int pid, int sig_no);
+extern int send_signal (struct pcb *p, int sig_no);
 extern void tick (void);
 
 struct pcb *current = NULL; /* the running process      */
@@ -102,7 +102,7 @@ void dispatch (void) {
             sig_no = 31;
             while (sig_no && !(current->sig_pending >> sig_no))
                 sig_no--;
-            send_signal (current->pid, sig_no);
+            send_signal (current, sig_no);
         }
 
         req  = context_switch (current);

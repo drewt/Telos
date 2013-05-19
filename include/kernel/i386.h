@@ -27,17 +27,22 @@
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
 
-#define KCODE_SEGN 1
-#define KDATA_SEGN 2
-#define UCODE_SEGN 3
-#define UDATA_SEGN 4
-#define TSS_SEGN   5
+enum {
+    NULL_SEGN,
+    KCODE_SEGN,
+    KDATA_SEGN,
+    UCODE_SEGN,
+    UDATA_SEGN,
+    TSS_SEGN
+};
 
-#define SEG_KCODE (KCODE_SEGN << 3)
-#define SEG_KDATA (KDATA_SEGN << 3)
-#define SEG_UCODE (UCODE_SEGN << 3)
-#define SEG_UDATA (UDATA_SEGN << 3)
-#define SEG_TSS   (TSS_SEGN   << 3)
+enum {
+    SEG_KCODE = KCODE_SEGN << 3,
+    SEG_KDATA = KDATA_SEGN << 3,
+    SEG_UCODE = UCODE_SEGN << 3,
+    SEG_UDATA = UDATA_SEGN << 3,
+    SEG_TSS   = TSS_SEGN   << 3
+};
 
 /* general purpose registers (pusha ordering) */
 struct gp_regs {
@@ -49,8 +54,11 @@ struct gp_regs {
     unsigned long edx;
     unsigned long ecx;
     unsigned long eax;
-    unsigned long stack[0];
+    unsigned long stack[];
 }; 
+
+#define U_CONTEXT_SIZE (sizeof (struct ctxt) + 8)
+#define S_CONTEXT_SIZE (sizeof (struct ctxt))
 
 /* process context before iret (in the kernel) */
 struct ctxt {
@@ -209,7 +217,7 @@ static inline void put_iret_frame_super (struct ctxt *f, unsigned long eip)
 {
     f->iret_eip = eip;
     f->iret_cs  = SEG_KCODE;
-    f->eflags   = 0x3200;
+    f->eflags   = EFLAGS_IOPL(3) | EFLAGS_IF;
 }
 
 extern void gdt_install (void);

@@ -54,75 +54,35 @@ static void sig_err (void)
     for (;;);
 }
 
-static int send_signal_super (struct pcb *p, int sig_no)
-{
-    struct ctxt *old_ctxt, *sig_frame;
-//    struct spr_ctxt *sig_frame;
-
-    struct sigaction *act = &p->sigactions[sig_no];
-    struct siginfo *info = &p->siginfos[sig_no];
-    bool siginfo = act->sa_flags & SA_SIGINFO;
-
-    old_ctxt = p->esp;
-    sig_frame = (struct ctxt*)
-            (((unsigned long*) p->esp) - (siginfo ? 12 : 5)) - 1;
-
-    sig_frame->iret_eip = siginfo ? (unsigned long) sigtramp1
-                                  : (unsigned long) sigtramp0;
-    sig_frame->iret_cs = SEG_KCODE;
-    sig_frame->eflags = 0x3200;
-    sig_frame->stack[0] = (unsigned long) sig_err;
-    sig_frame->stack[1] = (unsigned long) act->sa_handler;
-    sig_frame->stack[2] = (unsigned long) old_ctxt;
-    sig_frame->stack[3] = (unsigned long) sig_no;
-    if (siginfo) {
-        sig_frame->stack[4]  = info->si_errno;
-        sig_frame->stack[5]  = info->si_code;
-        sig_frame->stack[6]  = info->si_pid;
-        sig_frame->stack[7]  = (unsigned long) info->si_addr;
-        sig_frame->stack[8]  = info->si_status;
-        sig_frame->stack[9]  = info->si_band;
-        sig_frame->stack[10] = (unsigned long) info->si_value.sigval_ptr;
-        sig_frame->stack[11] = p->rc;
-    } else {
-        sig_frame->stack[4]  = p->rc;
-    }
-
-    old_ctxt->reg.eax = p->sig_ignore;
-
-    p->esp = (void*) sig_frame;
-    p->sig_pending &= ~(BIT(sig_no));
-    p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
-                            : (u32) (~0 << (sig_no + 1));
-    return 0;
-}
-
 /*-----------------------------------------------------------------------------
  * Prepares a process to switch contexts into the signal handler for the given
  * signal */
 //-----------------------------------------------------------------------------
-static int send_signal_user (struct pcb *p, int sig_no)
+int send_signal (struct pcb *p, int sig_no)
 {
-    struct sigaction *act = &(p->sigactions[sig_no]);
-    struct siginfo *info  = &p->siginfos[sig_no];
+    unsigned long sig_eip;
+    unsigned long *args;
+    struct ctxt *old_ctxt, *sig_frame;
+    struct sigaction *act = &p->sigactions[sig_no];
+    struct siginfo *info = &p->siginfos[sig_no];
     bool siginfo = act->sa_flags & SA_SIGINFO;
 
-    struct ctxt *old_ctxt = p->esp;
-    struct ctxt *sig_ctxt = old_ctxt - 1;
-    unsigned long sig_eip = siginfo ? (unsigned long) sigtramp1
-                                    : (unsigned long) sigtramp0;
-    unsigned long sig_esp = (unsigned long)
-        ((unsigned long*) old_ctxt->iret_esp - (siginfo ? 13 : 6));
+    if (SIGNO_INVALID (sig_no))
+        return -1;
 
-    // update pcb
-    p->ifp = p->esp;
-    p->esp = sig_ctxt;
-    p->sig_pending &= ~(BIT(sig_no));
+    old_ctxt = p->esp;
+    sig_eip = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
 
-    put_iret_frame (sig_ctxt, sig_eip, sig_esp);
+    // the frame and arguments are placed differently if the process
+    // runs with supervisor privileges
+    sig_frame = p->flags & PFLAG_SUPER ?
+        (struct ctxt*) (((ulong*) p->esp) - (siginfo ? 12 : 5)) - 1
+        : (struct ctxt*) ((char*) old_ctxt - U_CONTEXT_SIZE);
+    args = p->flags & PFLAG_SUPER ? sig_frame->stack
+        : ((ulong*) old_ctxt->iret_esp - (siginfo ? 12 : 5));
+    p->flags & PFLAG_SUPER ? put_iret_frame_super (sig_frame, sig_eip)
+        : put_iret_frame (sig_frame, sig_eip, (ulong) args);
 
-    // set up sigtramp frame
-    unsigned long *args = (unsigned long*) sig_esp;
     args[0] = (unsigned long) sig_err;
     args[1] = (unsigned long) act->sa_handler;
     args[2] = (unsigned long) old_ctxt;
@@ -141,23 +101,12 @@ static int send_signal_user (struct pcb *p, int sig_no)
     }
     old_ctxt->reg.eax = p->sig_ignore;
 
-    p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask) :
-                              (u32) (~0 << (sig_no + 1));
-
+    p->ifp = p->esp;
+    p->esp = sig_frame;
+    p->sig_pending &= ~(BIT (sig_no));
+    p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
+                            : (u32) (~0 << (sig_no + 1));
     return 0;
-}
-
-int send_signal (pid_t pid, int sig_no)
-{
-    int i = PT_INDEX (pid);
-    if (i < 0 || i > PT_SIZE || proctab[i].pid != pid)
-        return -1;
-    if (sig_no < 0 || sig_no > 31)
-        return -2;
-
-    return proctab[i].flags & PFLAG_SUPER
-            ? send_signal_super (&proctab[i], sig_no)
-            : send_signal_user (&proctab[i], sig_no);
 }
 
 /*-----------------------------------------------------------------------------
