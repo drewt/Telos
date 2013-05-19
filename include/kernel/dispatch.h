@@ -38,6 +38,8 @@ void ready (struct pcb *p);
 void new_process (void);
 int sq_rm (struct pcb *p);
 
+void __kill (struct pcb *p, int sig_no);
+
 /* service routines */
 void sys_malloc (unsigned int size, void **p);
 void sys_free (void *ptr);

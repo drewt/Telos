@@ -213,22 +213,9 @@ void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset)
 /*-----------------------------------------------------------------------------
  * Function to register that a signal has been sent to a process */
 //-----------------------------------------------------------------------------
-void sys_kill (int pid, int sig_no)
+void __kill (struct pcb *p, int sig_no)
 {
     u32 sig_bit = 1 << sig_no;
-    int pti = PT_INDEX (pid);
-
-    if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {
-        current->rc = ESRCH;
-        return;
-    }
-
-    if (SIGNO_INVALID(sig_no)) {
-        current->rc = EINVAL;
-        return;
-    }
-
-    struct pcb *p = &proctab[pti];
 
     // record signal if process accepts it
     if (p->sig_accept & sig_bit) {
@@ -252,5 +239,22 @@ void sys_kill (int pid, int sig_no)
             ready (p);
         }
     }
+}
+
+void sys_kill (int pid, int sig_no)
+{
+    int pti = PT_INDEX (pid);
+
+    if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {
+        current->rc = ESRCH;
+        return;
+    }
+
+    if (SIGNO_INVALID(sig_no)) {
+        current->rc = EINVAL;
+        return;
+    }
+
+    __kill (&proctab[pti], sig_no);
     current->rc = 0;
 }

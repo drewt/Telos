@@ -141,7 +141,8 @@ void sys_exit (int status)
     struct pf_info *mit;
 
     // TODO: see what POSIX requires vis-a-vis process data in handler
-    sys_kill (current->parent_pid, SIGCHLD);
+    pit = &proctab[PT_INDEX (current->parent_pid)];
+    __kill (pit, SIGCHLD);
 
     // free memory allocated to process
     kfree (current->stack_mem);

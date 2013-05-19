@@ -62,7 +62,7 @@ static void wake_action (struct pcb *p) {
  * Sends SIGALRM to the process */
 //-----------------------------------------------------------------------------
 static void alrm_action (struct pcb *p) {
-    sys_kill (p->pid, SIGALRM);
+    __kill (p, SIGALRM);
 }
 
 /*-----------------------------------------------------------------------------
