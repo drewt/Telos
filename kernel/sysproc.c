@@ -27,8 +27,9 @@
 
 void tsh (int argc, char **argv);
 
-void idle_proc () {
-    asm volatile ("halt: hlt\njmp halt" :::);
+void idle_proc ()
+{
+    asm volatile ("halt: hlt\njmp halt");
 }
 
 static void sigchld_handler(int signo) {}
@@ -47,14 +48,15 @@ static void reboot (void)
     );
 }
 
-void root_proc () {
-
+void root_proc ()
+{
     int sig;
 
     signal (SIGCHLD, sigchld_handler);
     
     syscreate (tsh, 0, NULL);
     for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
+
     printf ("\nPress any key to reboot");
     getchar ();
     reboot ();

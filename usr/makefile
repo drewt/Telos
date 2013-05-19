@@ -2,19 +2,13 @@ ROOT = ..
 include ../config.mk
 
 OBJECTS = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
-	  printserver.o proctest.o sigtest.o strtest.o tsh.o sysproc.o
+	  printserver.o proctest.o sigtest.o strtest.o tsh.o
 TARGET  = usr.a
 
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(AR) rcs $@ $^
-
-sysproc.o: sysproc.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o tmp.$@
-	$(LD) -r tmp.$@ ../lib/klib.a -o $@
-	$(OBJCOPY) -G root_proc -G idle_proc $@
-	rm tmp.$@
 
 printserver.o: printserver.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o tmp.$@
