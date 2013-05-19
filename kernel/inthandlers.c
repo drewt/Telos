@@ -22,6 +22,7 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <signal.h>
 
 /* names of some exceptions */
 static char *exns[20] = {
@@ -47,37 +48,54 @@ static char *exns[20] = {
     "SIMD Floating-Point Exception" //19
 };
 
+void print_cpu_context (struct ctxt *context)
+{
+    struct gp_regs *reg = (struct gp_regs*) &context->reg;
+    kprintf ("stack[0]=%x\n", reg->stack[0]);
+    kprintf ("stack[1]=%x\n", reg->stack[1]);
+    kprintf ("stack[2]=%x\n", reg->stack[2]);
+    kprintf ("Current process is %d\n", current->pid);
+
+    kprintf ("Dumping registers...\n");
+    kprintf ("\t%%eax=%x\n", reg->eax);
+    kprintf ("\t%%ecx=%x\n", reg->ecx);
+    kprintf ("\t%%edx=%x\n", reg->edx);
+    kprintf ("\t%%ebx=%x\n", reg->ebx);
+    kprintf ("\t%%esi=%x\n", reg->esi);
+    kprintf ("\t%%edi=%x\n", reg->edi);
+    kprintf ("\t%%esp=%x\n", reg->esp);
+    kprintf ("\t%%ebp=%x\n", reg->ebp);
+}
+
+void exn_page_fault (void)
+{
+    kprintf ("Page fault!\n");
+    print_cpu_context (current->esp);
+
+    __kill (current, SIGSEGV);
+    ready (current);
+    new_process ();
+}
+
 /* prints a nice message when something goes wrong */
 void exn_err (unsigned int num, struct gp_regs reg) {
 
     kprintf ("\ntrap!\nException %d: %s\n", num,
             (num < 20) ? exns[num] : "Unknown");
-    kprintf ("stack[0]=%x\n", reg.stack[0]);
-    kprintf ("stack[1]=%x\n", reg.stack[1]);
-    kprintf ("stack[2]=%x\n", reg.stack[2]);
-    kprintf ("Current process is %d\n", current->pid);
-
-    kprintf ("Dumping registers...\n");
-    kprintf ("\t%%eax=%x\n", reg.eax);
-    kprintf ("\t%%ecx=%x\n", reg.ecx);
-    kprintf ("\t%%edx=%x\n", reg.edx);
-    kprintf ("\t%%ebx=%x\n", reg.ebx);
-    kprintf ("\t%%esi=%x\n", reg.esi);
-    kprintf ("\t%%edi=%x\n", reg.edi);
-    kprintf ("\t%%esp=%x\n", reg.esp);
-    kprintf ("\t%%ebp=%x\n", reg.ebp);
-
-    asm ("_exnstall: hlt\njmp _exnstall\n");
+    print_cpu_context ((struct ctxt*) &reg);
 }
 
-#define MAKE_HANDLER(name,x)   \
-    static void name (void) {  \
-        asm volatile (         \
-            "pusha         \n" \
-            "pushl $"x"    \n" \
-            "call  exn_err \n" \
-        );                     \
-    }                          \
+#define MAKE_HANDLER(name,x)     \
+    static void name (void) {    \
+        asm volatile (           \
+            "pusha           \n" \
+            "pushl $"x"      \n" \
+            "call  exn_err   \n" \
+            "_hlt"x": "          \
+                "hlt         \n" \
+                "jmp _hlt"x" \n" \
+        );                       \
+    }                            \
 
 MAKE_HANDLER (int0, "0")
 MAKE_HANDLER (int1, "1")

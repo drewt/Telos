@@ -21,6 +21,8 @@
 
 /* vectors into the IDT; also serve as vectors into the sysactions table */
 enum int_vectors {
+    GP_EXN       = 0x0D,
+    PF_EXN       = 0x0E,
     TIMER_INTR   = 0x20,
     KBD_INTR     = 0x21,
     SYSCALL_INTR = 0x80

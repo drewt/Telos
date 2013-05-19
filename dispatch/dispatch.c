@@ -44,6 +44,7 @@ struct sysaction {
 /* table of actions to be taken for interrupts/system calls */
 static struct sysaction sysactions[SYSCALL_MAX] = {
 //    - INDEX -             - ACTION -            - ARGS -
+    [PF_EXN]        = { (void(*)()) exn_page_fault,  0 },
     [TIMER_INTR]    = { (void(*)()) tick,            0 },
     [SYS_CREATE]    = { (void(*)()) sys_create,      3 },
     [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },

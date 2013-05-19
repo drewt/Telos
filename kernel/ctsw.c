@@ -31,15 +31,17 @@ static int  rc;          /* syscall return code   */
 static unsigned int iid; /* syscall/interrupt ID  */
 
 /* ISR entry points */
+void fault_entry_point (void);
 void timer_entry_point (void);
 void kbd_entry_point (void);
 void syscall_entry_point (void);
 
 void isr_init (void)
 {
-    set_gate (TIMER_INTR, (unsigned long) timer_entry_point, SEG_KCODE);
-    set_gate (KBD_INTR, (unsigned long) kbd_entry_point, SEG_KCODE);
-    set_gate (SYSCALL_INTR, (unsigned long) syscall_entry_point, SEG_KCODE);
+    set_gate (PF_EXN,       (ulong) fault_entry_point,   SEG_KCODE);
+    set_gate (TIMER_INTR,   (ulong) timer_entry_point,   SEG_KCODE);
+    set_gate (KBD_INTR,     (ulong) kbd_entry_point,     SEG_KCODE);
+    set_gate (SYSCALL_INTR, (ulong) syscall_entry_point, SEG_KCODE);
     ksp = 0;
 }
 
@@ -68,6 +70,10 @@ unsigned int context_switch (struct pcb *p)
     "skip_seg_set: "
         "popa                    \n" // restore user context
         "iret                    \n" // return to user process
+    "fault_entry_point: "
+        "pusha                   \n"
+        "movl  %[PFX], %%eax     \n"
+        "jmp   common_isr        \n"
     "timer_entry_point: "
         "pusha                   \n" // save user context
         "movl  %[TMR], %%eax     \n" // put interrupt ID in %eax
@@ -96,7 +102,7 @@ unsigned int context_switch (struct pcb *p)
         "popf                    \n"
         : [iid] "=g" (iid)
         : [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
-          [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR),
+          [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
           [PGD] "b" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER)
         : "%eax", "%ecx"
     );

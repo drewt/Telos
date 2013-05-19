@@ -40,6 +40,8 @@ int sq_rm (struct pcb *p);
 
 void __kill (struct pcb *p, int sig_no);
 
+void exn_page_fault (void);
+
 /* service routines */
 void sys_malloc (unsigned int size, void **p);
 void sys_free (void *ptr);
