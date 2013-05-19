@@ -2,7 +2,7 @@ ROOT = ..
 include ../config.mk
 
 OBJECTS = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
-	  printserver.o proctest.o sigtest.o strtest.o tsh.o
+	  printserver.o proctest.o sigtest.o strtest.o exntest.o tsh.o
 TARGET  = usr.a
 
 all: $(TARGET)

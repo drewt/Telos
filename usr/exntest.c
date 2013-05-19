@@ -16,17 +16,29 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __USR_TEST_H_
-#define __USR_TEST_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
 
-void exntest (int argc, char *argv[]);
-void msgtest (int argc, char *argv[]);
-void sigtest (int argc, char *argv[]);
-void kbdtest (int argc, char *argv[]);
-void strtest (int argc, char *argv[]);
-void proctest (int argc, char *argv[]);
-void eventtest (int argc, char *argv[]);
-void memtest (int argc, char *argv[]);
-void consoletest (int argc, char *argv[]);
+#include <telos/process.h>
 
-#endif // __USR_TEST_H_
+int _dbz_ = 0;
+
+void dbz_proc ()
+{
+    printf ("Dividing by zero... ");
+    _dbz_ = 1 / _dbz_;
+    printf ("error\n");
+}
+
+void sigchld_handler (int sig) {}
+
+void exntest (int argc, char *argv[])
+{
+    signal (SIGCHLD, sigchld_handler);
+
+    syscreate (dbz_proc, 0, 0);
+    for (int sig = 0; sig != SIGCHLD; sig = sigwait ());
+    printf ("done.\n");
+}
