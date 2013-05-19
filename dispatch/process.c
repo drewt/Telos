@@ -64,29 +64,29 @@ void sys_create (void (*func)(int,char*), int argc, char **argv)
 int create_process (void (*func)(int,char*), int argc, char **argv,
         unsigned long flags)
 {
-    int pti;
+    int i;
+    void *frame;
     void *pstack;
     struct pcb *p;
     unsigned long *args;
 
     /* find a free PCB */
-    for (pti = 0; pti < PT_SIZE && proctab[pti].state != STATE_STOPPED; pti++)
+    for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
         /* nothing */;
-    if (pti == PT_SIZE)
+    if (i == PT_SIZE)
         return -EAGAIN;
 
     if (!(pstack = kmalloc (STACK_SIZE)))
         return -ENOMEM;
 
     /* set process metadata */
-    p = &proctab[pti];
+    p = &proctab[i];
     p->stack_mem = pstack;
     p->timestamp = tick_count;
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
     p->flags = flags;
-    p->pgdir = (unsigned long*)
-        ((unsigned long) &_kernel_pgd - (unsigned long) &KERNEL_PAGE_OFFSET);
+    p->pgdir = (ulong*) ((ulong) &_kernel_pgd - (ulong) &KERNEL_PAGE_OFFSET);
 
     list_init (&p->send_q);
     list_init (&p->recv_q);
@@ -97,25 +97,26 @@ int create_process (void (*func)(int,char*), int argc, char **argv,
     sig_init (p);
     files_init (p);
 
+    // the frame and arguments are placed differently if the process
+    // runs with supervisor privileges
     if (flags & PFLAG_SUPER) {
-        struct ctxt *f = (struct ctxt*)
-            ((char*) pstack + STACK_SIZE - sizeof (struct ctxt) - 128);
-        put_iret_frame_super (f, (unsigned long) func);
-        p->esp = f;
-        args = (unsigned long*) (f + 1);
+        frame = ((char*) pstack + STACK_SIZE - S_CONTEXT_SIZE - 128);
+        put_iret_frame_super (frame, (ulong) func);
+        args = (ulong*) ((ulong) frame + S_CONTEXT_SIZE);
     } else {
-        struct ctxt *f = (struct ctxt*) pstack + 32;
-        put_iret_frame (f, (unsigned long) func,
-                (unsigned long) ((char*) pstack + STACK_SIZE - 256));
-        p->esp = f;
-        p->ifp = f + 1;
-        args = (unsigned long*) f->iret_esp;
+        frame = (void*) ((ulong) pstack + 32 * U_CONTEXT_SIZE);
+        ulong esp = (ulong) ((char*) pstack + STACK_SIZE - 128);
+        put_iret_frame (frame, (ulong) func, esp);
+        args = (ulong*) esp;
     }
 
     /* pass arguments to process */
     args[0] = (unsigned long) exit;
     args[1] = (unsigned long) argc;
     args[2] = (unsigned long) argv;
+
+    p->esp = frame;
+    p->ifp = (void*) ((ulong) frame + U_CONTEXT_SIZE);
 
     ready (p);
 
