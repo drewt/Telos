@@ -49,6 +49,12 @@ void isr_init (void)
     ksp = 0;
 }
 
+#define ISR_ENTRY(entry,ident)   \
+    #entry ": "                  \
+        "pusha               \n" \
+        "movl "ident", %%eax \n" \
+        "jmp  common_isr     \n"
+
 unsigned int context_switch (struct pcb *p)
 {
     // make sure TSS points to the right part of the stack
@@ -74,37 +80,20 @@ unsigned int context_switch (struct pcb *p)
     "skip_seg_set: "
         "popa                    \n" // restore user context
         "iret                    \n" // return to user process
-    "pgf_entry_point: "
-        "pusha                   \n"
-        "movl  %[PFX], %%eax     \n"
-        "jmp   common_isr        \n"
-    "fpe_entry_point: "
-        "pusha                   \n"
-        "movl  %[FPE], %%eax     \n"
-        "jmp   common_isr        \n"
-    "ill_entry_point: "
-        "pusha                   \n"
-        "movl  %[ILL], %%eax     \n"
-        "jmp   common_isr        \n"
-    "timer_entry_point: "
-        "pusha                   \n" // save user context
-        "movl  %[TMR], %%eax     \n" // put interrupt ID in %eax
-        "jmp   common_isr        \n" // jump to common ISR code
-    "kbd_entry_point: "
-        "pusha                   \n"
-        "movl  %[KBD], %%eax     \n"
-        "jmp   common_isr        \n"
+
+    ISR_ENTRY (pgf_entry_point,   "%[PFX]")
+    ISR_ENTRY (fpe_entry_point,   "%[FPE]")
+    ISR_ENTRY (ill_entry_point,   "%[ILL]")
+    ISR_ENTRY (timer_entry_point, "%[TMR]")
+    ISR_ENTRY (kbd_entry_point,   "%[KBD]")
     "syscall_entry_point: "
         "pusha                   \n"
     "common_isr: "
-        "cmp   $0x0,      %[SPR] \n"
-        "jne   skip_seg_set0     \n"
         "movw  %[KDS],    %%cx   \n" // switch to kernel data segment
         "movw  %%cx,      %%ds   \n"
         "movw  %%cx,      %%es   \n"
         "movw  %%cx,      %%fs   \n"
         "movw  %%cx,      %%gs   \n"
-    "skip_seg_set0: "
         "movl  28(%%esp), %%ecx  \n"
         "movl  %%ecx,     rc     \n"
         "movl  %%esp,     psp    \n" // switch stacks
