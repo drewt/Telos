@@ -1,7 +1,4 @@
-/* ctsw.c : context switcher
- */
-
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -25,11 +22,6 @@
 #include <kernel/interrupt.h>
 #include <kernel/process.h>
 
-static void *ksp;        /* kernel stack pointer  */
-static void *psp;        /* process stack pointer */
-static int  rc;          /* syscall return code   */
-static unsigned int iid; /* syscall/interrupt ID  */
-
 /* ISR entry points */
 void fpe_entry_point (void);
 void ill_entry_point (void);
@@ -46,17 +38,22 @@ void isr_init (void)
     set_gate (TIMER_INTR,   (ulong) timer_entry_point,   SEG_KCODE);
     set_gate (KBD_INTR,     (ulong) kbd_entry_point,     SEG_KCODE);
     set_gate (SYSCALL_INTR, (ulong) syscall_entry_point, SEG_KCODE);
-    ksp = 0;
 }
 
-#define ISR_ENTRY(entry,ident)   \
-    #entry ": "                  \
-        "pusha               \n" \
-        "movl "ident", %%eax \n" \
-        "jmp  common_isr     \n"
+#define ISR_ENTRY(entry,ident)    \
+    #entry ": "                   \
+        "pusha                \n" \
+        "mov   %%eax,   %%edx \n" \
+        "movl  "ident", %%eax \n" \
+        "jmp   common_isr     \n"
 
 unsigned int context_switch (struct pcb *p)
 {
+    static int  rc;          // syscall return code
+    static void *ksp;        // kernel stack pointer
+    static void *psp;        // process stack pointer
+    static unsigned int iid; // syscall/interrupt ID
+
     // make sure TSS points to the right part of the stack
     tss.esp0 = (unsigned long) p->ifp;
 
@@ -65,9 +62,9 @@ unsigned int context_switch (struct pcb *p)
     asm volatile (
         "pushf                   \n" // save kernel context
         "pusha                   \n"
-        "movl  %%esp,  ksp       \n" // switch stacks
-        "movl  psp,    %%esp     \n"
-        "movl  rc,     %%eax     \n" // put return code in %eax
+        "movl  %%esp,  %[KSP]    \n" // switch stacks
+        "movl  %[PSP], %%esp     \n"
+        "movl  %[RET], %%eax     \n" // put return code in %eax
         "mov   %[PGD], %%cr3     \n" // switch page directories
         "movl  %%eax,  28(%%esp) \n"
         "cmp   $0x0,   %[SPR]    \n"
@@ -94,19 +91,23 @@ unsigned int context_switch (struct pcb *p)
         "movw  %%cx,      %%es   \n"
         "movw  %%cx,      %%fs   \n"
         "movw  %%cx,      %%gs   \n"
-        "movl  28(%%esp), %%ecx  \n"
-        "movl  %%ecx,     rc     \n"
-        "movl  %%esp,     psp    \n" // switch stacks
-        "movl  ksp,       %%esp  \n"
+        "movl  %%edx,     %[RET] \n" // save old %eax value as return code
+        "movl  %%esp,     %[PSP] \n" // switch stacks
+        "movl  %[KSP],    %%esp  \n"
         "movl  %%eax,     %[iid] \n" // save interrupt ID
         "popa                    \n" // restore kernel context
         "popf                    \n"
-        : [iid] "=g" (iid)
-        : [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
+        : [iid] "=g" (iid),
+        /* read-write operands must be in memory */
+          [RET] "+m" (rc), [KSP] "+m" (ksp), [PSP] "+m" (psp)
+        /* values used only in the "top half" may be put in registers */
+        : [PGD] "g" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER),
+        /* "bottom half" values must be either immediate or in memory */
+          [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
-          [FPE] "i" (FPE_EXN), [ILL] "i" (ILL_EXN),
-          [PGD] "b" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER)
-        : "%eax", "%ecx"
+          [FPE] "i" (FPE_EXN), [ILL] "i" (ILL_EXN)
+        /* prevent gcc from allocating to registers used in "top half" */
+        : "%eax"
     );
     p->esp = psp;
     p->rc  = rc;
