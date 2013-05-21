@@ -1,7 +1,4 @@
-/* device.h : devices
- */
-
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -19,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __DEVICE_H_
-#define __DEVICE_H_
+#ifndef _KERNEL_DEVICE_H_
+#define _KERNEL_DEVICE_H_
 
 #include <stdarg.h>
 
@@ -28,7 +25,7 @@
 
 #define IO_INCOMPLETE (-1)
 
-enum dev_id {
+enum {
     DEV_KBD,
     DEV_KBD_ECHO,
     DEV_CONSOLE_0,
@@ -40,8 +37,8 @@ struct device {
     int dvnum;
     char *dvname;
     int (*dvinit)(void);
-    int (*dvopen)(enum dev_id devno);
-    int (*dvclose)(enum dev_id devno);
+    int (*dvopen)(dev_t devno);
+    int (*dvclose)(dev_t devno);
     int (*dvread)(int fd, void *buf, int nbytes);
     int (*dvwrite)(int fd, void *buf, int nbytes);
     int (*dvioctl)(int fd, unsigned long request, va_list vargs);
@@ -52,4 +49,4 @@ struct device {
 
 extern struct device devtab[DT_SIZE];
 
-#endif // __DEVICE_H_
+#endif /* _KERNEL_DEVICE_H_ */

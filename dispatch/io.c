@@ -39,8 +39,8 @@ static const char *devmap[4] = {
  * */
 //-----------------------------------------------------------------------------
 void sys_open (const char *pathname, int flags, ...) {
-    int fd;
-    enum dev_id devno;
+    dev_t fd;
+    int devno;
 
     // look up device corresponding to pathname
     for (devno = 0; devno < 4; devno++)
@@ -68,7 +68,7 @@ void sys_open (const char *pathname, int flags, ...) {
 //-----------------------------------------------------------------------------
 void sys_close (int fd) {
 
-    enum dev_id devno = current->fds[fd];
+    dev_t devno = current->fds[fd];
     if (!FD_VALID (fd)) {
         current->rc = -EBADF;
         return;

@@ -86,8 +86,8 @@ struct pcb {
     list_head_t   recv_q;            // processes waiting to receive
     list_head_t   repl_q;            // processes waiting for a reply
     /* */
-    void         *parg;              // pointer to... something
-    enum dev_id  fds[FDT_SIZE];      // file descriptors
+    void          *parg;             // pointer to... something
+    dev_t         fds[FDT_SIZE];     // file descriptors
     list_head_t   heap_mem;          // heap allocated memory
     list_head_t   page_mem;
 };

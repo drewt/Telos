@@ -166,14 +166,14 @@ int kbd_read (int fd, void *buf, int buf_len) {
 /*-----------------------------------------------------------------------------
  * Opens a keyboard device */
 //-----------------------------------------------------------------------------
-int kbd_open (enum dev_id devno) {
+int kbd_open (dev_t devno) {
     return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Closes a keyboard device */
 //-----------------------------------------------------------------------------
-int kbd_close (enum dev_id devno) {
+int kbd_close (dev_t devno) {
     return 0;
 }
 

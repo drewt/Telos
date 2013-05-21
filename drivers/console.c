@@ -67,13 +67,13 @@ int console_write (int fd, void *buf, int buf_len) {
     return i;
 }
 
-int console_open (enum dev_id devno) {
+int console_open (dev_t devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     constab[cno].opened++;
     return 0;
 }
 
-int console_close (enum dev_id devno) {
+int console_close (dev_t devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     constab[cno].opened--;
     return 0;

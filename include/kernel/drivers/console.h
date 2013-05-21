@@ -26,8 +26,8 @@
 
 int console_init (void);
 int console_write (int fd, void *buf, int buf_len);
-int console_open (enum dev_id devno);
-int console_close (enum dev_id devno);
+int console_open (dev_t devno);
+int console_close (dev_t devno);
 int console_ioctl (int fd, unsigned long command, va_list vargs);
 
 int console_switch (unsigned int to);

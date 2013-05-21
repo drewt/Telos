@@ -22,8 +22,8 @@
 int serial_init (void);
 int serial_read (int fd, void *buf, int buf_len);
 int serial_write (int fd, void *buf, int buf_len);
-int serial_open (enum dev_id devno);
-int serial_close (enum dev_id devno);
+int serial_open (dev_t devno);
+int serial_close (dev_t devno);
 int serial_ioctl (int fd, unsigned long command, va_list vargs);
 void serial_int (void);
 

@@ -26,8 +26,8 @@
 
 int kbd_init (void);
 void kbd_interrupt (void);
-int kbd_open (enum dev_id devno);
-int kbd_close (enum dev_id devno);
+int kbd_open (dev_t devno);
+int kbd_close (dev_t devno);
 int kbd_read (int fd, void *buf, int nbytes);
 int kbd_read_echo (int fd, void *buf, int nbytes);
 int kbd_ioctl (int fd, unsigned long command, va_list vargs);

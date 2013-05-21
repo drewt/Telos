@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -16,11 +16,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __INTERRUPT_H_
-#define __INTERRUPT_H_
+#ifndef _KERNEL_INTERRUPT_H_
+#define _KERNEL_INTERRUPT_H_
 
 /* vectors into the IDT; also serve as vectors into the sysactions table */
-enum int_vectors {
+enum {
     DBZ_EXN      = 0x00,
     ILLOP_EXN    = 0x06,
     GP_EXN       = 0x0D,
@@ -33,4 +33,4 @@ enum int_vectors {
     SYSCALL_INTR = 0x80
 };
 
-#endif // __INTERRUPT_H_
+#endif /* _KERNEL_INTERRUPT_H_ */
