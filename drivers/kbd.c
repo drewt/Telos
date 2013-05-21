@@ -38,7 +38,7 @@
 
 #define NOCHAR 256
 
-static list_head_t work_q;
+static LIST_HEAD (work_q);
 
 static char kbd_eof = 4;
 
@@ -181,7 +181,6 @@ int kbd_close (enum dev_id devno) {
  * */
 //-----------------------------------------------------------------------------
 int kbd_init (void) {
-    list_init (&work_q);
     enable_irq (1, 0);
     return 0;
 }

@@ -102,6 +102,14 @@ typedef	struct list_entry      *list_entry_t;
 #define stack_pop(stack)        list_remove_head(stack)
 #define stack_peek(stack)       list_first(stack)
 
+/*
+ * Static initialization macros
+ */
+#define LIST_INIT(list) { &(list), &(list) }
+
+#define LIST_HEAD(name) \
+    list_head_t name = LIST_INIT(name)
+
 /* Initialize the given list */
 static inline void list_init (list_t q)
 {

@@ -46,7 +46,7 @@
     (PAGE_ALIGN((unsigned long)&_kend) - (unsigned long)&KERNEL_PAGE_OFFSET)
 
 /* free list for kernel heap */
-static list_head_t free_list;
+static LIST_HEAD (free_list);
 
 struct mem_area {
     list_chain_t chain;
@@ -157,7 +157,6 @@ unsigned long mem_init (struct multiboot_info *info)
     }
 
     list_init (&res_list);
-    list_init (&free_list);
 
     mark_reserved (&res_list, 0x00000000, KERNEL_END);
     mark_reserved (&res_list, 0x00400000, 0x00400000);

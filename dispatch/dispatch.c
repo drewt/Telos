@@ -31,8 +31,8 @@ extern unsigned int context_switch (struct pcb *p);
 extern int send_signal (struct pcb *p, int sig_no);
 extern void tick (void);
 
-struct pcb *current = NULL; /* the running process      */
-list_head_t ready_queue;   /* queue of ready processes */
+struct pcb *current = NULL;     /* the running process      */
+static LIST_HEAD (ready_queue); /* queue of ready processes */
 
 #define next() ((struct pcb*) dequeue (&ready_queue))
 
@@ -83,8 +83,6 @@ static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
  * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
 void dispatch_init (void) {
-    list_init (&ready_queue);
-
     // initialize actions that can't be initialized statically
     set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
 }
