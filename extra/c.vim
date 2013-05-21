@@ -2,259 +2,33 @@
 " for Telos syntax highlighting
 
 " integer types
-syn match s8_type display "s8"
-syn match u8_type display "u8"
-syn match s16_type display "s16"
-syn match u16_type display "u16"
-syn match s32_type display "s32"
-syn match u32_type display "u32"
-syn match s64_type display "s64"
-syn match u64_type display "u64"
-syn match uchar_type display "uchar"
-syn match ushort_type display "ushort"
-syn match ulong_type display "ulong"
-hi def link s8_type Type
-hi def link u8_type Type
-hi def link s16_type Type
-hi def link u16_type Type
-hi def link s32_type Type
-hi def link u32_type Type
-hi def link s64_type Type
-hi def link u64_type Type
-hi def link uchar_type Type
-hi def link ushort_type Type
-hi def link ulong_type Type
+syn keyword telosType s8 s16 s32 s64
+syn keyword telosType u8 u16 u32 u63
+syn keyword telosType uchar ushort ulong
 
 " Telos '*_t' types
-syn match pid_type display "pid_t"
-syn match port_type display "port_t"
-syn match dev_type display "dev_t"
-syn match list_type display "list_t"
-syn match list_head_type display "list_head_t"
-syn match list_chain_type display "list_chain_t"
-syn match list_entry_type display "list_entry_t"
-hi def link pid_type Type
-hi def link port_type Type
-hi def link dev_type Type
-hi def link list_type Type
-hi def link list_head_type Type
-hi def link list_chain_type Type
-hi def link list_entry_type Type
+syn keyword telosType pid_t port_t dev_t
+syn keyword telosType list_t list_head_t list_chain_t list_entry_t
+
+hi def link telosType Type
 
 " keyword-like macros
-syn match list_iterate display "list_iterate"
-syn match dequeue_iterate display "dequeue_iterate"
-hi def link list_iterate Statement
-hi def link dequeue_iterate Statement
+syn keyword telosMacro list_iterate dequeue_iterate
+hi def link telosMacro Statement
 
 " symbolic constants
-syn match STATE_STOPPED display "STATE_STOPPED"
-syn match STATE_RUNNING display "STATE_RUNNING"
-syn match STATE_READY display "STATE_READY"
-syn match STATE_BLOCKED display "STATE_BLOCKED"
-syn match STATE_SIGWAIT display "STATE_SIGWAIT"
-syn match STATE_SIGSUSPEND display "STATE_SIGSUSPEND"
-syn match STATE_SLEEPING display "STATE_SLEEPING"
-hi def link STATE_STOPPED Constant
-hi def link STATE_RUNNING Constant
-hi def link STATE_READY Constant
-hi def link STATE_BLOCKED Constant
-hi def link STATE_SIGWAIT Constant
-hi def link STATE_SIGSUSPEND Constant
-hi def link STATE_SLEEPING Constant
+syn keyword telosConst STATE_STOPPED STATE_RUNNING STATE_READY STATE_BLOCKED STATE_SIGWAIT STATE_SIGSUSPEND STATE_SLEEPING
+syn keyword telosConst PFLAG_SUPER
+syn keyword telosConst SYS_CREATE SYS_YIELD SYS_STOP SYS_GETPID SYS_SLEEP SYS_SIGRETURN SYS_KILL SYS_SIGWAIT SYS_SIGACTION SYS_SIGNAL SYS_SIGMASK SYS_SEND SYS_RECV SYS_REPLY SYS_OPEN SYS_CLOSE SYS_READ SYS_WRITE SYS_IOCTL SYS_ALARM SYS_MALLOC SYS_FREE SYS_PALLOC
+syn keyword telosConst DBZ_EXN ILLOP_EXN GP_EXN PF_EXN TIMER_INTR KBD_INTR FPE_EXN ILL_EXN SYSCALL_INTR
+syn keyword telosConst NULL_SEGN KCODE_SEGN KDATA_SEGN UCODE_SEGN UDATA_SEGN TSS_SEGN
+syn keyword telosConst SEG_KCODE SEG_KDATA SEG_UCODE SEG_UDATA SEG_TSS
 
-syn match PFLAG_SUPER display "PFLAG_SUPER"
-hi def link PFLAG_SUPER Constant
-
-syn match SYS_CREATE display "SYS_CREATE"
-syn match SYS_YIELD display "SYS_YIELD"
-syn match SYS_STOP display "SYS_STOP"
-syn match SYS_GETPID display "SYS_GETPID"
-syn match SYS_SLEEP display "SYS_SLEEP"
-syn match SYS_SIGRETURN display "SYS_SIGRETURN"
-syn match SYS_KILL display "SYS_KILL"
-syn match SYS_SIGWAIT display "SYS_SIGWAIT"
-syn match SYS_SIGACTION display "SYS_SIGACTION"
-syn match SYS_SIGNAL display "SYS_SIGNAL"
-syn match SYS_SIGMASK display "SYS_SIGMASK"
-syn match SYS_SEND display "SYS_SEND"
-syn match SYS_RECV display "SYS_RECV"
-syn match SYS_REPLY display "SYS_REPLY"
-syn match SYS_OPEN display "SYS_OPEN"
-syn match SYS_CLOSE display "SYS_CLOSE"
-syn match SYS_READ display "SYS_READ"
-syn match SYS_WRITE display "SYS_WRITE"
-syn match SYS_IOCTL display "SYS_IOCTL"
-syn match SYS_ALARM display "SYS_ALARM"
-syn match SYS_MALLOC display "SYS_MALLOC"
-syn match SYS_FREE display "SYS_FREE"
-syn match SYS_PALLOC display "SYS_PALLOC"
-hi def link SYS_CREATE Constant
-hi def link SYS_YIELD Constant
-hi def link SYS_STOP Constant
-hi def link SYS_GETPID Constant
-hi def link SYS_SLEEP Constant
-hi def link SYS_SIGRETURN Constant
-hi def link SYS_KILL Constant
-hi def link SYS_SIGWAIT Constant
-hi def link SYS_SIGACTION Constant
-hi def link SYS_SIGNAL Constant
-hi def link SYS_SIGMASK Constant
-hi def link SYS_SEND Constant
-hi def link SYS_RECV Constant
-hi def link SYS_REPLY Constant
-hi def link SYS_OPEN Constant
-hi def link SYS_CLOSE Constant
-hi def link SYS_READ Constant
-hi def link SYS_WRITE Constant
-hi def link SYS_IOCTL Constant
-hi def link SYS_ALARM Constant
-hi def link SYS_MALLOC Constant
-hi def link SYS_FREE Constant
-hi def link SYS_PALLOC Constant
-
-syn match DBZ_EXN display "DBZ_EXN"
-syn match ILLOP_EXN display "ILLOP_EXN"
-syn match GP_EXN display "GP_EXN"
-syn match PF_EXN display "PF_EXN"
-syn match TIMER_INTR display "TIMER_INTR"
-syn match KBD_INTR display "KBD_INTR"
-syn match FPE_EXN display "FPE_EXN"
-syn match ILL_EXN display "ILL_EXN"
-syn match SYSCALL_INTR display "SYSCALL_INTR"
-hi def link DBZ_EXN Constant
-hi def link ILLOP_EXN Constant
-hi def link GP_EXN Constant
-hi def link PF_EXN Constant
-hi def link TIMER_INTR Constant
-hi def link KBD_INTR Constant
-hi def link FPE_EXN Constant
-hi def link ILL_EXN Constant
-hi def link SYSCALL_INTR Constant
-
-syn match NULL_SEGN display "NULL_SEGN"
-syn match KCODE_SEGN display "KCODE_SEGN"
-syn match KDATA_SEGN display "KDATA_SEGN"
-syn match UCODE_SEGN display "UCODE_SEGN"
-syn match UDATA_SEGN display "UDATA_SEGN"
-syn match TSS_SEGN display "TSS_SEGN"
-syn match SEG_KCODE display "SEG_KCODE"
-syn match SEG_KDATA display "SEG_KDATA"
-syn match SEG_UCODE display "SEG_UCODE"
-syn match SEG_UDATA display "SEG_UDATA"
-syn match SEG_TSS display "SEG_TSS"
-hi def link NULL_SEGN Constant
-hi def link KCODE_SEGN Constant
-hi def link KDATA_SEGN Constant
-hi def link UCODE_SEGN Constant
-hi def link UDATA_SEGN Constant
-hi def link TSS_SEGN Constant
-hi def link SEG_KCODE Constant
-hi def link SEG_KDATA Constant
-hi def link SEG_UCODE Constant
-hi def link SEG_UDATA Constant
-hi def link SEG_TSS Constant
+hi def link telosConst Constant
 
 " these constants are missing from the default
 " C syntax file for whatever reason
-syn match EADDRINUSE display "EADDRINUSE"
-syn match EADDRNOTAVAIL display "EADDRNOTAVAIL"
-syn match EAFNOSUPPORT display "EAFNOSUPPORT"
-syn match EALREADY display "EALREADY"
-syn match ECONNABORTED display "ECONNABORTED"
-syn match ECONNREFUSED display "ECONNREFUSED"
-syn match ECONNRESET display "ECONNRESET"
-syn match EDESTADDRREQ display "EDESTADDRREQ"
-syn match EDQUOT display "EDQUOT"
-syn match EHOSTUNREACH display "EHOSTUNREACH"
-syn match EIDRM display "EIDRM"
-syn match EISCONN display "EISCONN"
-syn match ELOOP display "ELOOP"
-syn match EMULTIHOP display "EMULTIHOP"
-syn match ENETDOWN display "ENETDOWN"
-syn match ENETRESET display "ENETRESET"
-syn match ENETUNREACH display "ENETUNREACH"
-syn match ENOBUFS display "ENOBUFS"
-syn match ENODATA display "ENODATA"
-syn match ENOLINK display "ENOLINK"
-syn match ENOMSG display "ENOMSG"
-syn match ENOPROTOOPT display "ENOPROTOOPT"
-syn match ENOSR display "ENOSR"
-syn match ENOSTR display "ENOSTR"
-syn match ENOTCONN display "ENOTCONN"
-syn match ENOTSOCK display "ENOTSOCK"
-syn match EOPNOTSUPP display "EOPNOTSUPP"
-syn match EOVERFLOW display "EOVERFLOW"
-syn match EPROTO display "EPROTO"
-syn match EPROTONOTSUPPORT display "EPROTONOTSUPPORT"
-syn match EPROTOTYPE display "EPROTOTYPE"
-syn match ESTALE display "ESTALE"
-syn match ETIME display "ETIME"
-syn match ETXTBSY display "ETXTBSY"
-syn match EWOULDBLOCK display "EWOULDBLOCK"
-hi def link EADDRINUSE Constant
-hi def link EADDRNOTAVAIL Constant
-hi def link EAFNOSUPPORT Constant
-hi def link EALREADY Constant
-hi def link ECONNABORTED Constant
-hi def link ECONNREFUSED Constant
-hi def link ECONNRESET Constant
-hi def link EDESTADDRREQ Constant
-hi def link EDQUOT Constant
-hi def link EHOSTUNREACH Constant
-hi def link EIDRM Constant
-hi def link EISCONN Constant
-hi def link ELOOP Constant
-hi def link EMULTIHOP Constant
-hi def link ENETDOWN Constant
-hi def link ENETRESET Constant
-hi def link ENETUNREACH Constant
-hi def link ENOBUFS Constant
-hi def link ENODATA Constant
-hi def link ENOLINK Constant
-hi def link ENOMSG Constant
-hi def link ENOPROTOOPT Constant
-hi def link ENOSR Constant
-hi def link ENOSTR Constant
-hi def link ENOTCONN Constant
-hi def link ENOTSOCK Constant
-hi def link EOPNOTSUPP Constant
-hi def link EOVERFLOW Constant
-hi def link EPROTO Constant
-hi def link EPROTONOTSUPPORT Constant
-hi def link EPROTOTYPE Constant
-hi def link ESTALE Constant
-hi def link ETIME Constant
-hi def link ETXTBSY Constant
-hi def link EWOULDBLOCK Constant
+syn keyword POSIXConst EADDRINUSE EADDRNOTAVAIL EAFNOSUPPORT EALREADY ECONNABORTED ECONNREFUSED ECONNRESET EDESTADDRREQ EDQUOT EHOSTUNREACH EIDRM EISCONN ELOOP EMULTIHOP ENETDOWN ENETRESET ENETUNREACH ENOBUFS ENODATA ENOLINK ENOMSG ENOPROTOOPT ENOSR ENOSTR ENOTCONN ENOTSOCK EOPNOTSUPP EOVERFLOW EPROTO EPROTONOSUPPORT EPROTOTYPE ESTALE ETIME ETXTBSY EWOULDBLOCK
+syn keyword POSIXConst SIGBUS SIGPOLL SIGPROF SIGSYS SIGURG SIGVTALRM SIGXCPU SIGHOLD SA_NOCLDSTOP SA_ONSTACK SA_RESETHAND SA_RESTART SA_SIGINFO SA_NOCLDWAIT SA_NODEFER
 
-syn match SIGBUS display "SIGBUS"
-syn match SIGPOLL display "SIGPOLL"
-syn match SIGPROF display "SIGPROF"
-syn match SIGSYS display "SIGSYS"
-syn match SIGURG display "SIGURG"
-syn match SIGVTALRM display "SIGVTALRM"
-syn match SIGXCPU display "SIGXCPU"
-syn match SIGHOLD display "SIGHOLD"
-syn match SA_NOCLDSTOP display "SA_NOCLDSTOP"
-syn match SA_ONSTACK display "SA_ONSTACK"
-syn match SA_RESETHAND display "SA_RESETHAND"
-syn match SA_RESTART display "SA_RESTART"
-syn match SA_SIGINFO display "SA_SIGINFO"
-syn match SA_NOCLDWAIT display "SA_NOCLDWAIT"
-syn match SA_NODEFER display "SA_NODEFER"
-hi def link SIGBUS Constant
-hi def link SIGPOLL Constant
-hi def link SIGPROF Constant
-hi def link SIGSYS Constant
-hi def link SIGURG Constant
-hi def link SIGVTALRM Constant
-hi def link SIGXCPU Constant
-hi def link SIGHOLD Constant
-hi def link SA_NOCLDSTOP Constant
-hi def link SA_ONSTACK Constant
-hi def link SA_RESETHAND Constant
-hi def link SA_RESTART Constant
-hi def link SA_SIGINFO Constant
-hi def link SA_NOCLDWAIT Constant
-hi def link SA_NODEFER Constant
+hi def link POSIXConst Constant
