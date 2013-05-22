@@ -50,34 +50,34 @@ void isr_init (void)
 unsigned int context_switch (struct pcb *p)
 {
     static void *ksp; // kernel stack pointer
-    static void *psp; // process stack pointer
+    void *psp;        // process stack pointer
     int  rc;          // syscall return code
     unsigned int iid; // syscall/interrupt ID
 
     // make sure TSS points to the right part of the stack
     tss.esp0 = (unsigned long) p->ifp;
 
-    psp = p->esp;
     asm volatile (
-    ".set EAX, 0x1C              \n"
-    ".set ECX, 0x18              \n"
+    ".set EAX, 0x1C                \n"
+    ".set ECX, 0x18                \n"
+    ".set EDX, 0x14                \n"
 
-        "pushf                   \n" // save kernel context
-        "pusha                   \n"
-        "movl  %%esp,  %[KSP]    \n" // switch stacks
-        "movl  %[PSP], %%esp     \n"
-        "mov   %[PGD], %%cr3     \n" // switch page directories
-        "movl  %%eax,  EAX(%%esp) \n" // syscall return code in %eax
-        "cmp   $0x0,   %[SPR]    \n"
-        "jne   skip_seg_set      \n"
-        "movw  %[UDS], %%ax      \n" // switch to user data segment
-        "movw  %%ax,   %%ds      \n"
-        "movw  %%ax,   %%es      \n"
-        "movw  %%ax,   %%fs      \n"
-        "movw  %%ax,   %%gs      \n"
+        "pushf                     \n" // save kernel context
+        "pusha                     \n"
+        "movl  %%esp,   %[KSP]     \n" // switch stacks
+        "movl  %[PSP],  %%esp      \n"
+        "mov   %[PGD],  %%cr3      \n" // switch page directories
+        "movl  %[RET],  EAX(%%esp) \n" // syscall return code in %eax
+        "cmp   $0x0,    %[SPR]     \n"
+        "jne   skip_seg_set        \n"
+        "movw  %[UDS],  %%ax       \n" // switch to user data segment
+        "movw  %%ax,    %%ds       \n"
+        "movw  %%ax,    %%es       \n"
+        "movw  %%ax,    %%fs       \n"
+        "movw  %%ax,    %%gs       \n"
     "skip_seg_set: "
-        "popa                    \n" // restore user context
-        "iret                    \n" // return to user process
+        "popa                      \n" // restore user context
+        "iret                      \n" // return to user process
 
     ISR_ENTRY (pgf_entry_point,   "%[PFX]")
     ISR_ENTRY (fpe_entry_point,   "%[FPE]")
@@ -85,25 +85,26 @@ unsigned int context_switch (struct pcb *p)
     ISR_ENTRY (timer_entry_point, "%[TMR]")
     ISR_ENTRY (kbd_entry_point,   "%[KBD]")
     "syscall_entry_point: "
-        "pusha                       \n"
+        "pusha                     \n"
     "common_isr: "
-        "movw  %[KDS],    %%cx       \n" // switch to kernel data segment
-        "movw  %%cx,      %%ds       \n"
-        "movw  %%cx,      %%es       \n"
-        "movw  %%cx,      %%fs       \n"
-        "movw  %%cx,      %%gs       \n"
-        "movl  %%esp,     %[PSP]     \n" // switch stacks
-        "movl  %[KSP],    %%esp      \n"
-        "movl  %%eax,     EAX(%%esp) \n" // save interrupt ID in %eax
-        "movl  %%edx,     ECX(%%esp) \n" // save old %eax value in %ecx
-        "popa                        \n" // restore kernel context
-        "popf                        \n"
-        : "=a" (iid), "=c" (rc),
+        "movw  %[KDS],  %%cx       \n" // switch to kernel data segment
+        "movw  %%cx,    %%ds       \n"
+        "movw  %%cx,    %%es       \n"
+        "movw  %%cx,    %%fs       \n"
+        "movw  %%cx,    %%gs       \n"
+        "movl  %%esp,   %%ecx      \n" // switch stacks
+        "movl  %[KSP],  %%esp      \n"
+        "movl  %%eax,   EAX(%%esp) \n" // save interrupt ID in %eax
+        "movl  %%edx,   ECX(%%esp) \n" // save old %eax value in %ecx
+        "movl  %%ecx,   EDX(%%esp) \n" // save user %esp in %edx
+        "popa                      \n" // restore kernel context
+        "popf                      \n"
+        : "=a" (iid), "=c" (rc), "=d" (psp),
         /* read-write operands must be in memory */
-          [KSP] "+m" (ksp), [PSP] "+m" (psp)
+          [KSP] "+m" (ksp)
         /* values used only in the "top half" may be put in registers */
         : [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
-          "a" (p->rc),
+          [RET] "a" (p->rc), [PSP] "c" (p->esp),
         /* "bottom half" values must be either immediate or in memory */
           [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
