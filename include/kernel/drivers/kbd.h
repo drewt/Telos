@@ -22,14 +22,9 @@
 #ifndef __KBD_H_
 #define __KBD_H_
 
+#include <kernel/device.h>
 #include <telos/kbd.h>
 
-int kbd_init (void);
-void kbd_interrupt (void);
-int kbd_open (dev_t devno);
-int kbd_close (dev_t devno);
-int kbd_read (int fd, void *buf, int nbytes);
-int kbd_read_echo (int fd, void *buf, int nbytes);
-int kbd_ioctl (int fd, unsigned long command, va_list vargs);
+extern struct device_operations kbd_operations;
 
 #endif // __KBD_H_

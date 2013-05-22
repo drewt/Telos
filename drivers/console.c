@@ -43,6 +43,22 @@
 #define NUM_CLR   0xF
 #define TAB_WIDTH 8
 
+static int console_write (int fd, void *buf, int buf_len);
+static int console_open (dev_t devno);
+static int console_close (dev_t devno);
+static int console_ioctl (int fd, unsigned long command, va_list vargs);
+
+struct device_operations console_operations = {
+    .dvinit = console_init,
+    .dvopen = console_open,
+    .dvclose = console_close,
+    .dvread = NULL,
+    .dvwrite = console_write,
+    .dvioctl = console_ioctl,
+    .dviint = NULL,
+    .dvoint = NULL
+};
+
 struct console {
     unsigned char mem[CBUF_SIZE];
     unsigned int offset;
@@ -57,7 +73,7 @@ static void console_putc (unsigned char c, unsigned char attr,
         unsigned int cno);
 static void cursor (int pos);
 
-int console_write (int fd, void *buf, int buf_len) {
+static int console_write (int fd, void *buf, int buf_len) {
     int i;
     unsigned char *s = buf;
     unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
@@ -67,13 +83,13 @@ int console_write (int fd, void *buf, int buf_len) {
     return i;
 }
 
-int console_open (dev_t devno) {
+static int console_open (dev_t devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     constab[cno].opened++;
     return 0;
 }
 
-int console_close (dev_t devno) {
+static int console_close (dev_t devno) {
     unsigned int cno = devno - DEV_CONSOLE_0;
     constab[cno].opened--;
     return 0;
@@ -126,7 +142,7 @@ void clear_console (void) {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int console_ioctl (int fd, unsigned long command, va_list vargs) {
+static int console_ioctl (int fd, unsigned long command, va_list vargs) {
     switch (command) {
     case CONSOLE_IOCTL_SWITCH:
         return console_switch (va_arg (vargs, unsigned int));

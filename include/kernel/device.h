@@ -33,9 +33,16 @@ enum {
     DEV_SERIAL
 };
 
+struct device_operations;
+
 struct device {
     int dvnum;
     char *dvname;
+    void *dvioblk;
+    struct device_operations *dv_op;
+};
+
+struct device_operations {
     int (*dvinit)(void);
     int (*dvopen)(dev_t devno);
     int (*dvclose)(dev_t devno);
@@ -44,7 +51,6 @@ struct device {
     int (*dvioctl)(int fd, unsigned long request, va_list vargs);
     void (*dviint)(void);
     void (*dvoint)(void);
-    void *dvioblk;
 };
 
 extern struct device devtab[DT_SIZE];

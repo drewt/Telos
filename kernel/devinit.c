@@ -25,78 +25,39 @@
 #include <kernel/drivers/console.h>
 #include <kernel/drivers/serial.h>
 
-static int io_error () {
-    return SYSERR;
-}
-
 struct device devtab[DT_SIZE] = {
     [DEV_KBD] = {
         .dvnum   = DEV_KBD,
         .dvname  = "Keyboard (no echo)",
-        .dvinit  = kbd_init,
-        .dvopen  = kbd_open,
-        .dvclose = kbd_close,
-        .dvread  = kbd_read,
-        .dvwrite = io_error,
-        .dvioctl = kbd_ioctl,
-        .dviint  = kbd_interrupt,
-        .dvoint  = NULL,
-        .dvioblk = NULL
+        .dvioblk = NULL,
+        .dv_op = &kbd_operations
     },
     [DEV_KBD_ECHO] = {
         .dvnum   = DEV_KBD_ECHO,
         .dvname  = "Keyboard (echo)",
-        .dvinit  = kbd_init,
-        .dvopen  = kbd_open,
-        .dvclose = kbd_close,
-        .dvread  = kbd_read,
-        .dvwrite = io_error,
-        .dvioctl = kbd_ioctl,
-        .dviint  = kbd_interrupt,
-        .dvoint  = NULL,
-        .dvioblk = NULL
+        .dvioblk = NULL,
+        .dv_op = &kbd_operations
     },
     [DEV_CONSOLE_0] = {
         .dvnum   = DEV_CONSOLE_0,
         .dvname  = "Console 0",
-        .dvinit  = console_init,
-        .dvopen  = console_open,
-        .dvclose = console_close,
-        .dvread  = io_error,
-        .dvwrite = console_write,
-        .dvioctl = console_ioctl,
-        .dviint  = NULL,
-        .dvoint  = NULL,
-        .dvioblk = NULL
+        .dvioblk = NULL,
+        .dv_op = &console_operations
     },
     [DEV_CONSOLE_1] = {
         .dvnum   = DEV_CONSOLE_1,
         .dvname  = "Console 1",
-        .dvinit  = console_init,
-        .dvopen  = console_open,
-        .dvclose = console_close,
-        .dvread  = io_error,
-        .dvwrite = console_write,
-        .dvioctl = console_ioctl,
-        .dviint  = NULL,
-        .dvoint  = NULL,
-        .dvioblk = NULL
+        .dvioblk = NULL,
+        .dv_op = &console_operations
     },
     [DEV_SERIAL] = {
         .dvnum   = DEV_SERIAL,
         .dvname  = "Serial port",
-        .dvinit  = serial_init,
-        .dvopen  = serial_open,
-        .dvclose = serial_close,
-        .dvread  = serial_read,
-        .dvwrite = serial_write,
-        .dvioctl = serial_ioctl,
-        .dviint  = serial_int,
-        .dvoint  = serial_int,
-        .dvioblk = NULL
+        .dvioblk = NULL,
+        .dv_op = NULL
     }
 };
 
 void dev_init (void) {
-    devtab[DEV_KBD].dvinit ();
+    devtab[DEV_KBD].dv_op->dvinit ();
 }

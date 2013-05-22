@@ -22,14 +22,12 @@
 #ifndef __CONSOLE_H_
 #define __CONSOLE_H_
 
+#include <kernel/device.h>
 #include <telos/console.h>
 
-int console_init (void);
-int console_write (int fd, void *buf, int buf_len);
-int console_open (dev_t devno);
-int console_close (dev_t devno);
-int console_ioctl (int fd, unsigned long command, va_list vargs);
+extern struct device_operations console_operations;
 
+int console_init (void);
 int console_switch (unsigned int to);
 
 #endif // __CONSOLE_H_

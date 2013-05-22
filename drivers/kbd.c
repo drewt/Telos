@@ -38,6 +38,24 @@
 
 #define NOCHAR 256
 
+static int kbd_init (void);
+static void kbd_interrupt (void);
+static int kbd_open (dev_t devno);
+static int kbd_close (dev_t devno);
+static int kbd_read (int fd, void *buf, int nbytes);
+static int kbd_ioctl (int fd, unsigned long command, va_list vargs);
+
+struct device_operations kbd_operations  = {
+    .dvinit = kbd_init,
+    .dvopen = kbd_open,
+    .dvclose = kbd_close,
+    .dvread = kbd_read,
+    .dvwrite = NULL,
+    .dvioctl = kbd_ioctl,
+    .dviint = kbd_interrupt,
+    .dvoint = NULL
+};
+
 static LIST_HEAD (work_q);
 
 static char kbd_eof = 4;
@@ -76,7 +94,7 @@ static inline bool put_char (char c) {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void kbd_interrupt (void) {
+static void kbd_interrupt (void) {
     unsigned int c, s;
 
     s = inb (KBD_DAT);
@@ -110,7 +128,7 @@ void kbd_interrupt (void) {
 /*-----------------------------------------------------------------------------
  * Code shared between echo and noecho keyboard reads */
 //-----------------------------------------------------------------------------
-bool kbd_common_read (void) {
+static bool kbd_common_read (void) {
 
     cpy_buf_next = 0;
 
@@ -142,7 +160,7 @@ bool kbd_common_read (void) {
 /*-----------------------------------------------------------------------------
  * Initiate a read from the noecho keyboard device */
 //-----------------------------------------------------------------------------
-int kbd_read (int fd, void *buf, int buf_len) {
+static int kbd_read (int fd, void *buf, int buf_len) {
     if (reading) {
         current->pbuf = (struct pbuf)
             { .buf = buf, .len = buf_len, .id = fd };
@@ -166,21 +184,21 @@ int kbd_read (int fd, void *buf, int buf_len) {
 /*-----------------------------------------------------------------------------
  * Opens a keyboard device */
 //-----------------------------------------------------------------------------
-int kbd_open (dev_t devno) {
+static int kbd_open (dev_t devno) {
     return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Closes a keyboard device */
 //-----------------------------------------------------------------------------
-int kbd_close (dev_t devno) {
+static int kbd_close (dev_t devno) {
     return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int kbd_init (void) {
+static int kbd_init (void) {
     enable_irq (1, 0);
     return 0;
 }
@@ -191,7 +209,7 @@ int kbd_init (void) {
  * parameter is the integer value of the character that is to become the new
  * EOF indicator */
 //-----------------------------------------------------------------------------
-int kbd_ioctl (int fd, unsigned long command, va_list vargs) {
+static int kbd_ioctl (int fd, unsigned long command, va_list vargs) {
 
     if (command != KBD_IOCTL_MOD_EOF)
         return SYSERR;

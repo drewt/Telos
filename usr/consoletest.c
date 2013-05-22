@@ -7,7 +7,7 @@ void consoletest (int argc, char *argv[])
     int fd;
 
     puts ("This is standard output");
-    sleep (100);
+    sleep (10);
 
     if ((fd = open ("/dev/cons1", 0)) == -1) {
         puts ("error opening console 1");
@@ -25,7 +25,7 @@ void consoletest (int argc, char *argv[])
         return;
     }
 
-    sleep (100);
+    sleep (10);
 
     if (ioctl (fd, CONSOLE_IOCTL_SWITCH, 0) == -1) {
         puts ("error switching to console 0");
