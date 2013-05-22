@@ -144,7 +144,7 @@ void sys_sigwait (void)
 void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact)
 {
     if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
-        current->rc = EINVAL;
+        current->rc = -EINVAL;
         return;
     }
 
@@ -165,7 +165,7 @@ void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact)
 void sys_signal (int sig, void(*func)(int))
 {
     if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
-        current->rc = EINVAL;
+        current->rc = -EINVAL;
         return;
     }
 
@@ -203,7 +203,7 @@ void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset)
             current->sig_ignore |= *set;
             break;
         default:
-            current->rc = EINVAL;
+            current->rc = -EINVAL;
             return;
         }
     }
