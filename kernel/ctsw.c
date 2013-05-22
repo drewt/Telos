@@ -67,7 +67,7 @@ unsigned int context_switch (struct pcb *p)
         "movl  %%esp,  %[KSP]    \n" // switch stacks
         "movl  %[PSP], %%esp     \n"
         "mov   %[PGD], %%cr3     \n" // switch page directories
-        "movl  %%eax,  28(%%esp) \n" // syscall return code in %eax
+        "movl  %%eax,  EAX(%%esp) \n" // syscall return code in %eax
         "cmp   $0x0,   %[SPR]    \n"
         "jne   skip_seg_set      \n"
         "movw  %[UDS], %%ax      \n" // switch to user data segment

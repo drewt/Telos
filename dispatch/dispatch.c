@@ -1,7 +1,4 @@
-/* dispatch.c : dispatcher Mark II
- */
-
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -26,6 +23,8 @@
 #include <kernel/list.h>
 #include <syscall.h>
 
+typedef void(*isr_t)();
+
 /* routines defined in other files */
 extern unsigned int context_switch (struct pcb *p);
 extern int send_signal (struct pcb *p, int sig_no);
@@ -37,44 +36,45 @@ static LIST_HEAD (ready_queue); /* queue of ready processes */
 #define next() ((struct pcb*) dequeue (&ready_queue))
 
 struct sysaction {
-    void(*func)(); // service routine
+    isr_t func;
     int nargs;     // number of args
 };
 
 /* table of actions to be taken for interrupts/system calls */
 static struct sysaction sysactions[SYSCALL_MAX] = {
 //    - INDEX -             - ACTION -            - ARGS -
-    [FPE_EXN]       = { (void(*)()) exn_fpe,         0 },
-    [ILL_EXN]       = { (void(*)()) exn_ill_instr,   0 },
-    [PF_EXN]        = { (void(*)()) exn_page_fault,  0 },
-    [TIMER_INTR]    = { (void(*)()) tick,            0 },
-    [SYS_CREATE]    = { (void(*)()) sys_create,      3 },
-    [SYS_YIELD]     = { (void(*)()) sys_yield,       0 },
-    [SYS_STOP]      = { (void(*)()) sys_exit,        1 },
-    [SYS_GETPID]    = { (void(*)()) sys_getpid,      0 },
-    [SYS_REPORT]    = { (void(*)()) sys_report,      1 },
-    [SYS_SLEEP]     = { (void(*)()) sys_sleep,       1 },
-    [SYS_SIGRETURN] = { (void(*)()) sig_restore,     1 },
-    [SYS_KILL]      = { (void(*)()) sys_kill,        2 },
-    [SYS_SIGWAIT]   = { (void(*)()) sys_sigwait,     0 },
-    [SYS_SIGACTION] = { (void(*)()) sys_sigaction,   4 },
-    [SYS_SIGNAL]    = { (void(*)()) sys_signal,      2 },
-    [SYS_SIGMASK]   = { (void(*)()) sys_sigprocmask, 3 },
-    [SYS_OPEN]      = { (void(*)()) sys_open,        3 },
-    [SYS_CLOSE]     = { (void(*)()) sys_close,       1 },
-    [SYS_READ]      = { (void(*)()) sys_read,        3 },
-    [SYS_WRITE]     = { (void(*)()) sys_write,       3 },
-    [SYS_IOCTL]     = { (void(*)()) sys_ioctl,       3 },
-    [SYS_ALARM]     = { (void(*)()) sys_alarm,       1 },
-    [SYS_SEND]      = { (void(*)()) sys_send,        5 },
-    [SYS_RECV]      = { (void(*)()) sys_recv,        3 },
-    [SYS_REPLY]     = { (void(*)()) sys_reply,       3 },
-    [SYS_MALLOC]    = { (void(*)()) sys_malloc,      2 },
-    [SYS_FREE]      = { (void(*)()) sys_free,        1 },
-    [SYS_PALLOC]    = { (void(*)()) sys_palloc,      1 }
+    [FPE_EXN]       = { (isr_t) exn_fpe,         0 },
+    [ILL_EXN]       = { (isr_t) exn_ill_instr,   0 },
+    [PF_EXN]        = { (isr_t) exn_page_fault,  0 },
+    [TIMER_INTR]    = { (isr_t) tick,            0 },
+    [SYS_CREATE]    = { (isr_t) sys_create,      3 },
+    [SYS_YIELD]     = { (isr_t) sys_yield,       0 },
+    [SYS_STOP]      = { (isr_t) sys_exit,        1 },
+    [SYS_GETPID]    = { (isr_t) sys_getpid,      0 },
+    [SYS_REPORT]    = { (isr_t) sys_report,      1 },
+    [SYS_SLEEP]     = { (isr_t) sys_sleep,       1 },
+    [SYS_SIGRETURN] = { (isr_t) sig_restore,     1 },
+    [SYS_KILL]      = { (isr_t) sys_kill,        2 },
+    [SYS_SIGWAIT]   = { (isr_t) sys_sigwait,     0 },
+    [SYS_SIGACTION] = { (isr_t) sys_sigaction,   4 },
+    [SYS_SIGNAL]    = { (isr_t) sys_signal,      2 },
+    [SYS_SIGMASK]   = { (isr_t) sys_sigprocmask, 3 },
+    [SYS_OPEN]      = { (isr_t) sys_open,        3 },
+    [SYS_CLOSE]     = { (isr_t) sys_close,       1 },
+    [SYS_READ]      = { (isr_t) sys_read,        3 },
+    [SYS_WRITE]     = { (isr_t) sys_write,       3 },
+    [SYS_IOCTL]     = { (isr_t) sys_ioctl,       3 },
+    [SYS_ALARM]     = { (isr_t) sys_alarm,       1 },
+    [SYS_SEND]      = { (isr_t) sys_send,        5 },
+    [SYS_RECV]      = { (isr_t) sys_recv,        3 },
+    [SYS_REPLY]     = { (isr_t) sys_reply,       3 },
+    [SYS_MALLOC]    = { (isr_t) sys_malloc,      2 },
+    [SYS_FREE]      = { (isr_t) sys_free,        1 },
+    [SYS_PALLOC]    = { (isr_t) sys_palloc,      1 }
 };
 
-static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
+static inline void set_action (unsigned int vector, isr_t f, int nargs)
+{
     sysactions[vector] = (struct sysaction) { f, nargs };
 }
 
@@ -82,17 +82,18 @@ static inline void set_action (unsigned int vector, void(*f)(), int nargs) {
  * Initializes the dispatcher.  Must be called *after* the device table is
  * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
-void dispatch_init (void) {
+void dispatch_init (void)
+{
     // initialize actions that can't be initialized statically
-    set_action (KBD_INTR, (void(*)()) devtab[DEV_KBD].dviint, 0);
+    set_action (KBD_INTR, (isr_t) devtab[DEV_KBD].dviint, 0);
 }
 
 /*-----------------------------------------------------------------------------
  * The dispatcher.  Passes control to the appropriate routines to handle 
  * interrupts, system calls, and other events */
 //*----------------------------------------------------------------------------
-void dispatch (void) {
-    
+void dispatch (void)
+{    
     unsigned int req, sig_no;
     struct sys_args *args;
 
@@ -141,7 +142,8 @@ void dispatch (void) {
 /*-----------------------------------------------------------------------------
  * Enqueues a process on the ready queue */
 //-----------------------------------------------------------------------------
-void ready (struct pcb *p) {
+void ready (struct pcb *p)
+{
     p->state = STATE_READY;
     enqueue (&ready_queue, (list_entry_t) p);
 }
@@ -150,7 +152,8 @@ void ready (struct pcb *p) {
  * Selects a new process to run, choosing the idle process only if there are no
  * other processes ready to run */
 //-----------------------------------------------------------------------------
-void new_process (void) {
+void new_process (void)
+{
     current = next ();
 
     // skip idle process if possible
