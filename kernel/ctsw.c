@@ -52,7 +52,7 @@ unsigned int context_switch (struct pcb *p)
     static int  rc;          // syscall return code
     static void *ksp;        // kernel stack pointer
     static void *psp;        // process stack pointer
-    static unsigned int iid; // syscall/interrupt ID
+    unsigned int iid; // syscall/interrupt ID
 
     // make sure TSS points to the right part of the stack
     tss.esp0 = (unsigned long) p->ifp;
@@ -60,6 +60,8 @@ unsigned int context_switch (struct pcb *p)
     rc  = p->rc;
     psp = p->esp;
     asm volatile (
+    ".set EAX, 0x1C              \n"
+    ".set ECX, 0x18              \n"
         "pushf                   \n" // save kernel context
         "pusha                   \n"
         "movl  %%esp,  %[KSP]    \n" // switch stacks
@@ -84,30 +86,29 @@ unsigned int context_switch (struct pcb *p)
     ISR_ENTRY (timer_entry_point, "%[TMR]")
     ISR_ENTRY (kbd_entry_point,   "%[KBD]")
     "syscall_entry_point: "
-        "pusha                   \n"
+        "pusha                       \n"
     "common_isr: "
-        "movw  %[KDS],    %%cx   \n" // switch to kernel data segment
-        "movw  %%cx,      %%ds   \n"
-        "movw  %%cx,      %%es   \n"
-        "movw  %%cx,      %%fs   \n"
-        "movw  %%cx,      %%gs   \n"
-        "movl  %%edx,     %[RET] \n" // save old %eax value as return code
-        "movl  %%esp,     %[PSP] \n" // switch stacks
-        "movl  %[KSP],    %%esp  \n"
-        "movl  %%eax,     %[iid] \n" // save interrupt ID
-        "popa                    \n" // restore kernel context
-        "popf                    \n"
-        : [iid] "=g" (iid),
+        "movw  %[KDS],    %%cx       \n" // switch to kernel data segment
+        "movw  %%cx,      %%ds       \n"
+        "movw  %%cx,      %%es       \n"
+        "movw  %%cx,      %%fs       \n"
+        "movw  %%cx,      %%gs       \n"
+        "movl  %%edx,     %[RET]     \n" // save old %eax value as return code
+        "movl  %%esp,     %[PSP]     \n" // switch stacks
+        "movl  %[KSP],    %%esp      \n"
+        "movl  %%eax,     EAX(%%esp) \n" // save interrupt ID in %eax
+        "popa                        \n" // restore kernel context
+        "popf                        \n"
+        : [iid] "=a" (iid),
         /* read-write operands must be in memory */
           [RET] "+m" (rc), [KSP] "+m" (ksp), [PSP] "+m" (psp)
         /* values used only in the "top half" may be put in registers */
-        : [PGD] "g" (p->pgdir), [SPR] "g" (p->flags & PFLAG_SUPER),
+        : [PGD] "b" (p->pgdir), [SPR] "c" (p->flags & PFLAG_SUPER),
         /* "bottom half" values must be either immediate or in memory */
           [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
           [FPE] "i" (FPE_EXN), [ILL] "i" (ILL_EXN)
-        /* prevent gcc from allocating to registers used in "top half" */
-        : "%eax"
+        :
     );
     p->esp = psp;
     p->rc  = rc;
