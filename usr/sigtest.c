@@ -27,6 +27,11 @@
 #include <kernel/common.h>
 #include <telos/process.h>
 
+/* half-assed "test" of sigqueue--verifies that it's substitutable for kill */
+#if 0
+#define kill(a,b) sigqueue(a,b,(union sigval)0)
+#endif
+
 static pid_t sigtest_pid;
 
 static void void_handler (int signo) {}

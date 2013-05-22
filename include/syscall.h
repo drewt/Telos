@@ -33,6 +33,7 @@ enum syscall_id {
     SYS_SLEEP,
     SYS_SIGRETURN,
     SYS_KILL,
+    SYS_SIGQUEUE,
     SYS_SIGWAIT,
     SYS_SIGACTION,
     SYS_SIGNAL,

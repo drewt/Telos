@@ -241,25 +241,52 @@ void __kill (struct pcb *p, int sig_no)
     }
 }
 
-void sys_kill (int pid, int sig_no)
+void sys_kill (pid_t pid, int sig)
 {
-    int pti = PT_INDEX (pid);
+    int i = PT_INDEX (pid);
 
-    if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {
-        current->rc = ESRCH;
+    if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid) {
+        current->rc = -ESRCH;
         return;
     }
 
-    if (sig_no == 0) {
+    if (sig == 0) {
         current->rc = 0;
         return;
     }
 
-    if (SIGNO_INVALID(sig_no)) {
-        current->rc = EINVAL;
+    if (SIGNO_INVALID (sig)) {
+        current->rc = -EINVAL;
         return;
     }
 
-    __kill (&proctab[pti], sig_no);
+    proctab[i].siginfos[sig].si_code = SI_USER;
+
+    __kill (&proctab[i], sig);
+    current->rc = 0;
+}
+void sys_sigqueue (pid_t pid, int sig, const union sigval value)
+{
+    int i = PT_INDEX (pid);
+
+    if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid) {
+        current->rc = -ESRCH;
+        return;
+    }
+
+    if (sig == 0) {
+        current->rc = 0;
+        return;
+    }
+
+    if (SIGNO_INVALID (sig)) {
+        current->rc = -EINVAL;
+        return;
+    }
+
+    proctab[i].siginfos[sig].si_value = value;
+    proctab[i].siginfos[sig].si_code = SI_QUEUE;
+
+    __kill (&proctab[i], sig);
     current->rc = 0;
 }

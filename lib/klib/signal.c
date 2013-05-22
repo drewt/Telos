@@ -49,6 +49,14 @@ int kill (pid_t pid, int signal_number) {
 }
 
 /*-----------------------------------------------------------------------------
+ * Sends a signal to a process, with an associated value */
+//-----------------------------------------------------------------------------
+int sigqueue (pid_t pid, int sig, const union sigval value) {
+    return syscall3 (SYS_SIGQUEUE, (void*) pid, (void*) sig,
+            value.sigval_ptr);
+}
+
+/*-----------------------------------------------------------------------------
  * Suspends execution of the calling process until it receives a signal */
 //-----------------------------------------------------------------------------
 int sigwait (void) {

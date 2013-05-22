@@ -61,7 +61,8 @@ void sys_sigaction (int sig, struct sigaction *act,
         struct sigaction *oact);
 void sys_signal (int sig, void(*func)(int));
 void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset);
-void sys_kill (int pid, int sig_no);
+void sys_kill (pid_t pid, int sig);
+void sys_sigqueue (pid_t pid, int sig, const union sigval value);
 void sys_sigwait (void);
 void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 void sys_recv (int *src_pid, void *buffer, int length);

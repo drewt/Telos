@@ -55,6 +55,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
     [SYS_SLEEP]     = { (isr_t) sys_sleep,       1 },
     [SYS_SIGRETURN] = { (isr_t) sig_restore,     1 },
     [SYS_KILL]      = { (isr_t) sys_kill,        2 },
+    [SYS_SIGQUEUE]  = { (isr_t) sys_sigqueue,    3 },
     [SYS_SIGWAIT]   = { (isr_t) sys_sigwait,     0 },
     [SYS_SIGACTION] = { (isr_t) sys_sigaction,   4 },
     [SYS_SIGNAL]    = { (isr_t) sys_signal,      2 },

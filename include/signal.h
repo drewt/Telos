@@ -60,7 +60,7 @@ enum sig_nums {
     _TELOS_SIGMAX
 };
 
-enum sigaction_flags {
+enum {
     SA_NOCLDSTOP  = 1,
     SA_ONSTACK    = 1 << 1,
     SA_RESETHAND  = 1 << 2,
@@ -70,9 +70,18 @@ enum sigaction_flags {
     SA_NODEFER    = 1 << 6
 };
 
+enum {
+    SI_USER,
+    SI_QUEUE,
+    SI_TIMER,
+    SI_ASYNCIO,
+    SI_MESGQ
+};
+
 enum sigprocmask_flags { SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK };
 
 int kill (pid_t pid, int signal_number);
+int sigqueue (pid_t pid, int signal_number, const union sigval value);
 int sigaction (int sig, struct sigaction *act, struct sigaction *oact);
 void(*signal(int sig, void (*func)(int)))(int);
 int sigprocmask (int how, sigset_t *set, sigset_t *oset);
