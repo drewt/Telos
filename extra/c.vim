@@ -7,7 +7,7 @@ syn keyword telosType u8 u16 u32 u63
 syn keyword telosType uchar ushort ulong
 
 " Telos '*_t' types
-syn keyword telosType pid_t port_t dev_t
+syn keyword telosType pid_t port_t dev_t isr_t
 syn keyword telosType list_t list_head_t list_chain_t list_entry_t
 
 hi def link telosType Type
