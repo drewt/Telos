@@ -117,7 +117,7 @@ void sig_restore (void *osp)
     // TODO: verify that osp is in valid range and properly aligned
     struct ctxt *cx = osp;
     current->esp = cx;
-    current->ifp = cx + 1;
+    current->ifp = (struct ctxt*) ((ulong) cx + U_CONTEXT_SIZE);
 
     unsigned long *old_esp;
     old_esp = current->flags & PFLAG_SUPER
