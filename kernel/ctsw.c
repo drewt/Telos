@@ -49,26 +49,25 @@ void isr_init (void)
 
 unsigned int context_switch (struct pcb *p)
 {
-    static int  rc;          // syscall return code
-    static void *ksp;        // kernel stack pointer
-    static void *psp;        // process stack pointer
+    static void *ksp; // kernel stack pointer
+    static void *psp; // process stack pointer
+    int  rc;          // syscall return code
     unsigned int iid; // syscall/interrupt ID
 
     // make sure TSS points to the right part of the stack
     tss.esp0 = (unsigned long) p->ifp;
 
-    rc  = p->rc;
     psp = p->esp;
     asm volatile (
     ".set EAX, 0x1C              \n"
     ".set ECX, 0x18              \n"
+
         "pushf                   \n" // save kernel context
         "pusha                   \n"
         "movl  %%esp,  %[KSP]    \n" // switch stacks
         "movl  %[PSP], %%esp     \n"
-        "movl  %[RET], %%eax     \n" // put return code in %eax
         "mov   %[PGD], %%cr3     \n" // switch page directories
-        "movl  %%eax,  28(%%esp) \n"
+        "movl  %%eax,  28(%%esp) \n" // syscall return code in %eax
         "cmp   $0x0,   %[SPR]    \n"
         "jne   skip_seg_set      \n"
         "movw  %[UDS], %%ax      \n" // switch to user data segment
@@ -93,17 +92,18 @@ unsigned int context_switch (struct pcb *p)
         "movw  %%cx,      %%es       \n"
         "movw  %%cx,      %%fs       \n"
         "movw  %%cx,      %%gs       \n"
-        "movl  %%edx,     %[RET]     \n" // save old %eax value as return code
         "movl  %%esp,     %[PSP]     \n" // switch stacks
         "movl  %[KSP],    %%esp      \n"
         "movl  %%eax,     EAX(%%esp) \n" // save interrupt ID in %eax
+        "movl  %%edx,     ECX(%%esp) \n" // save old %eax value in %ecx
         "popa                        \n" // restore kernel context
         "popf                        \n"
-        : [iid] "=a" (iid),
+        : "=a" (iid), "=c" (rc),
         /* read-write operands must be in memory */
-          [RET] "+m" (rc), [KSP] "+m" (ksp), [PSP] "+m" (psp)
+          [KSP] "+m" (ksp), [PSP] "+m" (psp)
         /* values used only in the "top half" may be put in registers */
-        : [PGD] "b" (p->pgdir), [SPR] "c" (p->flags & PFLAG_SUPER),
+        : [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
+          "a" (p->rc),
         /* "bottom half" values must be either immediate or in memory */
           [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
           [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
