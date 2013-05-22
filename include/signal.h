@@ -87,4 +87,42 @@ void(*signal(int sig, void (*func)(int)))(int);
 int sigprocmask (int how, sigset_t *set, sigset_t *oset);
 int sigwait (void);
 
+static inline int sigfillset (sigset_t *set)
+{
+    *set = (1 << (_TELOS_SIGMAX - 1)) - 1;
+    return 0;
+}
+
+static inline int sigemptyset (sigset_t *set)
+{
+    *set = 0;
+    return 0;
+}
+
+static inline int sigaddset (sigset_t *set, int signum)
+{
+    if (signum >= _TELOS_SIGMAX)
+        return -1;
+
+    *set |= (1 << signum);
+    return 0;
+}
+
+static inline int sigdelset (sigset_t *set, int signum)
+{
+    if (signum >= _TELOS_SIGMAX)
+        return -1;
+
+    *set &= ~(1 << signum);
+    return 0;
+}
+
+static inline int sigismember (const sigset_t *set, int signum)
+{
+    if (signum >= _TELOS_SIGMAX)
+        return -1;
+
+    return *set & (1 << signum);
+}
+
 #endif // __SIGNAL_H_
