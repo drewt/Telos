@@ -40,11 +40,13 @@ void isr_init (void)
     set_gate (SYSCALL_INTR, (ulong) syscall_entry_point, SEG_KCODE);
 }
 
+#define __STR(x) #x
+#define STR(x) __STR(x)
 #define ISR_ENTRY(entry,ident)    \
     #entry ": "                   \
         "pusha                \n" \
         "mov   %%eax,   %%edx \n" \
-        "movl  "ident", %%eax \n" \
+        "movl  $"STR(ident)", %%eax \n" \
         "jmp   common_isr     \n"
 
 unsigned int context_switch (struct pcb *p)
@@ -79,11 +81,11 @@ unsigned int context_switch (struct pcb *p)
         "popa                      \n" // restore user context
         "iret                      \n" // return to user process
 
-    ISR_ENTRY (pgf_entry_point,   "%[PFX]")
-    ISR_ENTRY (fpe_entry_point,   "%[FPE]")
-    ISR_ENTRY (ill_entry_point,   "%[ILL]")
-    ISR_ENTRY (timer_entry_point, "%[TMR]")
-    ISR_ENTRY (kbd_entry_point,   "%[KBD]")
+    ISR_ENTRY (pgf_entry_point,   PF_EXN)
+    ISR_ENTRY (fpe_entry_point,   FPE_EXN)
+    ISR_ENTRY (ill_entry_point,   ILL_EXN)
+    ISR_ENTRY (timer_entry_point, TIMER_INTR)
+    ISR_ENTRY (kbd_entry_point,   KBD_INTR)
     "syscall_entry_point: "
         "pusha                     \n"
     "common_isr: "
@@ -106,9 +108,7 @@ unsigned int context_switch (struct pcb *p)
         : [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
           [RET] "a" (p->rc), [PSP] "c" (p->esp),
         /* "bottom half" values must be either immediate or in memory */
-          [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
-          [TMR] "i" (TIMER_INTR), [KBD] "i" (KBD_INTR), [PFX] "i" (PF_EXN),
-          [FPE] "i" (FPE_EXN), [ILL] "i" (ILL_EXN)
+          [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA)
         :
     );
     p->esp = psp;
