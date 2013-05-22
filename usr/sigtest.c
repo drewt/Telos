@@ -122,7 +122,7 @@ static void sigaction_test (void) {
     // verify that error returned for invalid input
     if (!sigaction (-1, NULL, NULL) || !sigaction (32, NULL, NULL))
         puts ("FAIL: accepted invalid signo");
-    if (sigaction (0, NULL, NULL) || sigaction (31, NULL, NULL))
+    if (sigaction (1, NULL, NULL) || sigaction (SIGXCPU, NULL, NULL))
         puts ("FAIL: rejected valid signo");
 }
 

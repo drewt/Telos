@@ -30,7 +30,7 @@
 /* signals which cannot be ignored by the user */
 #define SIG_NOIGNORE (BIT(SIGKILL) | BIT(SIGSTOP))
 
-#define SIGNO_INVALID(signo) ((signo) < 0 || (signo) > 31)
+#define SIGNO_INVALID(signo) ((signo) < 1 || (signo) >= _TELOS_SIGMAX)
 #define SIG_UNBLOCKABLE(signo) ((signo) == SIGKILL || (signo) == SIGSTOP)
 
 /* trampoline code */
@@ -247,6 +247,11 @@ void sys_kill (int pid, int sig_no)
 
     if (pti < 0 || pti >= PT_SIZE || proctab[pti].pid != pid) {
         current->rc = ESRCH;
+        return;
+    }
+
+    if (sig_no == 0) {
+        current->rc = 0;
         return;
     }
 

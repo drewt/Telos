@@ -30,7 +30,7 @@
 #define SIG_IGN  ((void(*)(int)) 4)
 
 enum sig_nums {
-    SIGABRT,
+    SIGABRT = 1,
     SIGALRM,
     SIGBUS,
     SIGCHLD,
