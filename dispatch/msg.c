@@ -65,7 +65,8 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 
         // send message
         tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
-        memcpy (dest->pbuf.buf, obuf, tmp);
+        copy_through_userspace (dest->pgdir, current->pgdir, dest->pbuf.buf,
+                obuf, tmp);
         dest->rc = tmp;
 
         // if sender expects reply, block in receiver's reply queue
@@ -138,7 +139,8 @@ void sys_recv (int *src_pid, void *buffer, int length) {
 
         // receive message
         tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
-        memcpy (buffer, src->pbuf.buf, tmp);
+        copy_through_userspace (current->pgdir, src->pgdir, buffer,
+                src->pbuf.buf, tmp);
         current->rc = tmp;
     }
 }
@@ -172,7 +174,9 @@ void sys_reply (int src_pid, void *buffer, int length) {
 
     // send reply
     tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
-    memcpy (src->reply_blk.buf, buffer, tmp);
+    copy_through_userspace (src->pgdir, current->pgdir, src->reply_blk.buf,
+            buffer, tmp);
+    //memcpy (src->reply_blk.buf, buffer, tmp);
     current->rc = tmp;
     src->rc = tmp;
 

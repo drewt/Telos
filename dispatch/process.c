@@ -67,6 +67,7 @@ int create_process (void (*func)(int,char*), int argc, char **argv,
     int i;
     void *frame;
     void *pstack;
+    void *vstack;
     struct pcb *p;
     unsigned long *args;
 
@@ -97,18 +98,25 @@ int create_process (void (*func)(int,char*), int argc, char **argv,
     if (p->pgdir == NULL)
         return -ENOMEM;
 
+/*    pstack = (void*) 0x00C00000;
+    if (map_pages (p->pgdir, (ulong) pstack, 8, PE_U | PE_RW, &p->page_mem))
+        return -ENOMEM;
+
+    p->stack_mem = pstack;
+*/    vstack = (void*) virt_to_phys (p->pgdir, (ulong) pstack);
+
     sig_init (p);
     files_init (p);
 
     // the frame and arguments are placed differently if the process
     // runs with supervisor privileges
     if (flags & PFLAG_SUPER) {
-        frame = ((char*) pstack + STACK_SIZE - S_CONTEXT_SIZE - 128);
+        frame = ((char*) vstack + STACK_SIZE - S_CONTEXT_SIZE - 128);
         put_iret_frame_super (frame, (ulong) func);
         args = (ulong*) ((ulong) frame + S_CONTEXT_SIZE);
     } else {
-        frame = (void*) ((ulong) pstack + 32 * U_CONTEXT_SIZE);
-        ulong esp = (ulong) ((char*) pstack + STACK_SIZE - 128);
+        frame = (void*) ((ulong) vstack + 32 * U_CONTEXT_SIZE);
+        ulong esp = (ulong) ((char*) vstack + STACK_SIZE - 128);
         put_iret_frame (frame, (ulong) func, esp);
         args = (ulong*) esp;
     }

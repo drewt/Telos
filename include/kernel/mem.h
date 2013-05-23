@@ -45,6 +45,10 @@
 #define PAGE_BASE(a) \
     ((a) & ~0xFFF)
 
+#define PE_P  0x1
+#define PE_RW 0x2
+#define PE_U  0x4
+
 extern unsigned long _kernel_pgd;
 extern unsigned long _kernel_high_pgt;
 
@@ -81,7 +85,10 @@ void hfree (struct mem_header *hdr);
 struct pf_info *kalloc_page (void);
 void kfree_page (struct pf_info *page);
 int paging_init (unsigned long start, unsigned long end);
-ulong *pgdir_create (list_t page_list);
+pmap_t pgdir_create (list_t page_list);
+ulong virt_to_phys (pmap_t pgdir, ulong addr);
+int map_pages (pmap_t pgdir, ulong start, int pages, uchar attr,
+        list_t page_list);
 
 static inline struct mem_header *mem_ptoh (void *addr)
 {

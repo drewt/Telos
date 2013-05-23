@@ -30,10 +30,6 @@
 
 #include <string.h>
 
-#define PE_P  0x1
-#define PE_RW 0x2
-#define PE_U  0x4
-
 #define ADDR_TO_PDI(addr) (((addr) & 0xFFC00000) >> 22)
 #define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
 
@@ -43,10 +39,10 @@ static LIST_HEAD (frame_pool);
 /* page frame metadata */
 static struct pf_info *frame_table;
 
-static ulong *kernel_pgdir;
+static pmap_t kernel_pgdir;
 
 //-----------------------------------------------------------------------------
-static inline pte_t *addr_to_pte (ulong *pgdir, ulong frame)
+static inline pte_t *addr_to_pte (pmap_t pgdir, ulong frame)
 {
     pte_t pde = pgdir[ADDR_TO_PDI(frame)];
     pte_t *pgtab = (pte_t*) (pde & ~0xFFF);
@@ -54,15 +50,15 @@ static inline pte_t *addr_to_pte (ulong *pgdir, ulong frame)
 }
 
 //-----------------------------------------------------------------------------
-static inline ulong *addr_to_pde (ulong *pgdir, ulong frame)
+static inline ulong *addr_to_pde (pmap_t pgdir, ulong frame)
 {
     return pgdir + ADDR_TO_PDI(frame);
 }
 
 //-----------------------------------------------------------------------------
-void page_attr_off (ulong *pgdir, ulong start, ulong end, ulong flags)
+void page_attr_off (pmap_t pgdir, ulong start, ulong end, ulong flags)
 {
-    unsigned long *pte;
+    pte_t *pte;
     int nr_frames;
 
     pte = addr_to_pte (pgdir, start);
@@ -72,7 +68,7 @@ void page_attr_off (ulong *pgdir, ulong start, ulong end, ulong flags)
 }
 
 //-----------------------------------------------------------------------------
-void page_attr_on (ulong *pgdir, ulong start, ulong end, ulong flags)
+void page_attr_on (pmap_t pgdir, ulong start, ulong end, ulong flags)
 {
     pte_t *pte;
     int nr_frames;
@@ -89,8 +85,7 @@ void page_attr_on (ulong *pgdir, ulong start, ulong end, ulong flags)
 int paging_init (unsigned long start, unsigned long end)
 {
     struct pf_info *page;
-    ulong pdi;
-    int nr_frames;
+    int nr_frames, pdi;
 
     nr_frames = (end - start) / FRAME_SIZE;
     frame_table = kmalloc (nr_frames * sizeof (struct pf_info));
@@ -109,16 +104,101 @@ int paging_init (unsigned long start, unsigned long end)
     /* make a 'dummmy' kernel page table that only maps the kernel */
     page = kalloc_page ();
     memset ((void*) page->addr, 0, FRAME_SIZE);
-    kernel_pgdir = (ulong*) page->addr;
+    kernel_pgdir = (pmap_t) page->addr;
 
     pdi = ADDR_TO_PDI ((ulong) &KERNEL_PAGE_OFFSET);
-    kernel_pgdir[pdi] = ((ulong*) &_kernel_pgd)[pdi];
+    kernel_pgdir[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
 
     return 0;
 }
 
+int map_pages (pmap_t pgdir, ulong start, int pages, uchar attr,
+        list_t page_list)
+{
+    pte_t *pte;
+    struct pf_info *frame;
+
+    pte = pgdir + ADDR_TO_PDI (start);
+    if (!(*pte & PE_P)) {
+        if ((frame = kalloc_page ()) == NULL)
+            return -ENOMEM;
+        memset ((void*) frame->addr, 0, FRAME_SIZE);
+        *pte = frame->addr | attr | PE_P;
+        list_insert_tail (page_list, (list_entry_t) frame);
+    }
+
+    pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI (start);
+    for (int i = 0; i < pages; i++, pte++) {
+        if ((frame = kalloc_page ()) == NULL)
+            return -ENOMEM;
+        *pte = frame->addr | attr | PE_P;
+        list_insert_tail (page_list, (list_entry_t) frame);
+    }
+
+    return 0;
+}
+
+ulong virt_to_phys (pmap_t pgdir, ulong addr)
+{
+    pte_t *pte;
+
+    pte = pgdir + ADDR_TO_PDI (addr);
+    if ((*pte & PE_P) == 0)
+        return 0;
+
+    pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI (addr);
+    if ((*pte & PE_P) == 0)
+        return 0;
+
+    return (*pte & ~0xFFF) | (addr & 0xFFF);
+}
+
+int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
+{
+    char *p_src = (char*) virt_to_phys (pgdir, (ulong) src);
+    if (p_src == NULL)
+        return -1;
+
+    strncpy (dst, p_src, len);
+    return 0;
+}
+
+int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
+{
+    void *p_src = (void*) virt_to_phys (pgdir, (ulong) src);
+    if (p_src == NULL)
+        return -1;
+
+    memcpy (dst, p_src, len);
+    return 0;
+}
+
+int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
+{
+    void *p_dst = (void*) virt_to_phys (pgdir, (ulong) dst);
+    if (p_dst == NULL)
+        return -1;
+
+    memcpy (p_dst, src, len);
+    return 0;
+}
+
+int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
+        const void *src, size_t len)
+{
+    void *p_dst, *p_src;
+
+    p_dst = (void*) virt_to_phys (dst_dir, (ulong) dst);
+    p_src = (void*) virt_to_phys (src_dir, (ulong) src);
+    if (p_dst == NULL || p_src == NULL)
+        return -1;
+
+    memcpy (p_dst, p_src, len);
+    return 0;
+}
+
 //-----------------------------------------------------------------------------
-ulong *pgdir_create (list_t page_list)
+pmap_t pgdir_create (list_t page_list)
 {
     struct pf_info *page;
 
@@ -126,9 +206,10 @@ ulong *pgdir_create (list_t page_list)
         return NULL;
 
     memcpy ((void*) page->addr, &_kernel_pgd, FRAME_SIZE);
+    //memcpy ((pmap_t) page->addr, kernel_pgdir, FRAME_SIZE);
 
     list_insert_head (page_list, (list_entry_t) page);
-    return (ulong*) page->addr;
+    return (pmap_t) page->addr;
 }
 
 /*-----------------------------------------------------------------------------

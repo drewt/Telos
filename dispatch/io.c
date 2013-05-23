@@ -43,9 +43,11 @@ void sys_open (const char *pathname, int flags, ...)
     dev_t fd;
     int devno;
 
+    const char *path = (char*) virt_to_phys (current->pgdir, (ulong) pathname);
+
     // look up device corresponding to pathname
     for (devno = 0; devno < 4; devno++)
-        if (!strcmp (pathname, devmap[devno]))
+        if (!strcmp (path, devmap[devno]))
             break;
     if (devno == 4) {
         current->rc = -ENOENT;
@@ -91,13 +93,15 @@ void sys_close (int fd)
 //-----------------------------------------------------------------------------
 void sys_read (int fd, void *buf, int nbyte)
 {
+    void *p_buf = (void*) virt_to_phys (current->pgdir, (ulong) buf);
+
     if (!FD_VALID (fd)) {
         current->rc = -EBADF;
         return;
     }
 
     struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-    current->rc = dev_op->dvread ? dev_op->dvread (fd, buf, nbyte) : ENXIO;
+    current->rc = dev_op->dvread ? dev_op->dvread (fd, p_buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
@@ -105,13 +109,15 @@ void sys_read (int fd, void *buf, int nbyte)
 //-----------------------------------------------------------------------------
 void sys_write (int fd, void *buf, int nbyte)
 {
+    void *p_buf = (void*) virt_to_phys (current->pgdir, (ulong) buf);
+
     if (!FD_VALID (fd)) {
         current->rc = -EBADF;
         return;
     }
 
     struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-    current->rc = dev_op->dvwrite ? dev_op->dvwrite (fd, buf, nbyte) : ENXIO;
+    current->rc = dev_op->dvwrite ? dev_op->dvwrite (fd, p_buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
