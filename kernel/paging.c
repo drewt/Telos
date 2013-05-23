@@ -26,6 +26,7 @@
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
 #include <kernel/mem.h>
+#include <kernel/process.h>
 
 #include <string.h>
 
@@ -37,23 +38,29 @@
 #define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
 
 /* free list for page heap */
-static list_head_t frame_pool;
+static LIST_HEAD (frame_pool);
 
 /* page frame metadata */
 static struct pf_info *frame_table;
 
-static unsigned long *addr_to_pte (unsigned long *pgdir, unsigned long frame)
-{
-    unsigned long *pgtab;
-    unsigned long pde;
+static ulong *kernel_pgdir;
 
-    pde = pgdir[ADDR_TO_PDI (frame)];
-    pgtab = (unsigned long*) (pde & ~0xFFF);
+//-----------------------------------------------------------------------------
+static inline pte_t *addr_to_pte (ulong *pgdir, ulong frame)
+{
+    pte_t pde = pgdir[ADDR_TO_PDI(frame)];
+    pte_t *pgtab = (pte_t*) (pde & ~0xFFF);
     return pgtab + ADDR_TO_PTI (frame);
 }
 
-void page_protect_disable (unsigned long *pgdir, unsigned long start,
-        unsigned long end, unsigned long flags)
+//-----------------------------------------------------------------------------
+static inline ulong *addr_to_pde (ulong *pgdir, ulong frame)
+{
+    return pgdir + ADDR_TO_PDI(frame);
+}
+
+//-----------------------------------------------------------------------------
+void page_attr_off (ulong *pgdir, ulong start, ulong end, ulong flags)
 {
     unsigned long *pte;
     int nr_frames;
@@ -64,14 +71,26 @@ void page_protect_disable (unsigned long *pgdir, unsigned long start,
         *pte &= ~flags;
 }
 
+//-----------------------------------------------------------------------------
+void page_attr_on (ulong *pgdir, ulong start, ulong end, ulong flags)
+{
+    pte_t *pte;
+    int nr_frames;
+
+    pte = addr_to_pte (pgdir, start);
+    nr_frames = (PAGE_ALIGN (end) - start) / FRAME_SIZE;
+    for (int i = 0; i < nr_frames; i++, pte++)
+        *pte |= flags;
+}
+
 /*-----------------------------------------------------------------------------
  * Initialize the frame pool */
 //-----------------------------------------------------------------------------
 int paging_init (unsigned long start, unsigned long end)
 {
+    struct pf_info *page;
+    ulong pdi;
     int nr_frames;
-
-    list_init (&frame_pool);
 
     nr_frames = (end - start) / FRAME_SIZE;
     frame_table = kmalloc (nr_frames * sizeof (struct pf_info));
@@ -84,12 +103,32 @@ int paging_init (unsigned long start, unsigned long end)
     }
 
     /* disable R/W flag for read-only sections */
-    page_protect_disable (&_kernel_pgd, (unsigned long) &_urostart,
-            (unsigned long) &_uroend, PE_RW);
-    page_protect_disable (&_kernel_pgd, (unsigned long) &_krostart,
-            (unsigned long) &_kroend, PE_RW);
+    page_attr_off (&_kernel_pgd, (ulong) &_urostart, (ulong) &_uroend, PE_RW);
+    page_attr_off (&_kernel_pgd, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
+
+    /* make a 'dummmy' kernel page table that only maps the kernel */
+    page = kalloc_page ();
+    memset ((void*) page->addr, 0, FRAME_SIZE);
+    kernel_pgdir = (ulong*) page->addr;
+
+    pdi = ADDR_TO_PDI ((ulong) &KERNEL_PAGE_OFFSET);
+    kernel_pgdir[pdi] = ((ulong*) &_kernel_pgd)[pdi];
 
     return 0;
+}
+
+//-----------------------------------------------------------------------------
+ulong *pgdir_create (list_t page_list)
+{
+    struct pf_info *page;
+
+    if ((page = kalloc_page ()) == NULL)
+        return NULL;
+
+    memcpy ((void*) page->addr, &_kernel_pgd, FRAME_SIZE);
+
+    list_insert_head (page_list, (list_entry_t) page);
+    return (ulong*) page->addr;
 }
 
 /*-----------------------------------------------------------------------------

@@ -23,6 +23,7 @@ typedef unsigned short port_t;
 
 typedef unsigned short dev_t;
 
+typedef unsigned long pte_t;
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
 typedef unsigned long  ulong;

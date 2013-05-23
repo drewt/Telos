@@ -27,6 +27,9 @@
 #define FRAME_SIZE 4096
 #define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
 
+#define KERNEL_TO_PHYS(addr) \
+    ((ulong) (addr) - (ulong) &KERNEL_PAGE_OFFSET)
+
 /*
  * unsigned long PAGE_ALIGN (unsigned long a)
  *      Takes an address and rounds it up to the nearest page boundary.
@@ -43,6 +46,7 @@
     ((a) & ~0xFFF)
 
 extern unsigned long _kernel_pgd;
+extern unsigned long _kernel_high_pgt;
 
 /* linker variables */
 extern unsigned long KERNEL_PAGE_OFFSET;
@@ -77,6 +81,7 @@ void hfree (struct mem_header *hdr);
 struct pf_info *kalloc_page (void);
 void kfree_page (struct pf_info *page);
 int paging_init (unsigned long start, unsigned long end);
+ulong *pgdir_create (list_t page_list);
 
 static inline struct mem_header *mem_ptoh (void *addr)
 {

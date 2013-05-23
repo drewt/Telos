@@ -86,13 +86,16 @@ int create_process (void (*func)(int,char*), int argc, char **argv,
     p->pid += PT_SIZE;
     p->parent_pid = current->pid;
     p->flags = flags;
-    p->pgdir = (ulong*) ((ulong) &_kernel_pgd - (ulong) &KERNEL_PAGE_OFFSET);
 
     list_init (&p->send_q);
     list_init (&p->recv_q);
     list_init (&p->repl_q);
     list_init (&p->heap_mem);
     list_init (&p->page_mem);
+
+    p->pgdir = pgdir_create (&p->page_mem);
+    if (p->pgdir == NULL)
+        return -ENOMEM;
 
     sig_init (p);
     files_init (p);
