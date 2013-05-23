@@ -49,6 +49,9 @@ void isr_init (void)
         "movl  $"STR(ident)", %%eax \n" \
         "jmp   common_isr     \n"
 
+extern unsigned long _kernel_pgd;
+extern unsigned long KERNEL_PAGE_OFFSET;
+
 unsigned int context_switch (struct pcb *p)
 {
     static void *ksp; // kernel stack pointer
@@ -96,6 +99,8 @@ unsigned int context_switch (struct pcb *p)
         "movw  %%cx,    %%gs       \n"
         "movl  %%esp,   %%ecx      \n" // switch stacks
         "movl  %[KSP],  %%esp      \n"
+        "movl  %[KPD],  %%ebx      \n"
+        "movl  %%ebx,   %%cr3      \n"
         "movl  %%eax,   EAX(%%esp) \n" // save interrupt ID in %eax
         "movl  %%edx,   ECX(%%esp) \n" // save old %eax value in %ecx
         "movl  %%ecx,   EDX(%%esp) \n" // save user %esp in %edx
@@ -108,7 +113,8 @@ unsigned int context_switch (struct pcb *p)
         : [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
           [RET] "a" (p->rc), [PSP] "c" (p->esp),
         /* "bottom half" values must be either immediate or in memory */
-          [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA)
+          [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
+          [KPD] "i" ((ulong) &_kernel_pgd - 0xC0000000)
         :
     );
     p->esp = psp;
