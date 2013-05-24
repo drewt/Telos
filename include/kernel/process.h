@@ -95,7 +95,10 @@ struct pcb {
 extern struct pcb proctab[];
 extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
-int create_process (void (*func)(int,char*), int argc, char **argv,
+int create_user_process (void (*func)(int,char*), int argc, char **argv,
         unsigned long flags);
+int create_kernel_process (void (*func)(int,char*), int argc, char **argv,
+        unsigned long flags);
+
 
 #endif /* _KERNEL_PROCESS_H_ */
