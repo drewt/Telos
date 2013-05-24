@@ -79,7 +79,7 @@ struct pf_info {
 
 struct multiboot_info;
 
-unsigned long mem_init (struct multiboot_info *info);
+unsigned long mem_init (struct multiboot_info **info);
 void *hmalloc (unsigned int size, struct mem_header **hdr);
 void hfree (struct mem_header *hdr);
 struct pf_info *kalloc_page (void);

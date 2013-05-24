@@ -70,13 +70,13 @@ void kmain (struct multiboot_info *info, unsigned long magic)
 
     bprints ("Initializing machine state...\n");
     idt_install ();
+    isr_init ();
     gdt_install ();
     pic_init (0x20, 0x28); // map IRQs after exceptions/reserved vectors
     pit_init (100);        // 10ms timer
 
     bprints ("Initializing kernel subsystems...\n");
-    memtotal = mem_init (info);
-    isr_init ();
+    memtotal = mem_init (&info);
     proctab_init ();
     dev_init ();
     dispatch_init ();

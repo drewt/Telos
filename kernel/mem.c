@@ -59,6 +59,9 @@ struct mem_area {
 int rmem_i = 0;
 struct mem_area rmem[256];
 
+/* Multiboot info structure */
+static struct multiboot_info mb_info;
+
 /* ELF section headers */
 static struct elf32_shdr elf_shtab[32];
 static char elf_strtab[512];
@@ -66,20 +69,23 @@ static char elf_strtab[512];
 /*-----------------------------------------------------------------------------
  * Initializes the memory system */
 //-----------------------------------------------------------------------------
-unsigned long mem_init (struct multiboot_info *info)
+unsigned long mem_init (struct multiboot_info **info)
 {
     struct elf32_shdr *str_hdr;
     struct mem_header *heap;
 
+    memcpy (&mb_info, *info, sizeof (struct multiboot_info));
+    *info = &mb_info;
+
     // copy ELF section headers & string table into kernel memory
-    memcpy (elf_shtab, (char*) info->elf_sec.addr,
-            info->elf_sec.num * info->elf_sec.size);
-    str_hdr = &elf_shtab[info->elf_sec.shndx];
+    memcpy (elf_shtab, (char*) mb_info.elf_sec.addr,
+            mb_info.elf_sec.num * mb_info.elf_sec.size);
+    str_hdr = &elf_shtab[mb_info.elf_sec.shndx];
     memcpy (elf_strtab, (char*) str_hdr->sh_addr, str_hdr->sh_size);
 
-    if (!MULTIBOOT_MEM_VALID (info)) {
+    if (!MULTIBOOT_MEM_VALID (&mb_info)) {
         wprints ("failed to detect memory limits; assuming 8MB total");
-        info->mem_upper = 0x800000;
+        mb_info.mem_upper = 0x800000;
     }
 
     heap = (void*) KERNEL_END;
@@ -87,9 +93,9 @@ unsigned long mem_init (struct multiboot_info *info)
     heap->magic = MAGIC_FREE;
     list_insert_head (&free_list, (list_entry_t) heap);
 
-    paging_init (0x00400000, PAGE_BASE (MULTIBOOT_MEM_MAX (info)));
+    paging_init (0x00400000, PAGE_BASE (MULTIBOOT_MEM_MAX (&mb_info)));
 
-    return MULTIBOOT_MEM_MAX (info) - KERNEL_END;
+    return MULTIBOOT_MEM_MAX (&mb_info) - KERNEL_TO_PHYS (KERNEL_END);
 }
 
 /*-----------------------------------------------------------------------------
