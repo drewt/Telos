@@ -71,6 +71,17 @@ static void print_cpu_context (struct ctxt *context)
     dump_registers (reg);
 }
 
+/*
+ * XXX: grotesque hack to make up for dump signal handling code
+ *      which assumes no error code was pushed on the stack.
+ */
+static inline void exn_kill (struct ctxt *cx, int sig)
+{
+    cx->stack[0] = cx->stack[1];
+    cx->stack[1] = cx->stack[2];
+    __kill (current, sig);
+}
+
 void exn_page_fault (void)
 {
     ulong error, eip, addr;
@@ -92,7 +103,7 @@ void exn_page_fault (void)
 
     dump_registers (current->esp);
 
-    __kill (current, SIGSEGV);
+    exn_kill (current->esp, SIGSEGV);
     ready (current);
     new_process ();
 }
