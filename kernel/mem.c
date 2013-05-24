@@ -43,7 +43,8 @@
 #define MAGIC_FREE 0xF2EEB10C
 
 #define KERNEL_END \
-    (PAGE_ALIGN((unsigned long)&_kend) - (unsigned long)&KERNEL_PAGE_OFFSET)
+    (PAGE_ALIGN((ulong)&_kend))
+//    (PAGE_ALIGN((unsigned long)&_kend) - (unsigned long)&KERNEL_PAGE_OFFSET)
 
 /* free list for kernel heap */
 static LIST_HEAD (free_list);
@@ -63,87 +64,12 @@ static struct elf32_shdr elf_shtab[32];
 static char elf_strtab[512];
 
 /*-----------------------------------------------------------------------------
- * Marks a memory area as reserved, inserting it into a sorted list of reserved
- * memory areas */
-//-----------------------------------------------------------------------------
-static void mark_reserved (list_t memory, unsigned long addr,
-        unsigned long size)
-{
-    struct mem_area *it, *block;
-    
-    block = &rmem[rmem_i++];
-    block->addr = addr;
-    block->size = size;
-
-    if (list_empty (memory)) {
-        list_insert_head (memory, (list_entry_t) block);
-        return;
-    }
-
-    /* iterate until finding the block that 'block' belongs before */
-    list_iterate (memory, it, struct mem_area*, chain) {
-        if (addr < it->addr) {
-            unsigned long diff = it->addr - addr;
-            if (diff >= size)
-                break; // 'block' goes before 'it'
-            kprintf ("*** TODO ***: overlapping allocation\n");
-            return; // overlap
-        }
-
-        unsigned long diff = addr - it->addr;
-        if (diff < it->size) {
-            if (diff + size <= it->size)
-                return; // already reserved
-            kprintf ("*** TODO ***: overlapping allocation\n");
-            return; // overlap
-        }
-    }
-
-    insqueue ((list_entry_t) block, list_prev ((list_entry_t) it));
-}
-
-/*-----------------------------------------------------------------------------
- * Initializes the free list given a list of reserved memory areas */
-//-----------------------------------------------------------------------------
-static void init_free_list (list_t res_list, unsigned long limit)
-{
-    struct mem_header *head;
-    struct mem_area *rsv;
-
-    rsv = (struct mem_area*) list_remove_head (res_list);
-    head = (struct mem_header*) (rsv->addr + rsv->size);
-    head->size = limit - (unsigned long) head;
-    head->magic = MAGIC_FREE;
-    list_insert_head (&free_list, (list_entry_t) head);
-
-    /* punch holes in the free list based on entries in res_list */
-    list_iterate (res_list, rsv, struct mem_area*, chain) {
-        struct mem_header *tail, *new;
-        tail = (struct mem_header*) list_last (&free_list);
-        new = (struct mem_header*) (rsv->addr + rsv->size); // XXX: overflow!
-
-        if ((unsigned long) new >= limit) {
-            tail->size = rsv->addr - (unsigned long) tail->data;
-            break;
-        }
-
-        unsigned long diff = new->data - tail->data;
-        new->size = tail->size - diff;
-        new->magic = MAGIC_FREE;
-
-        tail->size = rsv->addr - (unsigned long) tail->data;
-
-        list_insert_tail (&free_list, (list_entry_t) new);
-    }
-}
-
-/*-----------------------------------------------------------------------------
  * Initializes the memory system */
 //-----------------------------------------------------------------------------
 unsigned long mem_init (struct multiboot_info *info)
 {
     struct elf32_shdr *str_hdr;
-    list_head_t res_list;
+    struct mem_header *heap;
 
     // copy ELF section headers & string table into kernel memory
     memcpy (elf_shtab, (char*) info->elf_sec.addr,
@@ -156,12 +82,13 @@ unsigned long mem_init (struct multiboot_info *info)
         info->mem_upper = 0x800000;
     }
 
-    list_init (&res_list);
+    heap = (void*) KERNEL_END;
+    heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - KERNEL_END;
+    heap->magic = MAGIC_FREE;
+    list_insert_head (&free_list, (list_entry_t) heap);
 
-    mark_reserved (&res_list, 0x00000000, KERNEL_END);
-    mark_reserved (&res_list, 0x00400000, 0x00400000);
-    init_free_list (&res_list, MULTIBOOT_MEM_MAX (info));
-    paging_init (0x00400000, 0x00800000);
+    paging_init (0x00400000, PAGE_BASE (MULTIBOOT_MEM_MAX (info)));
+
     return MULTIBOOT_MEM_MAX (info) - KERNEL_END;
 }
 

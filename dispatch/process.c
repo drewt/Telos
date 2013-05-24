@@ -82,10 +82,6 @@ int create_kernel_process (void (*func)(int,char*), int argc, char **argv,
     if ((p = get_free_pcb ()) == NULL)
         return -EAGAIN;
 
-    if ((stack_mem = kmalloc (STACK_SIZE)) == NULL)
-        return -ENOMEM;
-
-    p->stack_mem = stack_mem;
     p->timestamp = tick_count;
     p->pid += PT_SIZE;
     p->parent_pid = 0;
@@ -93,6 +89,10 @@ int create_kernel_process (void (*func)(int,char*), int argc, char **argv,
     p->pgdir = (pmap_t) KERNEL_TO_PHYS (&_kernel_pgd);
 
     pcb_init (p);
+
+    if ((stack_mem = kmalloc (STACK_SIZE)) == NULL)
+        return -ENOMEM;
+    list_insert_tail (&p->heap_mem, (list_entry_t) mem_ptoh (stack_mem));
 
     frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
     put_iret_frame_super (frame, (ulong) func);
@@ -144,6 +144,7 @@ int create_user_process (void (*func)(int,char*), int argc, char **argv,
 
     if ((v_stack = (ulong) kmalloc (STACK_SIZE)) == 0)
         return -ENOMEM;
+    list_insert_tail (&p->heap_mem, (list_entry_t)mem_ptoh ((void*)v_stack));
 
     v_frame = (void*) ((ulong) v_stack + 32*U_CONTEXT_SIZE);
     esp = v_stack + STACK_SIZE - 128;
@@ -184,7 +185,6 @@ void sys_exit (int status)
     __kill (pit, SIGCHLD);
 
     // free memory allocated to process
-    //kfree (current->stack_mem);
     dequeue_iterate (&current->page_mem, mit, struct pf_info*)
         kfree_page (mit);
     dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
