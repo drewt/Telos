@@ -72,7 +72,7 @@ static void print_cpu_context (struct ctxt *context)
 }
 
 /*
- * XXX: grotesque hack to make up for dump signal handling code
+ * XXX: grotesque hack to make up for dumb signal handling code
  *      which assumes no error code was pushed on the stack.
  */
 static inline void exn_kill (struct ctxt *cx, int sig)
@@ -97,7 +97,7 @@ void exn_page_fault (void)
                  error & 2 ? "write to" : "read from",
                  addr);
     } else {
-        kprintf ("\tpage not present\n");
+        kprintf ("\tpage not present: %x\n", addr);
     }
     kprintf ("\teip=%x\n\n", eip);
 
