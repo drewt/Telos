@@ -33,6 +33,9 @@
 #define ADDR_TO_PDI(addr) (((addr) & 0xFFC00000) >> 22)
 #define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
 
+#define PAGES_IN_RANGE(addr,len) \
+    ((((addr & 0xFFF) + len) / FRAME_SIZE) + 1)
+
 /* page table for temporary mappings */
 pte_t *tmp_pgtab;
 
@@ -82,6 +85,9 @@ void page_attr_on (pmap_t pgdir, ulong start, ulong end, ulong flags)
         *pte |= flags;
 }
 
+ulong kmap_tmp_range (pmap_t pgdir, ulong addr, size_t len);
+void kunmap_range (ulong addr, size_t len);
+ulong kmap_tmp_page (pmap_t pgdir, ulong addr);
 /*-----------------------------------------------------------------------------
  * Initialize the frame pool */
 //-----------------------------------------------------------------------------
@@ -204,16 +210,78 @@ void kunmap_page (ulong addr)
     asm volatile ("invlpg (%0)" : : "b" (addr));
 }
 
+/* TODO: make this more efficient (bitmap?) */
+//-----------------------------------------------------------------------------
+static ulong get_tmp_ptes (pte_t **dst, unsigned nr_pages)
+{
+    pte_t *pte, *first = NULL;
+    ulong first_addr;
+    unsigned count = 0;
+    
+    pte = tmp_pgtab;
+
+    for (int i = 0; i < 1024; i++, pte++) {
+        if (!(*pte & PE_P)) {
+            if (first == NULL) {
+                first = pte;
+                first_addr = i*FRAME_SIZE;
+            }
+            if (++count >= nr_pages) {
+                *dst = first;
+                return 0xB0400000 + first_addr;
+            }
+        } else {
+            first = NULL;
+            count = 0;
+        }
+    }
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+ulong kmap_tmp_range (pmap_t pgdir, ulong addr, size_t len)
+{
+    pte_t *pte, *tmp;
+    ulong tmp_addr;
+    unsigned nr_pages;
+
+    nr_pages = PAGES_IN_RANGE (addr, len);
+
+    if ((tmp_addr = get_tmp_ptes (&tmp, nr_pages)) == 0)
+        return 0;
+
+    pte = addr_to_pte (pgdir, addr);
+    for (unsigned i = 0; i < nr_pages; i++, pte++, tmp++) {
+        *tmp = *pte | PE_RW;
+        asm volatile ("invlpg (%0)" : : "b" (tmp_addr + i*FRAME_SIZE));
+    }
+    return tmp_addr + (addr & 0xFFF);
+}
+
+//-----------------------------------------------------------------------------
+void kunmap_range (ulong addr, size_t len)
+{
+    pte_t *pte;
+    unsigned nr_pages;
+
+    nr_pages = PAGES_IN_RANGE (addr, len);
+    pte = addr_to_pte (&_kernel_pgd, addr);
+    for (unsigned i = 0; i < nr_pages; i++, pte++) {
+        *pte = 0;
+        asm volatile ("invlpg (%0)" : : "b" (addr + i*FRAME_SIZE));
+    }
+}
+
 //-----------------------------------------------------------------------------
 int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
 {
     ulong addr;
 
-    if ((addr = kmap_tmp_page (pgdir, (ulong) src)) == 0)
+    if ((addr = kmap_tmp_range (pgdir, (ulong) src, len)) == 0)
         return -1;
 
     memcpy (dst, (void*) addr, len);
-    kunmap_page (addr);
+    kunmap_range (addr, len);
 
     return 0;
 }
@@ -223,31 +291,32 @@ int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
 {
     ulong addr;
 
-    if ((addr = kmap_tmp_page (pgdir, (ulong) dst)) == 0)
+    if ((addr = kmap_tmp_range (pgdir, (ulong) dst, len)) == 0)
         return -1;
 
     memcpy ((void*) addr, src, len);
-    kunmap_page (addr);
+    kunmap_range (addr, len);
 
     return 0;
 }
 
+//-----------------------------------------------------------------------------
 int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
         const void *src, size_t len)
 {
     ulong dst_addr, src_addr;
 
-    if ((dst_addr = kmap_tmp_page (dst_dir, (ulong) dst)) == 0)
+    if ((dst_addr = kmap_tmp_range (dst_dir, (ulong) dst, len)) == 0)
         return -1;
 
-    if ((src_addr = kmap_tmp_page (src_dir, (ulong) src)) == 0) {
-        kunmap_page (dst_addr);
+    if ((src_addr = kmap_tmp_range (src_dir, (ulong) src, len)) == 0) {
+        kunmap_range (dst_addr, len);
         return -1;
     }
 
     memcpy ((void*) dst_addr, (void*) src_addr, len);
-    kunmap_page (dst_addr);
-    kunmap_page (src_addr);
+    kunmap_range (dst_addr, len);
+    kunmap_range (src_addr, len);
 
     return 0;
 }
@@ -255,26 +324,12 @@ int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
 //-----------------------------------------------------------------------------
 int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
 {
-    char *p_src = (char*) virt_to_phys (pgdir, (ulong) src);
-    if (p_src == NULL)
+    ulong addr;
+
+    if ((addr = kmap_tmp_range (pgdir, (ulong) src, len)) == 0)
         return -1;
 
-    strncpy (dst, p_src, len);
-    return 0;
-}
-
-//-----------------------------------------------------------------------------
-int _copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
-        const void *src, size_t len)
-{
-    void *p_dst, *p_src;
-
-    p_dst = (void*) virt_to_phys (dst_dir, (ulong) dst);
-    p_src = (void*) virt_to_phys (src_dir, (ulong) src);
-    if (p_dst == NULL || p_src == NULL)
-        return -1;
-
-    memcpy (p_dst, p_src, len);
+    strncpy (dst, (char*) addr, len);
     return 0;
 }
 
@@ -286,7 +341,6 @@ pmap_t pgdir_create (list_t page_list)
     if ((page = kalloc_page ()) == NULL)
         return NULL;
 
-    //memcpy ((void*) page->addr, &_kernel_pgd, FRAME_SIZE);
     memcpy ((pmap_t) page->addr, kernel_pgdir, FRAME_SIZE);
 
     list_insert_head (page_list, (list_entry_t) page);
