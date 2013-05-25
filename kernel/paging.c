@@ -33,6 +33,9 @@
 #define ADDR_TO_PDI(addr) (((addr) & 0xFFC00000) >> 22)
 #define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
 
+/* page table for temporary mappings */
+pte_t *tmp_pgtab;
+
 /* free list for page heap */
 static LIST_HEAD (frame_pool);
 
@@ -109,9 +112,17 @@ int paging_init (unsigned long start, unsigned long end)
     pdi = ADDR_TO_PDI ((ulong) &KERNEL_PAGE_OFFSET);
     kernel_pgdir[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
 
+    /* set up page table for temporary mappings */
+    page = kalloc_page ();
+    memset ((void*) page->addr, 0, FRAME_SIZE);
+    tmp_pgtab = (pte_t*) page->addr;
+    ((pmap_t)&_kernel_pgd)[ADDR_TO_PDI(0xB0400000)] =
+            page->addr | PE_P | PE_RW;
+
     return 0;
 }
 
+//-----------------------------------------------------------------------------
 int map_pages (pmap_t pgdir, ulong start, int pages, uchar attr,
         list_t page_list)
 {
@@ -138,6 +149,7 @@ int map_pages (pmap_t pgdir, ulong start, int pages, uchar attr,
     return 0;
 }
 
+//-----------------------------------------------------------------------------
 ulong virt_to_phys (pmap_t pgdir, ulong addr)
 {
     pte_t *pte;
@@ -153,6 +165,94 @@ ulong virt_to_phys (pmap_t pgdir, ulong addr)
     return (*pte & ~0xFFF) | (addr & 0xFFF);
 }
 
+//-----------------------------------------------------------------------------
+static inline ulong get_tmp_pte (pte_t **dst)
+{
+    pte_t *pte = tmp_pgtab;
+    for (int i = 0; i < 1024; i++, pte++) {
+        if (!(*pte & PE_P)) {
+            *dst = pte;
+            return 0xB0400000 + i*FRAME_SIZE;
+        }
+    }
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+ulong kmap_tmp_page (pmap_t pgdir, ulong addr)
+{
+    pte_t *pte, *tmp;
+    ulong tmp_addr;
+
+    if ((tmp_addr = get_tmp_pte (&tmp)) == 0)
+        return 0;
+
+    pte  = addr_to_pte (pgdir, addr);
+    *tmp = *pte | PE_RW;
+
+    asm volatile ("invlpg (%0)" : : "b" (tmp_addr));
+    return tmp_addr + (addr & 0xFFF);
+}
+
+//-----------------------------------------------------------------------------
+void kunmap_page (ulong addr)
+{
+    pte_t *pte;
+
+    pte = addr_to_pte (&_kernel_pgd, addr);
+    *pte = 0;
+    asm volatile ("invlpg (%0)" : : "b" (addr));
+}
+
+//-----------------------------------------------------------------------------
+int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
+{
+    ulong addr;
+
+    if ((addr = kmap_tmp_page (pgdir, (ulong) src)) == 0)
+        return -1;
+
+    memcpy (dst, (void*) addr, len);
+    kunmap_page (addr);
+
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
+{
+    ulong addr;
+
+    if ((addr = kmap_tmp_page (pgdir, (ulong) dst)) == 0)
+        return -1;
+
+    memcpy ((void*) addr, src, len);
+    kunmap_page (addr);
+
+    return 0;
+}
+
+int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
+        const void *src, size_t len)
+{
+    ulong dst_addr, src_addr;
+
+    if ((dst_addr = kmap_tmp_page (dst_dir, (ulong) dst)) == 0)
+        return -1;
+
+    if ((src_addr = kmap_tmp_page (src_dir, (ulong) src)) == 0) {
+        kunmap_page (dst_addr);
+        return -1;
+    }
+
+    memcpy ((void*) dst_addr, (void*) src_addr, len);
+    kunmap_page (dst_addr);
+    kunmap_page (src_addr);
+
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
 int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
 {
     char *p_src = (char*) virt_to_phys (pgdir, (ulong) src);
@@ -163,27 +263,8 @@ int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
     return 0;
 }
 
-int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
-{
-    void *p_src = (void*) virt_to_phys (pgdir, (ulong) src);
-    if (p_src == NULL)
-        return -1;
-
-    memcpy (dst, p_src, len);
-    return 0;
-}
-
-int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
-{
-    void *p_dst = (void*) virt_to_phys (pgdir, (ulong) dst);
-    if (p_dst == NULL)
-        return -1;
-
-    memcpy (p_dst, src, len);
-    return 0;
-}
-
-int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
+//-----------------------------------------------------------------------------
+int _copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
         const void *src, size_t len)
 {
     void *p_dst, *p_src;
@@ -205,8 +286,8 @@ pmap_t pgdir_create (list_t page_list)
     if ((page = kalloc_page ()) == NULL)
         return NULL;
 
-    memcpy ((void*) page->addr, &_kernel_pgd, FRAME_SIZE);
-    //memcpy ((pmap_t) page->addr, kernel_pgdir, FRAME_SIZE);
+    //memcpy ((void*) page->addr, &_kernel_pgd, FRAME_SIZE);
+    memcpy ((pmap_t) page->addr, kernel_pgdir, FRAME_SIZE);
 
     list_insert_head (page_list, (list_entry_t) page);
     return (pmap_t) page->addr;
@@ -217,10 +298,13 @@ pmap_t pgdir_create (list_t page_list)
 //-----------------------------------------------------------------------------
 struct pf_info *kalloc_page (void)
 {
+    struct pf_info *page;
+
     if (list_empty (&frame_pool))
         return NULL;
 
-    return (struct pf_info*) stack_pop (&frame_pool);
+    page = (void*) stack_pop (&frame_pool);
+    return page;
 }
 
 /*-----------------------------------------------------------------------------
