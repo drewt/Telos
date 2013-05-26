@@ -41,6 +41,7 @@ int sq_rm (struct pcb *p);
 void __kill (struct pcb *p, int sig_no);
 
 ulong virt_to_phys (pmap_t pgdir, ulong addr);
+int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len);
 int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
         const void *src, size_t len);
 

@@ -96,7 +96,7 @@ void dispatch_init (void)
 void dispatch (void)
 {    
     unsigned int req, sig_no;
-    struct sys_args *args;
+    struct sys_args args;
 
     current = next ();
     for (;;) {
@@ -109,7 +109,7 @@ void dispatch (void)
         }
 
         req  = context_switch (current);
-        args = current->esp;
+        copy_from_userspace (current->pgdir, &args, current->esp, sizeof args);
 
         if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
             switch (sysactions[req].nargs) {
@@ -117,21 +117,21 @@ void dispatch (void)
                 sysactions[req].func ();
                 break;
             case 1:
-                sysactions[req].func (args->arg0);
+                sysactions[req].func (args.arg0);
                 break;
             case 2:
-                sysactions[req].func (args->arg0, args->arg1);
+                sysactions[req].func (args.arg0, args.arg1);
                 break;
             case 3:
-                sysactions[req].func (args->arg0, args->arg1, args->arg2);
+                sysactions[req].func (args.arg0, args.arg1, args.arg2);
                 break;
             case 4:
-                sysactions[req].func (args->arg0, args->arg1, args->arg2,
-                        args->arg3);
+                sysactions[req].func (args.arg0, args.arg1, args.arg2,
+                        args.arg3);
                 break;
             case 5:
-                sysactions[req].func (args->arg0, args->arg1, args->arg2,
-                        args->arg3, args->arg4);
+                sysactions[req].func (args.arg0, args.arg1, args.arg2,
+                        args.arg3, args.arg4);
                 break;
             }
         } else {
