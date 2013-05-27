@@ -1,7 +1,7 @@
 ROOT = ..
 include ../config.mk
 
-OBJECTS = console.o kbd.o serial.o
+OBJECTS = console.o keyboard.o serial.o
 
 all: $(OBJECTS)
 
