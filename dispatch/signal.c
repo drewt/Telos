@@ -54,54 +54,78 @@ static void sig_err (void)
     for (;;);
 }
 
-/*-----------------------------------------------------------------------------
- * Prepares a process to switch contexts into the signal handler for the given
- * signal */
-//-----------------------------------------------------------------------------
-int send_signal (struct pcb *p, int sig_no)
+static void place_sig_args (void* dst, struct pcb *p, void *osp, int sig_no)
 {
-    unsigned long sig_eip;
-    unsigned long *args;
-    struct ctxt *old_ctxt, *sig_frame;
-    struct sigaction *act = &p->sigactions[sig_no];
     struct siginfo *info = &p->siginfos[sig_no];
-    bool siginfo = act->sa_flags & SA_SIGINFO;
+    ulong *args = (ulong*) kmap_tmp_range (p->pgdir, (ulong) dst,
+            12 * sizeof (ulong));
 
-    if (SIGNO_INVALID (sig_no))
-        return -1;
-
-    old_ctxt = p->esp;
-    sig_eip = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
-
-    // the frame and arguments are placed differently if the process
-    // runs with supervisor privileges
-    sig_frame = p->flags & PFLAG_SUPER ?
-        (struct ctxt*) (((ulong*) p->esp) - (siginfo ? 12 : 5)) - 1
-        : (struct ctxt*) ((char*) old_ctxt - U_CONTEXT_SIZE);
-    args = p->flags & PFLAG_SUPER ? sig_frame->stack
-        : ((ulong*) old_ctxt->iret_esp - (siginfo ? 12 : 5));
-    p->flags & PFLAG_SUPER ? put_iret_frame_super (sig_frame, sig_eip)
-        : put_iret_frame (sig_frame, sig_eip, (ulong) args);
-
-    args[0] = (unsigned long) sig_err;
-    args[1] = (unsigned long) act->sa_handler;
-    args[2] = (unsigned long) old_ctxt;
-    args[3] = (unsigned long) sig_no;
-    if (siginfo) {
+    args[0] = (ulong) sig_err;
+    args[1] = (ulong) p->sigactions[sig_no].sa_handler;
+    args[2] = (ulong) osp;
+    args[3] = (ulong) sig_no;
+    if (p->sigactions[sig_no].sa_flags & SA_SIGINFO) {
         args[4]  = info->si_errno;
         args[5]  = info->si_code;
         args[6]  = info->si_pid;
-        args[7]  = (unsigned long) info->si_addr;
+        args[7]  = (ulong) info->si_addr;
         args[8]  = info->si_status;
         args[9]  = info->si_band;
-        args[10] = (unsigned long) info->si_value.sigval_ptr;
+        args[10] = (ulong) info->si_value.sigval_ptr;
         args[11] = p->rc;
     } else {
         args[4]  = p->rc;
     }
+
+    kunmap_range ((ulong) args, 12 * sizeof (ulong));
+}
+
+static int send_signal_user (struct pcb *p, int sig_no)
+{
+    ulong *sig_esp;
+    struct ctxt *old_ctxt, *sig_frame;
+    struct sigaction *act = &p->sigactions[sig_no];
+    bool siginfo = act->sa_flags & SA_SIGINFO;
+
+    ulong u_oldctxt = (ulong) p->esp;
+    ulong u_sigframe = u_oldctxt - U_CONTEXT_SIZE;
+    ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
+
+    sig_frame = (struct ctxt*) kmap_tmp_range (p->pgdir, u_sigframe,
+            U_CONTEXT_SIZE * 2);
+    old_ctxt = (struct ctxt*) ((ulong) sig_frame + U_CONTEXT_SIZE);
+
+    sig_esp = ((ulong*) old_ctxt->iret_esp - (siginfo ? 12 : 5));
+    put_iret_frame (sig_frame, tramp_fn, (ulong) sig_esp);
+    place_sig_args (sig_esp, p, (void*) u_oldctxt, sig_no);
+
     old_ctxt->reg.eax = p->sig_ignore;
 
     p->ifp = p->esp;
+    p->esp = (void*) u_sigframe;
+    p->sig_pending &= ~(BIT (sig_no));
+    p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
+                            : (u32) (~0 << (sig_no + 1));
+
+    kunmap_range ((ulong) sig_frame, U_CONTEXT_SIZE * 2);
+    return 0;
+}
+
+static int send_signal_super (struct pcb *p, int sig_no)
+{
+    struct ctxt *old_ctxt, *sig_frame;
+    struct sigaction *act = &p->sigactions[sig_no];
+
+    bool siginfo = act->sa_flags & SA_SIGINFO;
+    ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
+
+    old_ctxt = p->esp;
+    sig_frame = (struct ctxt*) (((ulong*) p->esp) - (siginfo ? 12 : 5)) - 1;
+    put_iret_frame_super (sig_frame, tramp_fn);
+    place_sig_args (sig_frame->stack, p, old_ctxt, sig_no);
+
+    old_ctxt->reg.eax = p->sig_ignore;
+
     p->esp = sig_frame;
     p->sig_pending &= ~(BIT (sig_no));
     p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
@@ -110,23 +134,45 @@ int send_signal (struct pcb *p, int sig_no)
 }
 
 /*-----------------------------------------------------------------------------
+ * Prepares a process to switch contexts into the signal handler for the given
+ * signal */
+//-----------------------------------------------------------------------------
+int send_signal (struct pcb *p, int sig_no)
+{
+    if (SIGNO_INVALID (sig_no))
+        return -1;
+
+    return (p->flags & PFLAG_SUPER) ?
+        send_signal_super (p, sig_no)
+        : send_signal_user (p, sig_no);
+}
+
+/*-----------------------------------------------------------------------------
  * Restore CPU & signal context that was active before the current signal */
 //-----------------------------------------------------------------------------
 void sig_restore (void *osp)
 {
     // TODO: verify that osp is in valid range and properly aligned
-    struct ctxt *cx = osp;
-    current->esp = cx;
-    current->ifp = (struct ctxt*) ((ulong) cx + U_CONTEXT_SIZE);
+    //struct ctxt *cx = osp;
+    current->esp = osp;
+    current->ifp = (void*) ((ulong) osp + U_CONTEXT_SIZE);
 
-    unsigned long *old_esp;
-    old_esp = current->flags & PFLAG_SUPER
-            ? (unsigned long*) osp
-            : (unsigned long*) cx->iret_esp;
+    struct ctxt *cx = (void*) kmap_tmp_range (current->pgdir, (ulong) osp,
+            U_CONTEXT_SIZE);
+
+    ulong old_esp = current->flags & PFLAG_SUPER
+            ? (ulong) osp
+            : (ulong) cx->iret_esp;
+
+    ulong *rc = (void*) kmap_tmp_range (current->pgdir, old_esp,
+            sizeof (ulong));
 
     // restore old signal mask and return value
     current->sig_ignore = cx->reg.eax;
-    current->rc         = old_esp[-2];
+    current->rc         = rc[-2];
+
+    kunmap_range ((ulong) cx, U_CONTEXT_SIZE);
+    kunmap_range ((ulong) rc, sizeof (ulong));
 }
 
 /*-----------------------------------------------------------------------------
@@ -149,10 +195,12 @@ void sys_sigaction (int sig, struct sigaction *act, struct sigaction *oact)
     }
 
     if (oact)
-        *oact = current->sigactions[sig];
+        copy_to_userspace (current->pgdir, oact, &current->sigactions[sig],
+                sizeof (struct sigaction));
 
     if (act) {
-        current->sigactions[sig] = *act;
+        copy_from_userspace (current->pgdir, &current->sigactions[sig], act,
+                sizeof (struct sigaction));
         current->sig_accept |= BIT(sig);
     }
 
@@ -188,8 +236,11 @@ void sys_signal (int sig, void(*func)(int))
 //-----------------------------------------------------------------------------
 void sys_sigprocmask (int how, sigset_t *set, sigset_t *oset)
 {
-    if (oset)
-        *oset = ~(current->sig_ignore);
+    if (oset) {
+        u32 tmp = ~(current->sig_ignore);
+        copy_to_userspace (current->pgdir, oset, &tmp, sizeof (u32));
+    }
+
     if (set) {
         switch (how) {
         case SIG_BLOCK:
@@ -265,6 +316,7 @@ void sys_kill (pid_t pid, int sig)
     __kill (&proctab[i], sig);
     current->rc = 0;
 }
+
 void sys_sigqueue (pid_t pid, int sig, const union sigval value)
 {
     int i = PT_INDEX (pid);
