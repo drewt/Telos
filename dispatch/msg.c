@@ -1,7 +1,7 @@
 /* msg.c : message passing IPC
  */
 
-/*  Copyright 2013 Drew T.
+/*  Copyright 2013 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -29,8 +29,8 @@
  * Sends a message to another process.  If ibuf is not NULL, then the sending
  * process will block until it receives a reply from the receiving process */
 //-----------------------------------------------------------------------------
-void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
-
+void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
+{
     int tmp;
     struct pcb *dest;
 
@@ -57,7 +57,8 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
             (!dest->pbuf.id || dest->pbuf.id == current->pid)) {
 
         if (!dest->pbuf.id)
-            *((int*) dest->parg) = current->pid;
+            copy_to_userspace (dest->pgdir, dest->parg, &current->pid, sizeof (int));
+            //*((int*) dest->parg) = current->pid;
 
         // unblock receiver
         list_remove (&current->recv_q, (list_entry_t) dest);
@@ -88,35 +89,38 @@ void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen) {
 /*-----------------------------------------------------------------------------
  * Receives a message from another process */
 //-----------------------------------------------------------------------------
-void sys_recv (int *src_pid, void *buffer, int length) {
-
-    int tmp;
+void sys_recv (int *pid_ptr, void *buffer, int length)
+{
+    int tmp, src_pid;
     struct pcb *src = NULL;
 
-    if (length <= 0 || *src_pid < 0) {
+    copy_from_userspace (current->pgdir, &src_pid, pid_ptr, sizeof (int));
+
+    if (length <= 0 || src_pid < 0) {
         current->rc = -(EINVAL);
         return;
     }
 
-    if (*src_pid == 0) {
+    if (src_pid == 0) {
         if (list_empty (&current->send_q)) {
             /* no process waiting to send: block */
             current->pbuf.buf = buffer;
             current->pbuf.len = length;
             current->pbuf.id  = 0;
             current->state = STATE_BLOCKED;
-            current->parg = src_pid;
+            current->parg = pid_ptr;
             new_process ();
             return;
         } else {
             /* set *src_pid and pretend it was set all along... */
-            *src_pid = ((struct pcb*) list_first (&current->send_q))->pid;
+            src_pid = ((struct pcb*) list_first (&current->send_q))->pid;
+            copy_to_userspace (current->pgdir, pid_ptr, &src_pid, sizeof(int));
         }
     }
 
-    tmp = PT_INDEX (*src_pid);
-    if (proctab[tmp].pid != *src_pid) {
-        current->rc = -(ESRCH);
+    tmp = PT_INDEX (src_pid);
+    if (proctab[tmp].pid != src_pid) {
+        current->rc = -ESRCH;
         return;
     }
 
@@ -148,19 +152,19 @@ void sys_recv (int *src_pid, void *buffer, int length) {
 /*-----------------------------------------------------------------------------
  * Sends a reply to another process */
 //-----------------------------------------------------------------------------
-void sys_reply (int src_pid, void *buffer, int length) {
-
+void sys_reply (int src_pid, void *buffer, int length)
+{
     int tmp;
     struct pcb *src;
 
     if (length < 0 || src_pid <= 0) {
-        current->rc = -(EINVAL);
+        current->rc = -EINVAL;
         return;
     }
 
     tmp = PT_INDEX (src_pid);
     if (proctab[tmp].pid != src_pid) {
-        current->rc = -(ESRCH);
+        current->rc = -ESRCH;
         return;
     }
 
@@ -168,7 +172,7 @@ void sys_reply (int src_pid, void *buffer, int length) {
 
     // it is an error to reply before a corresponding send
     if (src->state != STATE_BLOCKED || src->reply_blk.id != current->pid) {
-        current->rc = -(EBADMSG); // XXX: better errno for this?
+        current->rc = -EBADMSG; // XXX: better errno for this?
         return;
     }
 
@@ -176,7 +180,6 @@ void sys_reply (int src_pid, void *buffer, int length) {
     tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
     copy_through_userspace (src->pgdir, current->pgdir, src->reply_blk.buf,
             buffer, tmp);
-    //memcpy (src->reply_blk.buf, buffer, tmp);
     current->rc = tmp;
     src->rc = tmp;
 
