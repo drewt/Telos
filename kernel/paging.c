@@ -36,16 +36,36 @@
 #define PAGES_IN_RANGE(addr,len) \
     ((((addr & 0xFFF) + len) / FRAME_SIZE) + 1)
 
+#define PAGE_TABLE(name) \
+    pte_t name[1024] __attribute__ ((aligned (0x1000)))
+
 /* page table for temporary mappings */
-pte_t *tmp_pgtab;
+static PAGE_TABLE (tmp_pgtab);
 
 /* free list for page heap */
 static LIST_HEAD (frame_pool);
 
 /* page frame metadata */
 static struct pf_info *frame_table;
+static ulong fp_start;
+static ulong fp_end;
 
-static pmap_t kernel_pgdir;
+//-----------------------------------------------------------------------------
+static inline struct pf_info *phys_to_info (ulong addr)
+{
+    if (addr < fp_start || addr >= fp_end)
+        return NULL;
+    return &frame_table[ (addr - fp_start) / FRAME_SIZE ];
+}
+
+//-----------------------------------------------------------------------------
+static inline struct pf_info *virt_to_info (pmap_t pgdir, ulong addr)
+{
+    ulong phys;
+    if ((phys = virt_to_phys (pgdir, addr)) == 0)
+        return NULL;
+    return phys_to_info (phys);
+}
 
 //-----------------------------------------------------------------------------
 static inline pte_t *addr_to_pte (pmap_t pgdir, ulong frame)
@@ -85,23 +105,20 @@ void page_attr_on (pmap_t pgdir, ulong start, ulong end, ulong flags)
         *pte |= flags;
 }
 
-ulong kmap_tmp_range (pmap_t pgdir, ulong addr, size_t len);
-void kunmap_range (ulong addr, size_t len);
-ulong kmap_tmp_page (pmap_t pgdir, ulong addr);
 /*-----------------------------------------------------------------------------
  * Initialize the frame pool */
 //-----------------------------------------------------------------------------
-int paging_init (unsigned long start, unsigned long end)
+int paging_init (ulong start, ulong end)
 {
-    struct pf_info *page;
-    int nr_frames, pdi;
-
-    nr_frames = (end - start) / FRAME_SIZE;
+    unsigned nr_frames = (end - start) / FRAME_SIZE;
     frame_table = kmalloc (nr_frames * sizeof (struct pf_info));
     if (frame_table == NULL)
         return -1;
 
-    for (int i = 0; i < nr_frames; i++) {
+    fp_start = start;
+    fp_end = end;
+
+    for (unsigned i = 0; i < nr_frames; i++) {
         frame_table[i].addr = start + (i * FRAME_SIZE);
         list_insert_tail (&frame_pool, (list_entry_t) &frame_table[i]);
     }
@@ -110,20 +127,9 @@ int paging_init (unsigned long start, unsigned long end)
     page_attr_off (&_kernel_pgd, (ulong) &_urostart, (ulong) &_uroend, PE_RW);
     page_attr_off (&_kernel_pgd, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
 
-    /* make a 'dummmy' kernel page table that only maps the kernel */
-    page = kalloc_page ();
-    memset ((void*) page->addr, 0, FRAME_SIZE);
-    kernel_pgdir = (pmap_t) page->addr;
-
-    pdi = ADDR_TO_PDI ((ulong) &KERNEL_PAGE_OFFSET);
-    kernel_pgdir[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
-
     /* set up page table for temporary mappings */
-    page = kalloc_page ();
-    memset ((void*) page->addr, 0, FRAME_SIZE);
-    tmp_pgtab = (pte_t*) page->addr;
     ((pmap_t)&_kernel_pgd)[ADDR_TO_PDI(0xB0400000)] =
-            page->addr | PE_P | PE_RW;
+        KERNEL_TO_PHYS (tmp_pgtab) | PE_P | PE_RW;
 
     return 0;
 }
@@ -185,16 +191,15 @@ static inline ulong get_tmp_pte (pte_t **dst)
 }
 
 //-----------------------------------------------------------------------------
-ulong kmap_tmp_page (pmap_t pgdir, ulong addr)
+ulong kmap_tmp_page (ulong addr)
 {
-    pte_t *pte, *tmp;
+    pte_t *tmp;
     ulong tmp_addr;
 
     if ((tmp_addr = get_tmp_pte (&tmp)) == 0)
         return 0;
 
-    pte  = addr_to_pte (pgdir, addr);
-    *tmp = *pte | PE_RW;
+    *tmp = addr | PE_P | PE_RW;
 
     asm volatile ("invlpg (%0)" : : "b" (tmp_addr));
     return tmp_addr + (addr & 0xFFF);
@@ -203,9 +208,7 @@ ulong kmap_tmp_page (pmap_t pgdir, ulong addr)
 //-----------------------------------------------------------------------------
 void kunmap_page (ulong addr)
 {
-    pte_t *pte;
-
-    pte = addr_to_pte (&_kernel_pgd, addr);
+    pte_t *pte = addr_to_pte (&_kernel_pgd, addr);
     *pte = 0;
     asm volatile ("invlpg (%0)" : : "b" (addr));
 }
@@ -261,11 +264,8 @@ ulong kmap_tmp_range (pmap_t pgdir, ulong addr, size_t len)
 //-----------------------------------------------------------------------------
 void kunmap_range (ulong addr, size_t len)
 {
-    pte_t *pte;
-    unsigned nr_pages;
-
-    nr_pages = PAGES_IN_RANGE (addr, len);
-    pte = addr_to_pte (&_kernel_pgd, addr);
+    unsigned nr_pages = PAGES_IN_RANGE (addr, len);
+    pte_t *pte = addr_to_pte (&_kernel_pgd, addr);
     for (unsigned i = 0; i < nr_pages; i++, pte++) {
         *pte = 0;
         asm volatile ("invlpg (%0)" : : "b" (addr + i*FRAME_SIZE));
@@ -276,7 +276,6 @@ void kunmap_range (ulong addr, size_t len)
 int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
 {
     ulong addr;
-
     if ((addr = kmap_tmp_range (pgdir, (ulong) src, len)) == 0)
         return -1;
 
@@ -290,7 +289,6 @@ int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
 int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len)
 {
     ulong addr;
-
     if ((addr = kmap_tmp_range (pgdir, (ulong) dst, len)) == 0)
         return -1;
 
@@ -345,7 +343,6 @@ int copy_string_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
 int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
 {
     ulong addr;
-
     if ((addr = kmap_tmp_range (pgdir, (ulong) src, len)) == 0)
         return -1;
 
@@ -357,11 +354,20 @@ int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
 pmap_t pgdir_create (list_t page_list)
 {
     struct pf_info *page;
+    ulong vaddr;
+    unsigned pdi;
 
-    if ((page = kalloc_page ()) == NULL)
+    struct pf_info *kzalloc_page (void);
+    if ((page = kzalloc_page ()) == NULL)
         return NULL;
 
-    memcpy ((pmap_t) page->addr, kernel_pgdir, FRAME_SIZE);
+    if ((vaddr = kmap_tmp_page (page->addr)) == 0) {
+        kfree_page (page);
+        return NULL;
+    }
+
+    pdi = ADDR_TO_PDI ((ulong) &KERNEL_PAGE_OFFSET);
+    ((pmap_t) vaddr)[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
 
     list_insert_head (page_list, (list_entry_t) page);
     return (pmap_t) page->addr;
@@ -380,6 +386,28 @@ struct pf_info *kalloc_page (void)
     page = (void*) stack_pop (&frame_pool);
     return page;
 }
+
+/*-----------------------------------------------------------------------------
+ * Allocate a page from the frame pool and fill it with zeros */
+//-----------------------------------------------------------------------------
+struct pf_info *kzalloc_page (void)
+{
+    struct pf_info *page;
+    ulong vaddr;
+
+    if ((page = kalloc_page ()) == NULL)
+        return NULL;
+
+    if ((vaddr = kmap_tmp_page (page->addr)) == 0) {
+        kfree_page (page);
+        return NULL;
+    }
+
+    memset ((void*) vaddr, 0, FRAME_SIZE);
+    kunmap_page (vaddr);
+    return page;
+}
+
 
 /*-----------------------------------------------------------------------------
  * Retrun a page to the frame pool */
