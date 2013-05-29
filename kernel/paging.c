@@ -321,6 +321,26 @@ int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
     return 0;
 }
 
+int copy_string_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
+        const void *src, size_t len)
+{
+    ulong dst_addr, src_addr;
+
+    if ((dst_addr = kmap_tmp_range (dst_dir, (ulong) dst, len)) == 0)
+        return -1;
+
+    if ((src_addr = kmap_tmp_range (src_dir, (ulong) src, len)) == 0) {
+        kunmap_range (dst_addr, len);
+        return -1;
+    }
+
+    strncpy ((void*) dst_addr, (void*) src_addr, len);
+    kunmap_range (dst_addr, len);
+    kunmap_range (src_addr, len);
+
+    return 0;
+}
+
 //-----------------------------------------------------------------------------
 int copy_user_string (pmap_t pgdir, char *dst, const char *src, size_t len)
 {

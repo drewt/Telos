@@ -114,7 +114,6 @@ int create_user_process (void (*func)(int,char*), int argc, char **argv,
     struct pcb  *p;
     ulong       v_stack, esp;
     ulong       *args;
-    //void        *p_frame;
     void        *v_frame;
 
     if ((p = get_free_pcb ()) == NULL)
@@ -131,17 +130,41 @@ int create_user_process (void (*func)(int,char*), int argc, char **argv,
     if (p->pgdir == NULL)
         return -ENOMEM;
 
-    /*v_stack = 0x00C00000;
+#if 1
+    ulong v_heap = 0x01000000;
+    if (map_pages (p->pgdir, v_heap, 1, PE_U | PE_RW, &p->page_mem))
+        return -ENOMEM;
+
+    char *kargv[argc];
+    copy_from_userspace (current->pgdir, kargv, argv, sizeof (char*) * argc);
+
+    ulong arg_addr = v_heap + 128;
+    char ** uargv = (void*) kmap_tmp_range (p->pgdir, v_heap, 128);
+    for (int i = 0; i < argc; i++, arg_addr += 128) {
+        uargv[i] = (char*) arg_addr;
+        copy_string_through_userspace (p->pgdir, current->pgdir,
+                (void*) arg_addr, kargv[i], 128);
+    }
+
+    void *p_frame;
+    v_stack = 0x00C00000;
     if (map_pages (p->pgdir, v_stack, 8, PE_U | PE_RW, &p->page_mem))
         return -ENOMEM;
 
     v_frame = (void*) (v_stack + 32 * U_CONTEXT_SIZE);
-    p_frame = (void*) virt_to_phys (p->pgdir, (ulong) v_frame);
+    p_frame = (void*) kmap_tmp_range (p->pgdir, (ulong) v_frame,
+            U_CONTEXT_SIZE);
     esp = v_stack + STACK_SIZE - 128;
     put_iret_frame (p_frame, (ulong) func, esp);
+    kunmap_range ((ulong) p_frame, U_CONTEXT_SIZE);
 
-    args = (ulong*) virt_to_phys (p->pgdir, esp);*/
+    args = (void*) kmap_tmp_range (p->pgdir, esp, sizeof (ulong) * 3);
+    args[0] = (ulong) exit;
+    args[1] = (ulong) argc;
+    args[2] = (ulong) v_heap;
+    kunmap_range ((ulong) args, sizeof (ulong) * 3);
 
+#else
     if ((v_stack = (ulong) kmalloc (STACK_SIZE)) == 0)
         return -ENOMEM;
     list_insert_tail (&p->heap_mem, (list_entry_t)mem_ptoh ((void*)v_stack));
@@ -149,11 +172,12 @@ int create_user_process (void (*func)(int,char*), int argc, char **argv,
     v_frame = (void*) ((ulong) v_stack + 32*U_CONTEXT_SIZE);
     esp = v_stack + STACK_SIZE - 128;
     put_iret_frame (v_frame, (ulong) func, esp);
-    args = (ulong*) esp;
 
+    args = (ulong*) esp;
     args[0] = (ulong) exit;
     args[1] = (ulong) argc;
     args[2] = (ulong) argv;
+#endif
 
     p->esp = v_frame;
     p->ifp = (void*) ((ulong) p->esp + U_CONTEXT_SIZE);

@@ -45,6 +45,8 @@ int copy_to_userspace (pmap_t pgdir, void *dst, const void *src, size_t len);
 int copy_from_userspace (pmap_t pgdir, void *dst, const void *src, size_t len);
 int copy_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
         const void *src, size_t len);
+int copy_string_through_userspace (pmap_t dst_dir, pmap_t src_dir, void *dst,
+        const void *src, size_t len);
 ulong kmap_tmp_range (pmap_t pgdir, ulong addr, size_t len);
 void kunmap_range (ulong addr, size_t len);
 
