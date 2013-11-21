@@ -30,46 +30,46 @@
 extern void(*int_errs[48])(void);
 
 struct idt_entry {
-    unsigned int off_low : 16;
-    unsigned int selector : 16;
-    unsigned int reserved : 5;
-    unsigned int zero : 3;
-    unsigned int type : 5;
-    unsigned int dpl : 2;
-    unsigned int present : 1;
-    unsigned int off_high : 16;
+	unsigned int off_low : 16;
+	unsigned int selector : 16;
+	unsigned int reserved : 5;
+	unsigned int zero : 3;
+	unsigned int type : 5;
+	unsigned int dpl : 2;
+	unsigned int present : 1;
+	unsigned int off_high : 16;
 };
 
 struct idt_entry idt[256];
 
-#define IDT_GATE(num,handler,selector)  \
-{                                       \
-    .off_low  = handler,                \
-    .selector = selector,               \
-    .zero     = 0,                      \
-    .type     = INTR_GATE,              \
-    .dpl      = 3,                      \
-    .present  = 1,                      \
-    .off_high = handler >> 16           \
+#define IDT_GATE(num,handler,selector)		\
+{						\
+	.off_low	= handler,		\
+	.selector	= selector,		\
+	.zero		= 0,			\
+	.type		= INTR_GATE,		\
+	.dpl		= 3,			\
+	.present	= 1,			\
+	.off_high	= handler >> 16		\
 }
 
 /*-----------------------------------------------------------------------------
  * Installs a trap gate at vector [num] with the given handler */
 //-----------------------------------------------------------------------------
-void set_gate (unsigned int num, unsigned long handler,
-        unsigned short selector)
+void set_gate(unsigned int num, unsigned long handler,
+		unsigned short selector)
 {
-    idt[num] = (struct idt_entry) IDT_GATE (num, handler, selector);
+	idt[num] = (struct idt_entry) IDT_GATE(num, handler, selector);
 }
 
 /*-----------------------------------------------------------------------------
  * Installs an interrupt descriptor table in which all exceptions and hardware
  * interrupts signal an error and halt the kernel */
 //-----------------------------------------------------------------------------
-void idt_install (void)
+void idt_install(void)
 {
-    memset (idt, 0, sizeof (struct idt_entry) * 256);
-    for (int i = 0; i < 48; i++)
-        set_gate (i, (unsigned long) int_errs[i], SEG_KCODE);
-    load_idt (&idt, sizeof (struct idt_entry) * 256);
+	memset(idt, 0, sizeof(struct idt_entry) * 256);
+	for (int i = 0; i < 48; i++)
+		set_gate(i, (unsigned long) int_errs[i], SEG_KCODE);
+	load_idt(&idt, sizeof(struct idt_entry) * 256);
 }

@@ -79,28 +79,28 @@
  * A generic doubly-linked list.
  */
 struct list_entry {
-    struct list_entry *next;
-    struct list_entry *prev;
+	struct list_entry *next;
+	struct list_entry *prev;
 };
 
-typedef struct list_entry      *list_t;
-typedef	struct list_entry      list_head_t;
-typedef	struct list_entry      list_chain_t;
-typedef	struct list_entry      *list_entry_t;
+typedef struct list_entry	*list_t;
+typedef	struct list_entry	list_head_t;
+typedef	struct list_entry	list_chain_t;
+typedef	struct list_entry	*list_entry_t;
 
 /*
  * Queue interface
  */
-#define enqueue(queue,elt)      list_insert_tail(queue, elt)
-#define dequeue(queue)          list_remove_head(queue)
-#define queue_peek(queue)       list_first(queue)
+#define enqueue(queue,elt)	list_insert_tail(queue, elt)
+#define dequeue(queue)		list_remove_head(queue)
+#define queue_peek(queue)	list_first(queue)
 
 /*
  * Stack interface
  */
-#define stack_push(stack,elt)   list_insert_head(stack, elt)
-#define stack_pop(stack)        list_remove_head(stack)
-#define stack_peek(stack)       list_first(stack)
+#define stack_push(stack,elt)	list_insert_head(stack, elt)
+#define stack_pop(stack)	list_remove_head(stack)
+#define stack_peek(stack)	list_first(stack)
 
 /*
  * Static initialization macros
@@ -108,126 +108,126 @@ typedef	struct list_entry      *list_entry_t;
 #define LIST_INIT(list) { &(list), &(list) }
 
 #define LIST_HEAD(name) \
-    list_head_t name = LIST_INIT(name)
+	list_head_t name = LIST_INIT(name)
 
 /* Initialize the given list */
-static inline void list_init (list_t q)
+static inline void list_init(list_t q)
 {
-    q->next = q->prev = q;
+	q->next = q->prev = q;
 }
 
 /* Tests whether a list is empty */
-static inline int list_empty (list_t q)
+static inline int list_empty(list_t q)
 {
-    return q == q->next;
+	return q == q->next;
 }
 
 /* Returns the first entry in the list */
-static inline list_entry_t list_first (list_t q)
+static inline list_entry_t list_first(list_t q)
 {
-    return q->next;
+	return q->next;
 }
 
 /* Returns the first entry in the list, or NULL if the list is empty. */
-static inline list_entry_t list_first_safe (list_t q)
+static inline list_entry_t list_first_safe(list_t q)
 {
-    return list_empty (q) ? (list_entry_t) 0 : q->next;
+	return list_empty(q) ? (list_entry_t) 0 : q->next;
 }
 
 /* Returns the entry after an item in the list */
-static inline list_entry_t list_next (list_entry_t qe)
+static inline list_entry_t list_next(list_entry_t qe)
 {
-    return qe->next;
+	return qe->next;
 }
 
 /* Returns the last entry in the list */
-static inline list_entry_t list_last (list_t q)
+static inline list_entry_t list_last(list_t q)
 {
-    return q->prev;
+	return q->prev;
 }
 
 /* Returns the entry before an item in the list */
-static inline list_entry_t list_prev (list_entry_t qe)
+static inline list_entry_t list_prev(list_entry_t qe)
 {
-    return qe->prev;
+	return qe->prev;
 }
 
 /* Tests whether a new entry is the end of the list */
 static inline int list_end(list_t q, list_entry_t qe)
 {
-    return q == qe;
+	return q == qe;
 }
 
 /* Adds the element at the tail of the list */
-static inline void list_insert_tail (list_t q, list_entry_t elt)
+static inline void list_insert_tail(list_t q, list_entry_t elt)
 {
-    elt->next = q;
-    elt->prev = q->prev;
-    q->prev->next = elt;
-    q->prev = elt;
+	elt->next = q;
+	elt->prev = q->prev;
+	q->prev->next = elt;
+	q->prev = elt;
 }
 
 /* Adds the element at the head of the list */
-static inline void list_insert_head (list_t q, list_entry_t elt)
+static inline void list_insert_head(list_t q, list_entry_t elt)
 {
-    elt->next = q->next;
-    elt->prev = q;
-    elt->next->prev = elt;
-    q->next = elt;
+	elt->next = q->next;
+	elt->prev = q;
+	elt->next->prev = elt;
+	q->next = elt;
 }
 
 /* Removes and returns the element at the head of the list */
-static inline list_entry_t list_remove_head (list_t q)
+static inline list_entry_t list_remove_head(list_t q)
 {
-    list_entry_t elt;
+	list_entry_t elt;
 
-    if (list_empty (q))
-        return (list_entry_t) 0;
+	if (list_empty(q))
+		return (list_entry_t) 0;
     
-    elt = q->next;
-    elt->next->prev = q;
-    q->next = elt->next;
-    return elt;
+	elt = q->next;
+	elt->next->prev = q;
+	q->next = elt->next;
+	return elt;
 }
 
 /* Removes and returns the element at the tail of the list */
-static inline list_entry_t list_remove_tail (list_t q)
+static inline list_entry_t list_remove_tail(list_t q)
 {
-    list_entry_t elt;
+	list_entry_t elt;
 
-    if (list_empty (q))
-        return (list_entry_t) 0;
+	if (list_empty(q))
+		return (list_entry_t) 0;
 
-    elt = q->prev;
-    elt->prev->next = q;
-    q->prev = elt->prev;
-    return elt;
+	elt = q->prev;
+	elt->prev->next = q;
+	q->prev = elt->prev;
+	return elt;
 }
 
-static inline void list_replace_entry (list_entry_t from, list_entry_t to)
+static inline void list_replace_entry(list_entry_t from, list_entry_t to)
 {
-    from->prev->next = to;
-    from->next->prev = to;
+	from->prev->next = to;
+	from->next->prev = to;
 
-    to->next = from->next;
-    to->prev = from->prev;
+	to->next = from->next;
+	to->prev = from->prev;
 }
 
 /* Removes an arbitrary element from the list.
  * Assumes that the element is on the list.    */
-static inline void list_remove (list_t q, list_entry_t elt)
+static inline void list_remove(list_t q, list_entry_t elt)
 {
-    elt->next->prev = elt->prev;
-    elt->prev->next = elt->next;
+	elt->next->prev = elt->prev;
+	elt->prev->next = elt->next;
 }
 
 /* Insert 'elt' after 'pred' in the list. */
-static inline void insqueue (list_entry_t elt, list_entry_t pred)
+static inline void insqueue(list_entry_t elt, list_entry_t pred)
 {
-    elt->next = pred->next;
-    elt->prev = pred;
-    (pred->next)->prev = elt;
-    pred->next = elt;
+	elt->next = pred->next;
+	elt->prev = pred;
+	(pred->next)->prev = elt;
+	pred->next = elt;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -242,41 +242,41 @@ static inline void insqueue (list_entry_t elt, list_entry_t pred)
  *      void list_enter(list_t q, <type> elt, <type>, <chain field>)
  */
 #define list_enter(head, elt, type, field)\
-    MACRO_BEGIN                                             \
-        list_entry_t prev;                                  \
-                                                            \
-        prev = (head)->prev;                                \
-        if ((head) == prev) {                               \
-            (head)->next = (list_entry_t) (elt);            \
-        }                                                   \
-        else {                                              \
-            ((type)prev)->field.next = (list_entry_t)(elt); \
-	}                                                   \
-        (elt)->field.prev = prev;                           \
-        (elt)->field.next = head;                           \
-        (head)->prev = (list_entry_t) elt;                  \
-    MACRO_END
+	MACRO_BEGIN							\
+		list_entry_t prev;					\
+									\
+		prev = (head)->prev;					\
+		if ((head) == prev) {					\
+			(head)->next = (list_entry_t) (elt);		\
+		}							\
+		else {							\
+			((type)prev)->field.next = (list_entry_t)(elt);	\
+		}							\
+		(elt)->field.prev = prev;				\
+		(elt)->field.next = head;				\
+		(head)->prev = (list_entry_t) elt;			\
+	MACRO_END
 
 /*
  * Insert a new element at the head of the list.
  *
  *      void list_enter_first(list_t q, <type> elt, <type>, <chain field>)
  */
-#define list_enter_first(head, elt, type, field)            \
-    MACRO_BEGIN                                             \
-        list_entry_t next;                                  \
-                                                            \
-        next = (head)->next;                                \
-        if ((head) == next) {                               \
-            (head)->prev = (list_entry_t) (elt);            \
-        }                                                   \
-        else {                                              \
-            ((type)next)->field.prev = (list_entry_t)(elt); \
-        }                                                   \
-        (elt)->field.next = next;                           \
-        (elt)->field.prev = head;                           \
-        (head)->next = (list_entry_t) elt;                  \
-    MACRO_END
+#define list_enter_first(head, elt, type, field)			\
+	MACRO_BEGIN							\
+		list_entry_t next;					\
+									\
+		next = (head)->next;					\
+		if ((head) == next) {					\
+			(head)->prev = (list_entry_t) (elt);		\
+		}							\
+		else {							\
+			((type)next)->field.prev = (list_entry_t)(elt);	\
+		}							\
+		(elt)->field.next = next;				\
+		(elt)->field.prev = head;				\
+		(head)->next = (list_entry_t) elt;			\
+	MACRO_END
 
 /*
  * [internal use only]
@@ -285,68 +285,68 @@ static inline void insqueue (list_entry_t elt, list_entry_t pred)
  * given list (head).
  */
 #define	list_field(head, thing, type, field) \
-        (((head) == (thing)) ? (head) : &((type)(thing))->field)
+	(((head) == (thing)) ? (head) : &((type)(thing))->field)
 
 /*
  * Remove an arbitrary item from the list.
  *
  *      void list_remove(list_t q, <type> elt, <type>, <chain field>)
  */
-#define	list_remove_macro(head, elt, type, field)           \
-    MACRO_BEGIN                                             \
-        list_entry_t next, prev;                            \
-                                                            \
-        next = (elt)->field.next;                           \
-        prev = (elt)->field.prev;                           \
-                                                            \
-        if ((head) == next)                                 \
-            (head)->prev = prev;                            \
-        else                                                \
-            ((type)next)->field.prev = prev;                \
-                                                            \
-        if ((head) == prev)                                 \
-            (head)->next = next;                            \
-        else                                                \
-            ((type)prev)->field.next = next;                \
-    MACRO_END
+#define	list_remove_macro(head, elt, type, field)		\
+	MACRO_BEGIN						\
+		list_entry_t next, prev;			\
+								\
+		next = (elt)->field.next;			\
+		prev = (elt)->field.prev;			\
+								\
+		if ((head) == next)				\
+			(head)->prev = prev;			\
+		else						\
+			((type)next)->field.prev = prev;	\
+								\
+		if ((head) == prev)				\
+			(head)->next = next;			\
+		else						\
+			((type)prev)->field.next = next;	\
+	MACRO_END
 
 /*
  * Remove and return the entry at the head of the list.
  *
  *      void list_remove_first(list_t head, <type> entry, <type>, <chain>)
  */
-#define	list_remove_first(head, entry, type, field)         \
-    MACRO_BEGIN                                             \
-        list_entry_t next;                                  \
-                                                            \
-        (entry) = (type) ((head)->next);                    \
-        next = (entry)->field.next;                         \
-                                                            \
-        if ((head) == next)                                 \
-            (head)->prev = (head);                          \
-        else                                                \
-            ((type)(next))->field.prev = (head);            \
-        (head)->next = next;                                \
-    MACRO_END
+#define	list_remove_first(head, entry, type, field)		\
+	MACRO_BEGIN						\
+		list_entry_t next;				\
+								\
+		(entry) = (type) ((head)->next);		\
+		next = (entry)->field.next;			\
+								\
+		if ((head) == next)				\
+			(head)->prev = (head);			\
+		else						\
+			((type)(next))->field.prev = (head);	\
+		(head)->next = next;				\
+	MACRO_END
 
 /* 
  * Remove and return the entry at the tail of the list.
  *
  *      void list_remove_last(list_t head, <type> entry, <type>, <chain>)
  */
-#define	list_remove_last(head, entry, type, field)          \
-    MACRO_BEGIN                                             \
-        list_entry_t prev;                                  \
-                                                            \
-        (entry) = (type) ((head)->prev);                    \
-        prev = (entry)->field.prev;                         \
-                                                            \
-        if ((head) == prev)                                 \
-            (head)->next = (head);                          \
-        else                                                \
-            ((type)(prev))->field.next = (head);            \
-        (head)->prev = prev;                                \
-    MACRO_END
+#define	list_remove_last(head, entry, type, field)		\
+	MACRO_BEGIN						\
+		list_entry_t prev;				\
+								\
+		(entry) = (type) ((head)->prev);		\
+		prev = (entry)->field.prev;			\
+								\
+		if ((head) == prev)				\
+			(head)->next = (head);			\
+		else						\
+			((type)(prev))->field.next = (head);	\
+		(head)->prev = prev;				\
+	MACRO_END
 
 /* 
  * Assign to a link in the list.
@@ -354,31 +354,31 @@ static inline void insqueue (list_entry_t elt, list_entry_t pred)
  *      void list_assign(list_entry_t to, list_entry_t from,
  *                       <type>, <chain field>)
  */
-#define	list_assign(to, from, type, field)                  \
-    MACRO_BEGIN                                             \
-        ((type)((from)->prev))->field.next = (to);          \
-        ((type)((from)->next))->field.prev = (to);          \
-        *to = *from;                                        \
-    MACRO_END
+#define	list_assign(to, from, type, field)			\
+	MACRO_BEGIN						\
+		((type)((from)->prev))->field.next = (to);	\
+		((type)((from)->next))->field.prev = (to);	\
+		*to = *from;					\
+	MACRO_END
 
 /* Iterate over each item in the list.  Generates a 'for' loop, setting
  * elt to each item in turn (by reference).
  *
  *      list_iterate(list_t head, <type> elt, <type>, <chain field>)
  */
-#define list_iterate(head, elt, type, field)                \
-        for ((elt) = (type) list_first(head);               \
-             !list_end((head), (list_entry_t)(elt));        \
-             (elt) = (type) list_next(&(elt)->field))
+#define list_iterate(head, elt, type, field)			\
+	for ((elt) = (type) list_first(head);			\
+		!list_end((head), (list_entry_t)(elt));		\
+		(elt) = (type) list_next(&(elt)->field))
 
 /* Iterate over each item in the queue, deqeuing after each iteration.
  * Generates a 'for' loop, setting elt to each item in turn (by reference).
  *
  *      dequeue_iterate(list_t head, <type> elt, <type>)
  */
-#define dequeue_iterate(head, elt, type)                    \
-        for ((elt) = (type) dequeue(head);                  \
-            (elt);                                          \
-            (elt) = (type) dequeue(head))
+#define dequeue_iterate(head, elt, type)	\
+	for ((elt) = (type) dequeue(head);	\
+		(elt);				\
+		(elt) = (type) dequeue(head))
 
-#endif /* _KERNEL_LIST_H_ */
+#endif

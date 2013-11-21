@@ -1,6 +1,3 @@
-/* strtest.c : string.h tests
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -24,119 +21,126 @@
 
 #include <usr/test.h>
 
-static void strcmp_test (void) {
-    int error = 0;
-    char *a = "equal";
-    char *b = "equal? no";
-    char *c = "a";
-    char *d = "f";
-    if (strcmp (a, a))
-        error = 1;
-    else if (!strcmp (a, b))
-        error = 2;
-    else if (strcmp (a, c) <= 0)
-        error = 3;
-    else if (strcmp (a, d) >= 0)
-        error = 4;
+static void strcmp_test(void)
+{
+	int error = 0;
+	char *a = "equal";
+	char *b = "equal? no";
+	char *c = "a";
+	char *d = "f";
+	if (strcmp(a, a))
+		error = 1;
+	else if (!strcmp(a, b))
+		error = 2;
+	else if (strcmp(a, c) <= 0)
+		error = 3;
+	else if (strcmp(a, d) >= 0)
+		error = 4;
 
-    printf ("strcmp: ");
-    if (error) {
-        printf ("error %d\n", error);
-        for (;;);
-    }
-    else
-        puts ("OK");
+	printf("strcmp: ");
+	if (error) {
+		printf("error %d\n", error);
+		for (;;);
+	} else {
+		puts("OK");
+	}
 }
 
-static void strcat_test (void) {
-    char *o = "origin";
-    char d[7] = "ori";
-    char s[4] = "gin";
-    strcat (d, s);
-    printf ("strcat: ");
-    if (strcmp (d, o))
-        printf ("error: %s != %s\n", d, o);
-    else
-        puts ("OK");
+static void strcat_test(void)
+{
+	char *o = "origin";
+	char d[7] = "ori";
+	char s[4] = "gin";
+	strcat(d, s);
+	printf("strcat: ");
+	if (strcmp(d, o))
+		printf("error: %s != %s\n", d, o);
+	else
+		puts("OK");
 }
 
-static void strncat_test (void) {
-    int error = 0;
-    char *o = "origin";
-    char *t = "orig";
-    char d[8] = "ori";
-    char s[4] = "gin";
-    strncat (d, s, 1);
-    if (strcmp (d, t))
-        error = 1;
-    d[3] = '\0';
-    strncat (d, s, 4);
-    if (strcmp (d, o))
-        error = 2;
-    printf ("strncat: ");
-    if (error)
-        printf ("error %d\n", error);
-    else
-        puts ("OK");
+static void strncat_test(void)
+{
+	int error = 0;
+	char *o = "origin";
+	char *t = "orig";
+	char d[8] = "ori";
+	char s[4] = "gin";
+	strncat(d, s, 1);
+	if (strcmp(d, t))
+		error = 1;
+	d[3] = '\0';
+	strncat(d, s, 4);
+	if (strcmp(d, o))
+		error = 2;
+	printf("strncat: ");
+	if (error)
+		printf("error %d\n", error);
+	else
+		puts("OK");
 }
 
-static void strchr_test (void) {
-    int error = 0;
-    char *res;
-    char *o = "origin";
-    if (!(res = strchr (o, 'i')))
-        error = 1;
-    else if (strcmp (res, "igin"))
-        error = 2;
-    else if (strchr (o, 'x'))
-        error = 3;
-    printf ("strchr: ");
-    if (error)
-        printf ("error: %d\n", error);
-    else
-        puts ("OK");
+static void strchr_test(void)
+{
+	int error = 0;
+	char *res;
+	char *o = "origin";
+	if (!(res = strchr(o, 'i')))
+		error = 1;
+	else if (strcmp(res, "igin"))
+		error = 2;
+	else if (strchr(o, 'x'))
+		error = 3;
+	printf("strchr: ");
+	if (error)
+		printf("error: %d\n", error);
+	else
+		puts("OK");
 }
 
-static void strrchr_test (void) {
-    int error = 0;
-    char *res;
-    char *o = "origin";
-    if (!(res = strrchr (o, 'i')))
-        error = 1;
-    else if (strcmp (res, "in"))
-        error = 2;
-    else if (strrchr (o, 'x'))
-        error = 3;
-    printf ("strrchr: ");
-    if (error)
-        printf ("error %d\n", error);
-    else
-        puts ("OK");
+static void strrchr_test(void)
+{
+	int error = 0;
+	char *res;
+	char *o = "origin";
+	if (!(res = strrchr(o, 'i')))
+		error = 1;
+	else if (strcmp(res, "in"))
+		error = 2;
+	else if (strrchr(o, 'x'))
+		error = 3;
+	printf("strrchr: ");
+	if (error)
+		printf("error %d\n", error);
+	else
+		puts("OK");
 }
 
-static void strtok_test (void) {
-    char *tok;
-    int i, error = 0;
-    char str[] = "this(is).a.string$with/delimiters";
-    char toks[7][11] = { "this", "is", "", "a", "string", "with", "delimiters" };
+static void strtok_test(void)
+{
+	char *tok;
+	int i, error = 0;
+	char str[] = "this(is).a.string$with/delimiters";
+	char toks[7][11] = { "this", "is", "", "a", "string", "with", "delimiters" };
 
-    for (i = 0, tok = strtok (str, "().$/"); tok != NULL;
-            i++, tok = strtok (NULL, "().$/")) {
-        if (strcmp (tok, toks[i]))
-            error = i+1;
-    }
-    printf ("strtok: ");
-    if (error)
-        printf ("error %d\n", error);
-    else
-        puts ("OK");
+	for (i = 0, tok = strtok(str, "().$/"); tok != NULL;
+			i++, tok = strtok(NULL, "().$/")) {
+		if (strcmp(tok, toks[i]))
+			error = i+1;
+	}
+	printf("strtok: ");
+	if (error)
+		printf("error %d\n", error);
+	else
+		puts("OK");
 }
 
-void strtest (int argc, char *argv[]) {
-    strcmp_test ();
-    strcat_test ();
-    strncat_test ();
-    strchr_test ();
-    strrchr_test ();
-    strtok_test ();
+void strtest(int argc, char *argv[])
+{
+	strcmp_test();
+	strcat_test();
+	strncat_test();
+	strchr_test();
+	strrchr_test();
+	strtok_test();
 }

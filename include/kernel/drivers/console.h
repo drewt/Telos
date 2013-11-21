@@ -1,6 +1,3 @@
-/* console.h : console driver
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -27,7 +24,7 @@
 
 extern struct device_operations console_operations;
 
-int console_init (void);
-int console_switch (unsigned int to);
+int console_init(void);
+int console_switch(unsigned int to);
 
 #endif // __CONSOLE_H_

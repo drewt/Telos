@@ -16,9 +16,9 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TIME_H_
-#define __TIME_H_
+#ifndef _KERNEL_TIME_H_
+#define _KERNEL_TIME_H_
 
 extern unsigned int tick_count;
 
-#endif // __TIME_H_
+#endif

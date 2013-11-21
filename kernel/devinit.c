@@ -26,38 +26,39 @@
 #include <kernel/drivers/serial.h>
 
 struct device devtab[DT_SIZE] = {
-    [DEV_KBD] = {
-        .dvnum   = DEV_KBD,
-        .dvname  = "Keyboard (no echo)",
-        .dvioblk = NULL,
-        .dv_op = &kbd_operations
-    },
-    [DEV_KBD_ECHO] = {
-        .dvnum   = DEV_KBD_ECHO,
-        .dvname  = "Keyboard (echo)",
-        .dvioblk = NULL,
-        .dv_op = &kbd_operations
-    },
-    [DEV_CONSOLE_0] = {
-        .dvnum   = DEV_CONSOLE_0,
-        .dvname  = "Console 0",
-        .dvioblk = NULL,
-        .dv_op = &console_operations
-    },
-    [DEV_CONSOLE_1] = {
-        .dvnum   = DEV_CONSOLE_1,
-        .dvname  = "Console 1",
-        .dvioblk = NULL,
-        .dv_op = &console_operations
-    },
-    [DEV_SERIAL] = {
-        .dvnum   = DEV_SERIAL,
-        .dvname  = "Serial port",
-        .dvioblk = NULL,
-        .dv_op = NULL
-    }
+	[DEV_KBD] = {
+		.dvnum   = DEV_KBD,
+		.dvname  = "Keyboard (no echo)",
+		.dvioblk = NULL,
+		.dv_op = &kbd_operations
+	},
+	[DEV_KBD_ECHO] = {
+		.dvnum   = DEV_KBD_ECHO,
+		.dvname  = "Keyboard (echo)",
+		.dvioblk = NULL,
+		.dv_op = &kbd_operations
+	},
+	[DEV_CONSOLE_0] = {
+		.dvnum   = DEV_CONSOLE_0,
+		.dvname  = "Console 0",
+		.dvioblk = NULL,
+		.dv_op = &console_operations
+	},
+	[DEV_CONSOLE_1] = {
+		.dvnum   = DEV_CONSOLE_1,
+		.dvname  = "Console 1",
+		.dvioblk = NULL,
+		.dv_op = &console_operations
+	},
+	[DEV_SERIAL] = {
+		.dvnum   = DEV_SERIAL,
+		.dvname  = "Serial port",
+		.dvioblk = NULL,
+		.dv_op = NULL
+	}
 };
 
-void dev_init (void) {
-    devtab[DEV_KBD].dv_op->dvinit ();
+void dev_init(void)
+{
+	devtab[DEV_KBD].dv_op->dvinit();
 }

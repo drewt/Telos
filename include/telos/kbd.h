@@ -1,6 +1,3 @@
-/* telos/kbd.h : keyboard
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,11 +16,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_KBD_H_
-#define __TELOS_KBD_H_
+#ifndef _TELOS_KBD_H_
+#define _TELOS_KBD_H_
 
 enum kbd_ioctl {
-    KBD_IOCTL_MOD_EOF = 49
+	KBD_IOCTL_MOD_EOF = 49
 };
 
-#endif // __TELOS_KBD_H_
+#endif

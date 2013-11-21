@@ -23,72 +23,80 @@
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-unsigned int alarm (unsigned int seconds) {
-    return syscall1 (SYS_ALARM, (void*) seconds);
+unsigned int alarm(unsigned int seconds)
+{
+	return syscall1(SYS_ALARM, (void*) seconds);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-unsigned int sleep (unsigned int seconds) {
-    return syscall1 (SYS_SLEEP, (void*) seconds);
+unsigned int sleep(unsigned int seconds)
+{
+	return syscall1(SYS_SLEEP, (void*) seconds);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-pid_t getpid (void) {
-    return syscall0 (SYS_GETPID);
+pid_t getpid(void)
+{
+	return syscall0(SYS_GETPID);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int open (const char *pathname, int flags, ...) {
-    int rv = syscall2 (SYS_OPEN, (void*) pathname, (void*) flags);
-    if (rv < 0)
-        return -1;
-    return rv;
+int open(const char *pathname, int flags, ...)
+{
+	int rv = syscall2(SYS_OPEN, (void*) pathname, (void*) flags);
+	if (rv < 0)
+		return -1;
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int close (int fd) {
-    int rv = syscall1 (SYS_CLOSE, (void*) fd);
-    if (rv < 0)
-        return -1;
-    return rv;
+int close(int fd)
+{
+	int rv = syscall1(SYS_CLOSE, (void*) fd);
+	if (rv < 0)
+		return -1;
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-ssize_t read (int fd, void *buf, size_t nbyte) {
-    int rv = syscall3 (SYS_READ, (void*) fd, buf, (void*) nbyte);
-    if (rv < 0)
-        return -1;
-    return rv;
+ssize_t read(int fd, void *buf, size_t nbyte)
+{
+	int rv = syscall3(SYS_READ, (void*) fd, buf, (void*) nbyte);
+	if (rv < 0)
+		return -1;
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-ssize_t write (int fd, const void *buf, size_t nbyte) {
-    int rv = syscall3 (SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
-    if (rv < 0)
-        return -1;
-    return rv;
+ssize_t write(int fd, const void *buf, size_t nbyte)
+{
+	int rv = syscall3(SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
+	if (rv < 0)
+		return -1;
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int ioctl (int fd, int command, ...) {
-    int rv;
-    va_list ap;
-    va_start (ap, command);
-    rv = syscall3 (SYS_IOCTL, (void*) fd, (void*) command, ap);
-    va_end (ap);
-    return (rv < 0) ? -1 : rv;
+int ioctl(int fd, int command, ...)
+{
+	int rv;
+	va_list ap;
+	va_start(ap, command);
+	rv = syscall3(SYS_IOCTL, (void*) fd, (void*) command, ap);
+	va_end(ap);
+	return (rv < 0) ? -1 : rv;
 }

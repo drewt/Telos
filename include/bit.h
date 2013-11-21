@@ -1,6 +1,3 @@
-/* bit.h : bitwise operations
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,12 +16,12 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __BIT_H_
-#define __BIT_H_
+#ifndef _BIT_H_
+#define _BIT_H_
 
 #define BIT(x) (1 << (x))
 #define RMBIT(val,x) ((val) & ~(BIT((x))))
 #define ADDBIT(val,x) ((val) | BIT((x)))
 #define TOGGLEBIT(val,x) ((val) ^ BIT((x)))
 
-#endif // __BIT_H_
+#endif

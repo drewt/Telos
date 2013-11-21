@@ -1,6 +1,3 @@
-/* console.h : console
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,12 +16,12 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_CONSOLE_H_
-#define __TELOS_CONSOLE_H_
+#ifndef _TELOS_CONSOLE_H_
+#define _TELOS_CONSOLE_H_
 
 enum console_ioctl {
-    CONSOLE_IOCTL_SWITCH,
-    CONSOLE_IOCTL_CLEAR
+	CONSOLE_IOCTL_SWITCH,
+	CONSOLE_IOCTL_CLEAR
 };
 
-#endif // __TELOS_CONSOLE_H_
+#endif

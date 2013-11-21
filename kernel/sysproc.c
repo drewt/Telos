@@ -25,39 +25,39 @@
 
 #include <telos/process.h>
 
-void tsh (int argc, char **argv);
+void tsh(int argc, char **argv);
 
-void idle_proc ()
+void idle_proc()
 {
-    asm volatile ("halt: hlt\njmp halt");
+	asm volatile("halt: hlt\njmp halt");
 }
 
 static void sigchld_handler(int signo) {}
 
-static void reboot (void)
+static void reboot(void)
 {
-    asm volatile (
-        "cli                \n"
-        "rb_loop:           \n"
-            "inb $0x64, %al \n"
-            "and $0x2,  %al \n"
-            "cmp $0x0,  %al \n"
-            "jne  rb_loop   \n"
-        "mov $0xFE, %al      \n"
-        "out %al, $0x64     \n"
-    );
+	asm volatile(
+	"cli			\n"
+	"rb_loop:		\n"
+		"inb $0x64, %al	\n"
+		"and $0x2,  %al	\n"
+		"cmp $0x0,  %al	\n"
+		"jne  rb_loop	\n"
+	"mov $0xFE, %al		\n"
+	"out %al, $0x64		\n"
+	);
 }
 
-void root_proc ()
+void root_proc()
 {
-    int sig;
+	int sig;
 
-    signal (SIGCHLD, sigchld_handler);
-    
-    syscreate (tsh, 0, NULL);
-    for (sig = sigwait (); sig != SIGCHLD; sig = sigwait ());
+	signal(SIGCHLD, sigchld_handler);
 
-    printf ("\nPress any key to reboot");
-    getchar ();
-    reboot ();
+	syscreate(tsh, 0, NULL);
+	for (sig = sigwait(); sig != SIGCHLD; sig = sigwait());
+
+	printf("\nPress any key to reboot");
+	getchar();
+	reboot();
 }

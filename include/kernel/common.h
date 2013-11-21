@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __COMMON_H_
-#define __COMMON_H_
+#ifndef _KERNEL_COMMON_H_
+#define _KERNEL_COMMON_H_
 
 #define __KERNEL__
 
@@ -28,11 +28,11 @@
 
 #define STACK_SIZE (1024*16)
 
-#define wprintf(fmt, ...) kprintf_clr (0xC, "WARNING: "fmt"\n", __VA_ARGS__)
-#define wprints(str) kprintf_clr (0xC, "WARNING: "str"\n")
+#define wprintf(fmt, ...) kprintf_clr(0xC, "WARNING: "fmt"\n", __VA_ARGS__)
+#define wprints(str) kprintf_clr(0xC, "WARNING: "str"\n")
 
-extern int kprintf (const char *fmt, ...);
-extern int kprintf_clr (unsigned char clr, const char *fmt, ...);
-extern void clear_console (void);
+extern int kprintf(const char *fmt, ...);
+extern int kprintf_clr(unsigned char clr, const char *fmt, ...);
+extern void clear_console(void);
 
-#endif // __COMMON_H_
+#endif

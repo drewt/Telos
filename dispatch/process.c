@@ -29,213 +29,213 @@
 
 #include <signal.h>
 
-extern void exit (int status);
+extern void exit(int status);
 
-static inline struct pcb *get_free_pcb (void)
+static inline struct pcb *get_free_pcb(void)
 {
-    int i;
-    for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
-        /* nothing */;
-    return (i == PT_SIZE) ? NULL : &proctab[i];
+	int i;
+	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
+		/* nothing */;
+	return (i == PT_SIZE) ? NULL : &proctab[i];
 }
 
-static void pcb_init (struct pcb *p)
+static void pcb_init(struct pcb *p)
 {
-    // init signal data
-    p->sig_pending = 0;
-    p->sig_accept  = 0;
-    p->sig_ignore  = ~0;
-    for (int i = 0; i < _TELOS_SIGMAX; i++) {
-        p->sigactions[i] = default_sigactions[i];
-        if (default_sigactions[i].sa_handler != SIG_IGN)
-            p->sig_accept |= 1 << i;
-    }
+	/* init signal data */
+	p->sig_pending = 0;
+	p->sig_accept  = 0;
+	p->sig_ignore  = ~0;
+	for (int i = 0; i < _TELOS_SIGMAX; i++) {
+		p->sigactions[i] = default_sigactions[i];
+		if (default_sigactions[i].sa_handler != SIG_IGN)
+			p->sig_accept |= 1 << i;
+	}
 
-    // init file data
-    p->fds[0] = DEV_KBD_ECHO;
-    p->fds[1] = DEV_CONSOLE_0;
-    p->fds[2] = DEV_CONSOLE_1;
-    for (int i = 3; i < FDT_SIZE; i++)
-        p->fds[i] = FD_NONE;
+	/* init file data */
+	p->fds[0] = DEV_KBD_ECHO;
+	p->fds[1] = DEV_CONSOLE_0;
+	p->fds[2] = DEV_CONSOLE_1;
+	for (int i = 3; i < FDT_SIZE; i++)
+		p->fds[i] = FD_NONE;
 
-    // init lists
-    list_init (&p->send_q);
-    list_init (&p->recv_q);
-    list_init (&p->repl_q);
-    list_init (&p->heap_mem);
-    list_init (&p->page_mem);
+	/* init lists */
+	list_init(&p->send_q);
+	list_init(&p->recv_q);
+	list_init(&p->repl_q);
+	list_init(&p->heap_mem);
+	list_init(&p->page_mem);
 }
 
-void sys_create (void (*func)(int,char*), int argc, char **argv)
+void sys_create(void(*func)(int,char*), int argc, char **argv)
 {
-    current->rc = create_user_process (func, argc, argv, 0);
+	current->rc = create_user_process(func, argc, argv, 0);
 }
 
-int create_kernel_process (void (*func)(int,char*), int argc, char **argv,
-        ulong flags)
+int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
+		ulong flags)
 {
-    struct pcb  *p;
-    void        *stack_mem;
-    void        *frame;
-    ulong       *args;
+	struct pcb	*p;
+	void		*stack_mem;
+	void		*frame;
+	ulong		*args;
 
-    if ((p = get_free_pcb ()) == NULL)
-        return -EAGAIN;
+	if ((p = get_free_pcb()) == NULL)
+		return -EAGAIN;
 
-    p->timestamp = tick_count;
-    p->pid += PT_SIZE;
-    p->parent_pid = 0;
-    p->flags = flags | PFLAG_SUPER;
-    p->pgdir = (pmap_t) KERNEL_TO_PHYS (&_kernel_pgd);
+	p->timestamp = tick_count;
+	p->pid += PT_SIZE;
+	p->parent_pid = 0;
+	p->flags = flags | PFLAG_SUPER;
+	p->pgdir = (pmap_t) KERNEL_TO_PHYS(&_kernel_pgd);
 
-    pcb_init (p);
+	pcb_init(p);
 
-    if ((stack_mem = kmalloc (STACK_SIZE)) == NULL)
-        return -ENOMEM;
-    list_insert_tail (&p->heap_mem, (list_entry_t) mem_ptoh (stack_mem));
+	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
+		return -ENOMEM;
+	list_insert_tail(&p->heap_mem, (list_entry_t) mem_ptoh(stack_mem));
 
-    frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
-    put_iret_frame_super (frame, (ulong) func);
-    args = (ulong*) ((ulong) frame + S_CONTEXT_SIZE);
+	frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
+	put_iret_frame_super(frame, (ulong) func);
+	args = (ulong*) ((ulong) frame + S_CONTEXT_SIZE);
 
-    args[0] = (ulong) exit;
-    args[1] = (ulong) argc;
-    args[2] = (ulong) argv;
+	args[0] = (ulong) exit;
+	args[1] = (ulong) argc;
+	args[2] = (ulong) argv;
 
-    p->esp = frame;
+	p->esp = frame;
 
-    ready (p);
-    return p->pid;
+	ready(p);
+	return p->pid;
 }
 
-int create_user_process (void (*func)(int,char*), int argc, char **argv,
-        ulong flags)
+int create_user_process(void(*func)(int,char*), int argc, char **argv,
+		ulong flags)
 {
-    struct pcb  *p;
-    ulong       v_stack, esp;
-    ulong       *args;
-    void        *v_frame;
+	struct pcb	*p;
+	ulong		v_stack, esp;
+	ulong		*args;
+	void		*v_frame;
 
-    if ((p = get_free_pcb ()) == NULL)
-        return -EAGAIN;
+	if ((p = get_free_pcb()) == NULL)
+		return -EAGAIN;
 
-    p->timestamp = tick_count;
-    p->pid += PT_SIZE;
-    p->parent_pid = current->pid;
-    p->flags = flags;
+	p->timestamp = tick_count;
+	p->pid += PT_SIZE;
+	p->parent_pid = current->pid;
+	p->flags = flags;
 
-    pcb_init (p);
+	pcb_init(p);
 
-    p->pgdir = pgdir_create (&p->page_mem);
-    if (p->pgdir == NULL)
-        return -ENOMEM;
+	p->pgdir = pgdir_create(&p->page_mem);
+	if (p->pgdir == NULL)
+		return -ENOMEM;
 
 #if 1
-    ulong v_heap = 0x01000000;
-    if (map_pages (p->pgdir, v_heap, 1, PE_U | PE_RW, &p->page_mem))
-        return -ENOMEM;
+	ulong v_heap = 0x01000000;
+	if (map_pages(p->pgdir, v_heap, 1, PE_U | PE_RW, &p->page_mem))
+		return -ENOMEM;
 
-    char *kargv[argc];
-    copy_from_userspace (current->pgdir, kargv, argv, sizeof (char*) * argc);
+	char *kargv[argc];
+	copy_from_userspace(current->pgdir, kargv, argv, sizeof(char*) * argc);
 
-    ulong arg_addr = v_heap + 128;
-    char ** uargv = (void*) kmap_tmp_range (p->pgdir, v_heap, 128);
-    for (int i = 0; i < argc; i++, arg_addr += 128) {
-        uargv[i] = (char*) arg_addr;
-        copy_string_through_userspace (p->pgdir, current->pgdir,
-                (void*) arg_addr, kargv[i], 128);
-    }
+	ulong arg_addr = v_heap + 128;
+	char ** uargv = (void*) kmap_tmp_range(p->pgdir, v_heap, 128);
+	for (int i = 0; i < argc; i++, arg_addr += 128) {
+		uargv[i] = (char*) arg_addr;
+		copy_string_through_userspace(p->pgdir, current->pgdir,
+				(void*) arg_addr, kargv[i], 128);
+	}
 
-    void *p_frame;
-    v_stack = 0x00C00000;
-    if (map_pages (p->pgdir, v_stack, 8, PE_U | PE_RW, &p->page_mem))
-        return -ENOMEM;
+	void *p_frame;
+	v_stack = 0x00C00000;
+	if (map_pages(p->pgdir, v_stack, 8, PE_U | PE_RW, &p->page_mem))
+		return -ENOMEM;
 
-    v_frame = (void*) (v_stack + 32 * U_CONTEXT_SIZE);
-    p_frame = (void*) kmap_tmp_range (p->pgdir, (ulong) v_frame,
-            U_CONTEXT_SIZE);
-    esp = v_stack + STACK_SIZE - 128;
-    put_iret_frame (p_frame, (ulong) func, esp);
-    kunmap_range ((ulong) p_frame, U_CONTEXT_SIZE);
+	v_frame = (void*) (v_stack + 32 * U_CONTEXT_SIZE);
+	p_frame = (void*) kmap_tmp_range(p->pgdir, (ulong) v_frame,
+			U_CONTEXT_SIZE);
+	esp = v_stack + STACK_SIZE - 128;
+	put_iret_frame(p_frame, (ulong) func, esp);
+	kunmap_range((ulong) p_frame, U_CONTEXT_SIZE);
 
-    args = (void*) kmap_tmp_range (p->pgdir, esp, sizeof (ulong) * 3);
-    args[0] = (ulong) exit;
-    args[1] = (ulong) argc;
-    args[2] = (ulong) v_heap;
-    kunmap_range ((ulong) args, sizeof (ulong) * 3);
+	args = (void*) kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
+	args[0] = (ulong) exit;
+	args[1] = (ulong) argc;
+	args[2] = (ulong) v_heap;
+	kunmap_range((ulong) args, sizeof(ulong) * 3);
 
 #else
-    if ((v_stack = (ulong) kmalloc (STACK_SIZE)) == 0)
-        return -ENOMEM;
-    list_insert_tail (&p->heap_mem, (list_entry_t)mem_ptoh ((void*)v_stack));
+	if ((v_stack = (ulong) kmalloc(STACK_SIZE)) == 0)
+		return -ENOMEM;
+	list_insert_tail(&p->heap_mem, (list_entry_t)mem_ptoh((void*)v_stack));
 
-    v_frame = (void*) ((ulong) v_stack + 32*U_CONTEXT_SIZE);
-    esp = v_stack + STACK_SIZE - 128;
-    put_iret_frame (v_frame, (ulong) func, esp);
+	v_frame = (void*) ((ulong) v_stack + 32*U_CONTEXT_SIZE);
+	esp = v_stack + STACK_SIZE - 128;
+	put_iret_frame(v_frame, (ulong) func, esp);
 
-    args = (ulong*) esp;
-    args[0] = (ulong) exit;
-    args[1] = (ulong) argc;
-    args[2] = (ulong) argv;
+	args = (ulong*) esp;
+	args[0] = (ulong) exit;
+	args[1] = (ulong) argc;
+	args[2] = (ulong) argv;
 #endif
 
-    p->esp = v_frame;
-    p->ifp = (void*) ((ulong) p->esp + U_CONTEXT_SIZE);
+	p->esp = v_frame;
+	p->ifp = (void*) ((ulong) p->esp + U_CONTEXT_SIZE);
 
-    ready (p);
-    return p->pid;
+	ready(p);
+	return p->pid;
 }
 
 /*-----------------------------------------------------------------------------
  * Yeild control to another process */
 //-----------------------------------------------------------------------------
-void sys_yield (void)
+void sys_yield(void)
 {
-    ready (current);
-    new_process ();
+	ready(current);
+	new_process();
 }
 
 /*-----------------------------------------------------------------------------
  * Stop the current process and free all resources associated with it */
 //-----------------------------------------------------------------------------
-void sys_exit (int status)
+void sys_exit(int status)
 {
-    struct pcb          *pit;
-    struct mem_header   *hit;
-    struct pf_info      *mit;
+	struct pcb		*pit;
+	struct mem_header	*hit;
+	struct pf_info		*mit;
 
-    // TODO: see what POSIX requires vis-a-vis process data in handler
-    pit = &proctab[PT_INDEX (current->parent_pid)];
-    __kill (pit, SIGCHLD);
+	// TODO: see what POSIX requires vis-a-vis process data in handler
+	pit = &proctab[PT_INDEX(current->parent_pid)];
+	__kill(pit, SIGCHLD);
 
-    // free memory allocated to process
-    dequeue_iterate (&current->page_mem, mit, struct pf_info*)
-        kfree_page (mit);
-    dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
-        kfree (hit->data);
+	// free memory allocated to process
+	dequeue_iterate (&current->page_mem, mit, struct pf_info*)
+		kfree_page(mit);
+	dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
+		kfree(hit->data);
 
-    current->state = STATE_STOPPED;
+	current->state = STATE_STOPPED;
 
-    #define CLEAR_MSG_QUEUE(q)                \
-    dequeue_iterate ((q), pit, struct pcb*) { \
-        pit->rc = SYSERR;                     \
-        ready (pit);                          \
-    }
-    CLEAR_MSG_QUEUE (&current->send_q)
-    CLEAR_MSG_QUEUE (&current->recv_q)
-    CLEAR_MSG_QUEUE (&current->repl_q)
+	#define CLEAR_MSG_QUEUE(q)			\
+	dequeue_iterate ((q), pit, struct pcb*) {	\
+		pit->rc = SYSERR;			\
+		ready(pit);				\
+	}
+	CLEAR_MSG_QUEUE(&current->send_q)
+	CLEAR_MSG_QUEUE(&current->recv_q)
+	CLEAR_MSG_QUEUE(&current->repl_q)
 
-    for (int i = 0; i < FDT_SIZE; i++)
-        if (current->fds[i] != FD_NONE)
-            sys_close (current->fds[i]);
+	for (int i = 0; i < FDT_SIZE; i++)
+		if (current->fds[i] != FD_NONE)
+			sys_close(current->fds[i]);
 
-    new_process ();
+	new_process();
 }
 
 /*-----------------------------------------------------------------------------
  * Return the current process's pid */
 //-----------------------------------------------------------------------------
-void sys_getpid (void)
+void sys_getpid(void)
 {
-    current->rc = current->pid;
+	current->rc = current->pid;
 }

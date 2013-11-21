@@ -22,10 +22,12 @@
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
 
-void sys_puts (char *s) {
-    kprintf ("%s", s);
+void sys_puts(char *s)
+{
+	kprintf("%s", s);
 }
 
-void sys_report (char *s) {
-    kprintf ("%d: %s", current->pid, s);
+void sys_report(char *s)
+{
+	kprintf("%d: %s", current->pid, s);
 }

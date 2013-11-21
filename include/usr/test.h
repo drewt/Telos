@@ -16,17 +16,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __USR_TEST_H_
-#define __USR_TEST_H_
+#ifndef _USR_TEST_H_
+#define _USR_TEST_H_
 
-void exntest (int argc, char *argv[]);
-void msgtest (int argc, char *argv[]);
-void sigtest (int argc, char *argv[]);
-void kbdtest (int argc, char *argv[]);
-void strtest (int argc, char *argv[]);
-void proctest (int argc, char *argv[]);
-void eventtest (int argc, char *argv[]);
-void memtest (int argc, char *argv[]);
-void consoletest (int argc, char *argv[]);
+void exntest(int argc, char *argv[]);
+void msgtest(int argc, char *argv[]);
+void sigtest(int argc, char *argv[]);
+void kbdtest(int argc, char *argv[]);
+void strtest(int argc, char *argv[]);
+void proctest(int argc, char *argv[]);
+void eventtest(int argc, char *argv[]);
+void memtest(int argc, char *argv[]);
+void consoletest(int argc, char *argv[]);
 
-#endif // __USR_TEST_H_
+#endif

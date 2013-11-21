@@ -24,27 +24,31 @@ typedef int pid_t;
 /*-----------------------------------------------------------------------------
  * Create a process */
 //-----------------------------------------------------------------------------
-pid_t syscreate (void(*func)(int,char**), int argc, char *argv[]) {
-    return syscall3 (SYS_CREATE, func, (void*) argc, argv);
+pid_t syscreate(void(*func)(int,char**), int argc, char *argv[])
+{
+	return syscall3(SYS_CREATE, func, (void*) argc, argv);
 }
 
 /*-----------------------------------------------------------------------------
  * Yield the processor */
 //-----------------------------------------------------------------------------
-void sysyield (void) {
-    syscall0 (SYS_YIELD);
+void sysyield(void)
+{
+	syscall0(SYS_YIELD);
 }
 
 /*-----------------------------------------------------------------------------
  * Terminate */
 //-----------------------------------------------------------------------------
-void exit (int status) {
-    syscall1 (SYS_STOP, (void*) status);
+void exit(int status)
+{
+	syscall1(SYS_STOP, (void*) status);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sysreport (char *s) {
-    syscall1 (SYS_REPORT, s);
+void sysreport(char *s)
+{
+	syscall1(SYS_REPORT, s);
 }

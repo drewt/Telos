@@ -1,6 +1,3 @@
-/* kbd.h : keyboard driver
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.

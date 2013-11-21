@@ -25,20 +25,20 @@
 
 int _dbz_ = 0;
 
-void dbz_proc ()
+void dbz_proc()
 {
-    printf ("Dividing by zero... ");
-    _dbz_ = 1 / _dbz_;
-    printf ("error\n");
+	printf("Dividing by zero... ");
+	_dbz_ = 1 / _dbz_;
+	printf("error\n");
 }
 
-void sigchld_handler (int sig) {}
+void sigchld_handler(int sig) {}
 
-void exntest (int argc, char *argv[])
+void exntest(int argc, char *argv[])
 {
-    signal (SIGCHLD, sigchld_handler);
+	signal(SIGCHLD, sigchld_handler);
 
-    syscreate (dbz_proc, 0, 0);
-    for (int sig = 0; sig != SIGCHLD; sig = sigwait ());
-    printf ("done.\n");
+	syscreate(dbz_proc, 0, 0);
+	for (int sig = 0; sig != SIGCHLD; sig = sigwait());
+	printf("done.\n");
 }

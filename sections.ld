@@ -5,58 +5,58 @@ KERNEL_PAGE_OFFSET = 0xC0000000;
 SECTIONS
 {
 
-    . = KERNEL_LOAD_ADDR;
+	. = KERNEL_LOAD_ADDR;
 
-    loader ALIGN (0x1000) :
-    {
-        boot/loader.o(.text)
-    }
+	loader ALIGN (0x1000) :
+	{
+		boot/loader.o(.text)
+	}
 
-    . += KERNEL_PAGE_OFFSET;
+	. += KERNEL_PAGE_OFFSET;
 
-    utext ALIGN (0x1000) : AT(ADDR(utext) - KERNEL_PAGE_OFFSET)
-    {
-        _ustart = .;
-        _urostart = .;
-        usr/usr.a:*(.text .rodata)
-        lib/klib.a:*(.text .rodata)
-        _uroend = .;
-    }
+	utext ALIGN (0x1000) : AT(ADDR(utext) - KERNEL_PAGE_OFFSET)
+	{
+		_ustart = .;
+		_urostart = .;
+		usr/usr.a:*(.text .rodata)
+		lib/klib.a:*(.text .rodata)
+		_uroend = .;
+	}
 
-    udata ALIGN (0x1000) : AT(ADDR(udata) - KERNEL_PAGE_OFFSET)
-    {
-        usr/usr.a:*(.data .bss COMMON)
-        lib/klib.a:*(.data .bss COMMON)
-        _uend = .;
-    }
+	udata ALIGN (0x1000) : AT(ADDR(udata) - KERNEL_PAGE_OFFSET)
+	{
+		usr/usr.a:*(.data .bss COMMON)
+		lib/klib.a:*(.data .bss COMMON)
+		_uend = .;
+	}
 
-    .text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_PAGE_OFFSET)
-    {
-        _kstart = .;
-        _krostart = .;
-        *(.text)
-        *(.rodata)
-        _kroend = .;
-    }
+	.text ALIGN (0x1000) : AT(ADDR(.text) - KERNEL_PAGE_OFFSET)
+	{
+		_kstart = .;
+		_krostart = .;
+		*(.text)
+		*(.rodata)
+		_kroend = .;
+	}
 
-    .data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_PAGE_OFFSET)
-    {
-        _krw_start = .;
-        *(.data)
-    }
+	.data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_PAGE_OFFSET)
+	{
+		_krw_start = .;
+		*(.data)
+	}
 
-    .bss ALIGN (0x1000) : AT(ADDR(.bss) - KERNEL_PAGE_OFFSET)
-    {
-        *(.bss)
-        *(COMMON)
-        _krw_end = .;
-        _kend = .;
-    }
+	.bss ALIGN (0x1000) : AT(ADDR(.bss) - KERNEL_PAGE_OFFSET)
+	{
+		*(.bss)
+		*(COMMON)
+		_krw_end = .;
+		_kend = .;
+	}
 
-    /DISCARD/ :
-    {
-        *(.comment)
-        *(.eh_frame)
-    }
+	/DISCARD/ :
+	{
+		*(.comment)
+		*(.eh_frame)
+	}
 
 }

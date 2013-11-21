@@ -22,21 +22,24 @@
 /*-----------------------------------------------------------------------------
  * */ 
 //-----------------------------------------------------------------------------
-int send (pid_t pid, void *obuf, int olen, void *ibuf, int ilen) {
-    return syscall5 (SYS_SEND, (void*) pid, obuf, (void*) olen, ibuf,
-            (void*) ilen);
+int send(pid_t pid, void *obuf, int olen, void *ibuf, int ilen)
+{
+	return syscall5(SYS_SEND, (void*) pid, obuf, (void*) olen, ibuf,
+			(void*) ilen);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int recv (pid_t *pid, void *buffer, int length) {
-    return syscall3 (SYS_RECV, (void*) pid, buffer, (void*) length);
+int recv(pid_t *pid, void *buffer, int length)
+{
+	return syscall3(SYS_RECV, (void*) pid, buffer, (void*) length);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-int reply (pid_t pid, void *buffer, int length) {
-    return syscall3 (SYS_REPLY, (void*) pid, buffer, (void*) length);
+int reply (pid_t pid, void *buffer, int length)
+{
+	return syscall3(SYS_REPLY, (void*) pid, buffer, (void*) length);
 }

@@ -28,42 +28,44 @@
 
 static pid_t server_pid = -1;
 
-void printserver (int argc, char *argv[]) {
-    int rv;
-    pid_t pid;
-    char buf[BUF_LEN];
+void printserver(int argc, char *argv[])
+{
+	int rv;
+	pid_t pid;
+	char buf[BUF_LEN];
 
-    server_pid = getpid ();
+	server_pid = getpid();
 
-    for (;;) {
-        pid = 0;
-        if ((rv = recv (&pid, buf, BUF_LEN)) == -1) {
-            puts ("printserver: recv error");
-            return;
-        }
-        if (write (STDOUT_FILENO, buf, rv) == -1) {
-            puts ("printserver: write error");
-            return;
-        }
-        if (reply (pid, NULL, 0) == -1) {
-            puts ("printserver: reply error");
-            return;
-        }
-    }
+	for (;;) {
+		pid = 0;
+		if ((rv = recv(&pid, buf, BUF_LEN)) == -1) {
+			puts("printserver: recv error");
+			return;
+		}
+		if (write(STDOUT_FILENO, buf, rv) == -1) {
+			puts("printserver: write error");
+			return;
+		}
+		if (reply(pid, NULL, 0) == -1) {
+			puts("printserver: reply error");
+			return;
+		}
+	}
 }
 
-void printclient (int argc, char *argv[]) {
-    char reply_blk;
+void printclient(int argc, char *argv[])
+{
+	char reply_blk;
 
-    if (argc < 1) {
-        puts ("usage: printclient [string]");
-        return;
-    }
-    for (int i = 0; argv[i] != NULL; i++) {
-        if (send (server_pid, argv[i], strlen (argv[i])+1, &reply_blk, 1) == -1)
-            puts ("printclient: send error");
-        else
-            printf (" ");
-    }
-    puts ("");
+	if (argc < 1) {
+		puts("usage: printclient [string]");
+		return;
+	}
+	for (int i = 0; argv[i] != NULL; i++) {
+		if (send(server_pid, argv[i], strlen(argv[i])+1, &reply_blk, 1) == -1)
+			puts("printclient: send error");
+		else
+			printf(" ");
+	}
+	puts("");
 }

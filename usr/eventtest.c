@@ -22,48 +22,53 @@
 
 #include <telos/process.h>
 
-static void sleep_proc (int argc, char *argv[]) {
-    sleep (argc);
-    printf ("%d ", argc);
+static void sleep_proc(int argc, char *argv[])
+{
+	sleep(argc);
+	printf("%d ", argc);
 }
 
-static void sleep_test (void) {
-    printf ("Testing sleep...\nVerify ascending: ");
-    syscreate (sleep_proc, 1, NULL);
-    syscreate (sleep_proc, 2, NULL);
-    syscreate (sleep_proc, 3, NULL);
-    sleep (4);
+static void sleep_test(void)
+{
+	printf("Testing sleep...\nVerify ascending: ");
+	syscreate(sleep_proc, 1, NULL);
+	syscreate(sleep_proc, 2, NULL);
+	syscreate(sleep_proc, 3, NULL);
+	sleep(4);
 
-    printf ("\nVefify ascending: ");
-    syscreate (sleep_proc, 3, NULL);
-    syscreate (sleep_proc, 2, NULL);
-    syscreate (sleep_proc, 1, NULL);
-    sleep (4);
-    puts ("");
+	printf("\nVefify ascending: ");
+	syscreate(sleep_proc, 3, NULL);
+	syscreate(sleep_proc, 2, NULL);
+	syscreate(sleep_proc, 1, NULL);
+	sleep(4);
+	puts("");
 }
 
-static void alarm_handler (int signo) {
-    puts ("rm");
+static void alarm_handler(int signo)
+{
+	puts("rm");
 }
 
-static void alarm_test (void) {
-    int sig, rv;
-    signal (SIGALRM, alarm_handler);
-    printf ("Testing alarm... alrm ?= ");
-    alarm (2);
-    if ((rv = alarm (2)) <= 0)
-        printf ("error");
-    printf ("al");
-    for (sig = sigwait (); sig != SIGALRM; sig = sigwait ());
-    printf ("Testing alarm(0)... ");
-    alarm (2);
-    if (alarm (0) > 0)
-        puts ("okay");
-    else
-        puts ("error");
+static void alarm_test(void)
+{
+	int sig, rv;
+	signal(SIGALRM, alarm_handler);
+	printf("Testing alarm... alrm ?= ");
+	alarm(2);
+	if ((rv = alarm(2)) <= 0)
+		printf("error");
+	printf("al");
+	for (sig = sigwait(); sig != SIGALRM; sig = sigwait());
+	printf("Testing alarm(0)... ");
+	alarm(2);
+	if (alarm(0) > 0)
+		puts("okay");
+	else
+		puts("error");
 }
 
-void eventtest (int argc, char *argv[]) {
-    sleep_test ();
-    alarm_test ();
+void eventtest(int argc, char *argv[])
+{
+	sleep_test();
+	alarm_test();
 }

@@ -1,6 +1,3 @@
-/* print.h : printing to the console
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,9 +16,9 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_PRINT_H_
-#define __TELOS_PRINT_H_
+#ifndef _TELOS_PRINT_H_
+#define _TELOS_PRINT_H_
 
-void sysreport (char *s);
+void sysreport(char *s);
 
 #endif

@@ -28,68 +28,71 @@
 
 pid_t main_pid;
 
-void recv_proc (int argc, char *argv[]) {
-    char msg[40];
+void recv_proc(int argc, char *argv[])
+{
+	char msg[40];
 
-    if (recv (&main_pid, msg, 40) == -1) {
-        puts ("recv error: returned -1");
-        return;
-    }
-    if (strcmp (msg, argv[0])) {
-        puts ("recv error: msg != arg");
-        return;
-    }
+	if (recv(&main_pid, msg, 40) == -1) {
+		puts("recv error: returned -1");
+		return;
+	}
+	if (strcmp(msg, argv[0])) {
+		puts("recv error: msg != arg");
+		return;
+	}
 }
 
-void send_proc () {
-    char msg[40] = "msg";
-    char reply[40];
+void send_proc()
+{
+	char msg[40] = "msg";
+	char reply[40];
 
-    if (send (main_pid, msg, 4, reply, 40) == -1) {
-        puts ("send error: returned -1");
-        return;
-    }
-    if (strcmp (msg, reply)) {
-        puts ("reply error: msg != reply");
-        return;
-    }
+	if (send(main_pid, msg, 4, reply, 40) == -1) {
+		puts("send error: returned -1");
+		return;
+	}
+	if (strcmp(msg, reply)) {
+		puts("reply error: msg != reply");
+		return;
+	}
 }
 
-void msgtest (void *arg) {
-    pid_t pids[10];
-    char buf[40];
-    char *msg = "msg";
+void msgtest(void *arg)
+{
+	pid_t pids[10];
+	char buf[40];
+	char *msg = "msg";
 
-    main_pid = getpid ();
+	main_pid = getpid();
 
-    puts ("Testing block-on-recv...");
-    for (int i = 0; i < 10; i++)
-        pids[i] = syscreate (recv_proc, 1, &msg);
-    sleep (1);
-    for (int i = 0; i < 10; i++)
-        send (pids[i], msg, 4, NULL, 0);
+	puts("Testing block-on-recv...");
+	for (int i = 0; i < 10; i++)
+		pids[i] = syscreate(recv_proc, 1, &msg);
+	sleep(1);
+	for (int i = 0; i < 10; i++)
+		send(pids[i], msg, 4, NULL, 0);
 
-    puts ("Testing block-on-send...");
-    for (int i = 0; i < 10; i++)
-        pids[i] = syscreate (send_proc, 0, NULL);
-    sleep (1);
-    for (int i = 0; i < 10; i++) {
-        if (recv (&pids[i], buf, 40) == -1) {
-            puts ("recv error: returned -1");
-            return;
-        }
-        if (strcmp (buf, msg)) {
-            puts ("recv error: buf != msg");
-            return;
-        }
-        buf[0] = '\0';
-    }
+	puts("Testing block-on-send...");
+	for (int i = 0; i < 10; i++)
+		pids[i] = syscreate(send_proc, 0, NULL);
+	sleep(1);
+	for (int i = 0; i < 10; i++) {
+		if (recv(&pids[i], buf, 40) == -1) {
+			puts("recv error: returned -1");
+			return;
+		}
+		if (strcmp(buf, msg)) {
+			puts("recv error: buf != msg");
+			return;
+		}
+		buf[0] = '\0';
+	}
 
-    puts ("Testing block-on-reply...");
-    for (int i = 0; i < 10; i++) {
-        if (reply (pids[i], msg, 4) == -1) {
-            puts ("reply error: returned -1");
-            return;
-        }
-    }
+	puts("Testing block-on-reply...");
+	for (int i = 0; i < 10; i++) {
+		if (reply(pids[i], msg, 4) == -1) {
+			puts("reply error: returned -1");
+			return;
+		}
+	}
 }

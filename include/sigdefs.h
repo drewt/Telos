@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIGDEFS_H_
-#define __SIGDEFS_H_
+#ifndef _SIGDEFS_H_
+#define _SIGDEFS_H_
 
 #ifdef __KERNEL__
 #include <kernel/types.h>
@@ -29,42 +29,42 @@ typedef int pid_t;
 typedef unsigned long sigset_t;
 
 typedef struct sigstack {
-    int    ss_onstack; // non-zero when signal stack is in use
-    void   *ss_sp;     // stack base or pointer
-    size_t ss_size;    // stack size
-    int    ss_flags;   // flags
+	int	ss_onstack;	// non-zero when signal stack is in use
+	void	*ss_sp;		// stack base or pointer
+	size_t	ss_size;	// stack size
+	int	ss_flags;	// flags
 } stack_t;
 
 union sigval {
-    int  sigval_int;
-    void *sigval_ptr;
+	int  sigval_int;
+	void *sigval_ptr;
 };
 
 struct sigevent {
-    int          sigev_notify;
-    int          sigev_signo;
-    union sigval sigev_value;
-    void (*sigev_notify_function)(union sigval);
+	int		sigev_notify;
+	int		sigev_signo;
+	union sigval	sigev_value;
+	void(*sigev_notify_function)(union sigval);
 };
 
 typedef struct siginfo {
-    int   si_signo;  // signal number
-    int   si_errno;  // if non-zero, an errno value associated with this signal
-    int   si_code;   // signal code
-    pid_t si_pid;    // sending process ID
-    void  *si_addr;  // address of faulting instruction
-    int   si_status; // exit value or signal
-    int   si_band;   // band event for SIGPOLL
-    union sigval si_value; // signal value
+	int		si_signo;	// signal number
+	int		si_errno;	// errno value associated with this signal
+	int		si_code;	// signal code
+	pid_t		si_pid;		// sending process ID
+	void		*si_addr;	// address of faulting instruction
+	int		si_status;	// exit value or signal
+	int		si_band;	// band event for SIGPOLL
+	union sigval	si_value;	// signal value
 } siginfo_t;
 
 struct sigaction {
-    union {
-        void (*sa_handler)(int);
-        void (*sa_sigaction)(int,siginfo_t*,void*);
-    } _u;
-    sigset_t sa_mask;
-    int      sa_flags;
+	union {
+		void(*sa_handler)(int);
+		void(*sa_sigaction)(int,siginfo_t*,void*);
+	} _u;
+	sigset_t	sa_mask;
+	int		sa_flags;
 };
 
 #define sa_handler   _u.sa_handler

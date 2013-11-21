@@ -26,30 +26,33 @@
 
 #include <telos/process.h>
 
-static void print_proc (int argc, char *argv[]) {
-    printf ("%s", (char*) argv[0]);
+static void print_proc(int argc, char *argv[])
+{
+	printf("%s", (char*) argv[0]);
 }
 
-static void stop_proc () {
-    exit (0);
-    printf ("FAIL");
+static void stop_proc()
+{
+	exit(0);
+	printf("FAIL");
 }
 
-void proctest (void *arg) {
-    char *a = "a", *s = "s", *d = "d", *f = "f";
-    printf ("Testing syscreate... asdf ?= ");
-    syscreate (print_proc, 1, &a);
-    sleep (1);
-    syscreate (print_proc, 1, &s);
-    sleep (1);
-    syscreate (print_proc, 1, &d);
-    sleep (1);
-    syscreate (print_proc, 1, &f);
-    sleep (1);
-    puts ("");
+void proctest(void *arg)
+{
+	char *a = "a", *s = "s", *d = "d", *f = "f";
+	printf("Testing syscreate... asdf ?= ");
+	syscreate(print_proc, 1, &a);
+	sleep(1);
+	syscreate(print_proc, 1, &s);
+	sleep(1);
+	syscreate(print_proc, 1, &d);
+	sleep(1);
+	syscreate(print_proc, 1, &f);
+	sleep(1);
+	puts("");
 
-    printf ("Testing sysstop...");
-    syscreate (stop_proc, 0, NULL);
-    sleep (1);
-    puts ("");
+	printf("Testing sysstop...");
+	syscreate(stop_proc, 0, NULL);
+	sleep(1);
+	puts("");
 }

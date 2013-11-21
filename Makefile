@@ -14,10 +14,10 @@ all: kernel.img
 kernel.bin: $(SUBMAKES) boot/loader.o
 	@echo 'Generating linker script'
 	@printf 'INPUT ( %s )\n' \
-	    "boot/loader.o `$(FINDOBJ)` usr/usr.a lib/klib.a" \
-	    > linker.ld
+		"boot/loader.o `$(FINDOBJ)` usr/usr.a lib/klib.a" \
+		> linker.ld
 	@cat sections.ld >> linker.ld
-	$(LD) -T linker.ld -o $@
+	$(LD) -T linker.ld --warn-common -o $@
 
 # make a bootable floppy image with grub legacy
 kernel.img: kernel.bin pad

@@ -1,6 +1,3 @@
-/* msg.h : message passing IPC
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,13 +16,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TELOS_MSG_H_
-#define __TELOS_MSG_H_
+#ifndef _TELOS_MSG_H_
+#define _TELOS_MSG_H_
 
 #include <sys/types.h>
 
-int send (pid_t dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-int recv (pid_t *src_pid, void *buffer, int length);
-int reply (pid_t src_pid, void *buffer, int length);
+int send(pid_t dest_pid, void *obuf, int olen, void *ibuf, int ilen);
+int recv(pid_t *src_pid, void *buffer, int length);
+int reply(pid_t src_pid, void *buffer, int length);
 
-#endif // __TELOS_MSG_H_
+#endif

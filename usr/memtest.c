@@ -24,28 +24,31 @@
 #define M 100
 #define A 144
 
-void memtest (int argc, char *argv[])
+void memtest(int argc, char *argv[])
 {
-    void *mem[N];
+	void *mem[N];
 
-    puts ("Testing palloc()...");
-    for (int i = 0; i < N; i++) {
-        if ((mem[i] = palloc ()) == NULL) {
-            printf ("memtest[%d]: palloc returned NULL\n", i);
-            return;
-        }
-        memset (mem[i], 0xFF, 4096);
-    }
+	puts("Testing palloc()...");
+	for (int i = 0; i < N; i++) {
+		if ((mem[i] = palloc()) == NULL) {
+			printf("memtest[%d]: palloc returned NULL\n", i);
+			return;
+		}
+		memset(mem[i], 0xFF, 4096);
+	}
 
-    /*puts ("Testing malloc()...");
-    for (int i = 0; i < N; i++) {
-        if ((mem[i] = malloc (i*M+A)) == NULL) {
-            puts ("memtest: malloc returned NULL");
-            return;
-        }
-    }
+	unsigned long *bad = (void*) (0x00112000 + 0xC0000000);
+	*bad = 0xFF;
 
-    puts ("Testing free()...");
-    for (int i = N-1; i >= 0; i--)
-        free (mem[i]);*/
+	/*puts("Testing malloc()...");
+	for (int i = 0; i < N; i++) {
+		if ((mem[i] = malloc(i*M+A)) == NULL) {
+			puts("memtest: malloc returned NULL");
+			return;
+		}
+	}
+
+	puts("Testing free()...");
+	for (int i = N-1; i >= 0; i--)
+		free(mem[i]);*/
 }

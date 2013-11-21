@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __KERNEL_H_
-#define __KERNEL_H_
+#ifndef _KERNEL_KERNEL_H_
+#define _KERNEL_KERNEL_H_
 
 struct multiboot_info;
 
@@ -25,11 +25,11 @@ struct multiboot_info;
 extern void(*dfl_sighandlers[])(int);
 
 /* initialization procedures */
-extern void dev_init (void); /* devinit.c */
-extern void isr_init (void); /* ctsw.c */
+extern void dev_init(void); /* devinit.c */
+extern void isr_init(void); /* ctsw.c */
 
 /* user.c */
-extern void root_proc ();
-extern void idle_proc ();
+extern void root_proc();
+extern void idle_proc();
 
-#endif // __KERNEL_H_
+#endif

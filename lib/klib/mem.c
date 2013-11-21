@@ -27,60 +27,66 @@ int errno;
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-static inline int telos_malloc (size_t size, void **p) {
-    return syscall2 (SYS_MALLOC, (void*) size, p);
+static inline int telos_malloc(size_t size, void **p)
+{
+	return syscall2(SYS_MALLOC, (void*) size, p);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void *palloc (void) {
-    void *rv;
-    int error;
+void *palloc(void)
+{
+	void *rv;
+	int error;
 
-    if ((error = syscall1 (SYS_PALLOC, &rv)) != 0) {
-        errno = error * -1;
-        return NULL;
-    }
-    return rv;
+	if ((error = syscall1(SYS_PALLOC, &rv)) != 0) {
+		errno = error * -1;
+		return NULL;
+	}
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void free (void *ptr) {
-    syscall1 (SYS_FREE, ptr);
+void free(void *ptr)
+{
+	syscall1(SYS_FREE, ptr);
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void *malloc (size_t size) {
-    void *rp;
-    if (telos_malloc (size, &rp))
-        return NULL;
-    return rp;
+void *malloc(size_t size)
+{
+	void *rp;
+	if (telos_malloc(size, &rp))
+		return NULL;
+	return rp;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void *calloc (size_t nmemb, size_t size) {
-    void *rp;
-    if (telos_malloc (nmemb * size, &rp))
-        return NULL;
-    memset (rp, 0, nmemb * size);
-    return rp;
+void *calloc(size_t nmemb, size_t size)
+{
+	void *rp;
+	if (telos_malloc(nmemb * size, &rp))
+		return NULL;
+	memset(rp, 0, nmemb * size);
+	return rp;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void *realloc (void *ptr, size_t size) {
-    void *rp;
-    if (telos_malloc (size, &rp))
-        return NULL;
-    memcpy (rp, ptr, size);
-    free (ptr);
-    return rp;
+void *realloc(void *ptr, size_t size)
+{
+	void *rp;
+	if (telos_malloc(size, &rp))
+		return NULL;
+	memcpy(rp, ptr, size);
+	free(ptr);
+	return rp;
 }

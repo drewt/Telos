@@ -31,52 +31,52 @@
 
 #define MAX_ALLOC 0x4000
 
-void sys_malloc (unsigned int size, void **p)
-{    
-    struct mem_header *h;
+void sys_malloc(unsigned int size, void **p)
+{
+	struct mem_header *h;
 
-    if (size == 0) {
-        current->rc = -EINVAL;
-        return;
-    }
+	if (size == 0) {
+		current->rc = -EINVAL;
+		return;
+	}
 
-    // TODO: limit memory use in a more `global' way
-    if (size > MAX_ALLOC) {
-        current->rc = -ENOMEM;
-        return;
-    }
+	// TODO: limit memory use in a more `global' way
+	if (size > MAX_ALLOC) {
+		current->rc = -ENOMEM;
+		return;
+	}
 
-    if (!(*p = hmalloc (size, &h))) {
-        current->rc = -ENOMEM;
-        return;
-    }
+	if (!(*p = hmalloc(size, &h))) {
+		current->rc = -ENOMEM;
+		return;
+	}
 
-    // add h to list of allocated memory for current process
-    list_insert_tail (&current->heap_mem, (list_entry_t) h);
+	// add h to list of allocated memory for current process
+	list_insert_tail(&current->heap_mem, (list_entry_t) h);
 
-    current->rc = 0;
+	current->rc = 0;
 }
 
-void sys_free (void *ptr)
+void sys_free(void *ptr)
 {
-    struct mem_header *h = mem_ptoh (ptr);
+	struct mem_header *h = mem_ptoh(ptr);
 
-    // XXX: unsafe!  Memory might be unallocated or allocated to another process
-    list_remove (&current->heap_mem, (list_entry_t) h);
-    hfree (h);
+	// XXX: unsafe!  Memory might be unallocated or allocated to another process
+	list_remove(&current->heap_mem, (list_entry_t) h);
+	hfree(h);
 }
 
-void sys_palloc (void **p)
+void sys_palloc(void **p)
 {
-    struct pf_info *page;
+	struct pf_info *page;
 
-    if ((page = kalloc_page ()) == NULL) {
-        current->rc = -ENOMEM;
-        return;
-    }
+	if ((page = kalloc_page()) == NULL) {
+		current->rc = -ENOMEM;
+		return;
+	}
 
-    list_insert_tail (&current->page_mem, (list_entry_t) page);
+	list_insert_tail(&current->page_mem, (list_entry_t) page);
 
-    *p = (void*) page->addr;
-    current->rc = 0;
+	*p = (void*) page->addr;
+	current->rc = 0;
 }

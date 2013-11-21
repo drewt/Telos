@@ -1,6 +1,3 @@
-/* signal.h : signals
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIGNAL_H_
-#define __SIGNAL_H_
+#ifndef _SIGNAL_H_
+#define _SIGNAL_H_
 
 #include <sigdefs.h>
 
@@ -30,99 +27,99 @@
 #define SIG_IGN  ((void(*)(int)) 4)
 
 enum sig_nums {
-    SIGABRT = 1,
-    SIGALRM,
-    SIGBUS,
-    SIGCHLD,
-    SIGCONT,
-    SIGFPE,
-    SIGHUP,
-    SIGILL,
-    SIGINT,
-    SIGPIPE,
-    SIGQUIT,
-    SIGSEGV,
-    SIGTERM,
-    SIGTSTP,
-    SIGTTIN,
-    SIGTTOU,
-    SIGUSR1,
-    SIGUSR2,
-    SIGPOLL,
-    SIGPROF,
-    SIGSYS,
-    SIGTRAP,
-    SIGURG,
-    SIGVTALRM,
-    SIGXCPU,
-    SIGSTOP,
-    SIGKILL,
-    _TELOS_SIGMAX
+	SIGABRT = 1,
+	SIGALRM,
+	SIGBUS,
+	SIGCHLD,
+	SIGCONT,
+	SIGFPE,
+	SIGHUP,
+	SIGILL,
+	SIGINT,
+	SIGPIPE,
+	SIGQUIT,
+	SIGSEGV,
+	SIGTERM,
+	SIGTSTP,
+	SIGTTIN,
+	SIGTTOU,
+	SIGUSR1,
+	SIGUSR2,
+	SIGPOLL,
+	SIGPROF,
+	SIGSYS,
+	SIGTRAP,
+	SIGURG,
+	SIGVTALRM,
+	SIGXCPU,
+	SIGSTOP,
+	SIGKILL,
+	_TELOS_SIGMAX
 };
 
 enum {
-    SA_NOCLDSTOP  = 1,
-    SA_ONSTACK    = 1 << 1,
-    SA_RESETHAND  = 1 << 2,
-    SA_RESTART    = 1 << 3,
-    SA_SIGINFO    = 1 << 4,
-    SA_NOCLDWAIT  = 1 << 5,
-    SA_NODEFER    = 1 << 6
+	SA_NOCLDSTOP	= 1,
+	SA_ONSTACK	= 1 << 1,
+	SA_RESETHAND	= 1 << 2,
+	SA_RESTART	= 1 << 3,
+	SA_SIGINFO	= 1 << 4,
+	SA_NOCLDWAIT	= 1 << 5,
+	SA_NODEFER	= 1 << 6
 };
 
 enum {
-    SI_USER,
-    SI_QUEUE,
-    SI_TIMER,
-    SI_ASYNCIO,
-    SI_MESGQ
+	SI_USER,
+	SI_QUEUE,
+	SI_TIMER,
+	SI_ASYNCIO,
+	SI_MESGQ
 };
 
 enum sigprocmask_flags { SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK };
 
-int kill (pid_t pid, int signal_number);
-int sigqueue (pid_t pid, int signal_number, const union sigval value);
-int sigaction (int sig, struct sigaction *act, struct sigaction *oact);
-void(*signal(int sig, void (*func)(int)))(int);
-int sigprocmask (int how, sigset_t *set, sigset_t *oset);
-int sigwait (void);
+int kill(pid_t pid, int signal_number);
+int sigqueue(pid_t pid, int signal_number, const union sigval value);
+int sigaction(int sig, struct sigaction *act, struct sigaction *oact);
+void(*signal(int sig, void(*func)(int)))(int);
+int sigprocmask(int how, sigset_t *set, sigset_t *oset);
+int sigwait(void);
 
-static inline int sigfillset (sigset_t *set)
+static inline int sigfillset(sigset_t *set)
 {
-    *set = (1 << (_TELOS_SIGMAX - 1)) - 1;
-    return 0;
+	*set = (1 << (_TELOS_SIGMAX - 1)) - 1;
+	return 0;
 }
 
-static inline int sigemptyset (sigset_t *set)
+static inline int sigemptyset(sigset_t *set)
 {
-    *set = 0;
-    return 0;
+	*set = 0;
+	return 0;
 }
 
-static inline int sigaddset (sigset_t *set, int signum)
+static inline int sigaddset(sigset_t *set, int signum)
 {
-    if (signum >= _TELOS_SIGMAX)
-        return -1;
+	if (signum >= _TELOS_SIGMAX)
+		return -1;
 
-    *set |= (1 << signum);
-    return 0;
+	*set |= (1 << signum);
+	return 0;
 }
 
-static inline int sigdelset (sigset_t *set, int signum)
+static inline int sigdelset(sigset_t *set, int signum)
 {
-    if (signum >= _TELOS_SIGMAX)
-        return -1;
+	if (signum >= _TELOS_SIGMAX)
+		return -1;
 
-    *set &= ~(1 << signum);
-    return 0;
+	*set &= ~(1 << signum);
+	return 0;
 }
 
-static inline int sigismember (const sigset_t *set, int signum)
+static inline int sigismember(const sigset_t *set, int signum)
 {
-    if (signum >= _TELOS_SIGMAX)
-        return -1;
+	if (signum >= _TELOS_SIGMAX)
+		return -1;
 
-    return *set & (1 << signum);
+	return *set & (1 << signum);
 }
 
-#endif // __SIGNAL_H_
+#endif

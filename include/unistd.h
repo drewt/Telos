@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_UNISTD_H_
-#define _TELOS_UNISTD_H_
+#ifndef _UNISTD_H_
+#define _UNISTD_H_
 
 #include <sys/types.h>
 
@@ -26,18 +26,18 @@
 #endif
 
 enum {
-    STDIN_FILENO,
-    STDOUT_FILENO,
-    STDERR_FILENO,
+	STDIN_FILENO,
+	STDOUT_FILENO,
+	STDERR_FILENO,
 };
 
-unsigned int alarm (unsigned int seconds);
-pid_t getpid (void);
-unsigned int sleep (unsigned int seconds);
-int open (const char *pathname, int flags, ...);
-int close (int fd);
-ssize_t read (int fd, void *buf, size_t nbyte);
-ssize_t write (int fd, const void *buf, size_t nbyte);
-int ioctl (int fd, int command, ...);
+unsigned int alarm(unsigned int seconds);
+pid_t getpid(void);
+unsigned int sleep(unsigned int seconds);
+int open(const char *pathname, int flags, ...);
+int close(int fd);
+ssize_t read(int fd, void *buf, size_t nbyte);
+ssize_t write(int fd, const void *buf, size_t nbyte);
+int ioctl(int fd, int command, ...);
 
 #endif

@@ -29,107 +29,107 @@
 
 // TODO: replace with real dev filesystem
 static const char *devmap[4] = {
-    [DEV_KBD]       = "/dev/kbd",
-    [DEV_KBD_ECHO]  = "/dev/kbd_echo",
-    [DEV_CONSOLE_0] = "/dev/cons0",
-    [DEV_CONSOLE_1] = "/dev/cons1"
+	[DEV_KBD]	= "/dev/kbd",
+	[DEV_KBD_ECHO]	= "/dev/kbd_echo",
+	[DEV_CONSOLE_0]	= "/dev/cons0",
+	[DEV_CONSOLE_1]	= "/dev/cons1"
 };
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_open (const char *pathname, int flags, ...)
+void sys_open(const char *pathname, int flags, ...)
 {
-    dev_t fd;
-    int devno;
+	dev_t fd;
+	int devno;
 
-    const char *path = (char*) kmap_tmp_range (current->pgdir,
-            (ulong) pathname, 1024);
+	const char *path = (char*) kmap_tmp_range(current->pgdir,
+			(ulong) pathname, 1024);
 
-    // look up device corresponding to pathname
-    for (devno = 0; devno < 4; devno++)
-        if (!strcmp (path, devmap[devno]))
-            break;
+	/* look up device corresponding to pathname */
+	for (devno = 0; devno < 4; devno++)
+		if (!strcmp(path, devmap[devno]))
+			break;
 
-    kunmap_range ((ulong) path, 1024);
+	kunmap_range((ulong) path, 1024);
 
-    if (devno == 4) {
-        current->rc = -ENOENT;
-        return;
-    }
+	if (devno == 4) {
+		current->rc = -ENOENT;
+		return;
+	}
 
-    for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);
-    if (fd == FDT_SIZE) {
-        current->rc = -ENFILE;
-        return;
-    }
+	for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);
+	if (fd == FDT_SIZE) {
+		current->rc = -ENFILE;
+		return;
+	}
 
-    if (devtab[devno].dv_op->dvopen == NULL)
-        return;
-    if ((current->rc = devtab[devno].dv_op->dvopen(devno)))
-        return;
+	if (devtab[devno].dv_op->dvopen == NULL)
+		return;
+	if ((current->rc = devtab[devno].dv_op->dvopen(devno)))
+		return;
 
-    current->fds[fd] = devno;
-    current->rc = fd;
+	current->fds[fd] = devno;
+	current->rc = fd;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_close (int fd)
+void sys_close(int fd)
 {
-    dev_t devno = current->fds[fd];
-    if (!FD_VALID (fd)) {
-        current->rc = -EBADF;
-        return;
-    }
-    if (devtab[devno].dv_op->dvclose &&devtab[devno].dv_op->dvclose (devno)) {
-        current->rc = -EIO;
-        return;
-    }
+	dev_t devno = current->fds[fd];
+	if (!FD_VALID(fd)) {
+		current->rc = -EBADF;
+		return;
+	}
+	if (devtab[devno].dv_op->dvclose &&devtab[devno].dv_op->dvclose(devno)) {
+		current->rc = -EIO;
+		return;
+	}
 
-    current->fds[fd] = FD_NONE;
-    current->rc = 0;
+	current->fds[fd] = FD_NONE;
+	current->rc = 0;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_read (int fd, void *buf, int nbyte)
+void sys_read(int fd, void *buf, int nbyte)
 {
-    if (!FD_VALID (fd)) {
-        current->rc = -EBADF;
-        return;
-    }
+	if (!FD_VALID(fd)) {
+		current->rc = -EBADF;
+		return;
+	}
 
-    struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-    current->rc = dev_op->dvread ? dev_op->dvread (fd, buf, nbyte) : ENXIO;
+	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	current->rc = dev_op->dvread ? dev_op->dvread(fd, buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_write (int fd, void *buf, int nbyte)
+void sys_write(int fd, void *buf, int nbyte)
 {
-    if (!FD_VALID (fd)) {
-        current->rc = -EBADF;
-        return;
-    }
+	if (!FD_VALID(fd)) {
+		current->rc = -EBADF;
+		return;
+	}
 
-    struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-    current->rc = dev_op->dvwrite ? dev_op->dvwrite (fd, buf, nbyte) : ENXIO;
+	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	current->rc = dev_op->dvwrite ? dev_op->dvwrite(fd, buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_ioctl (int fd, ulong cmd, va_list vargs)
+void sys_ioctl(int fd, ulong cmd, va_list vargs)
 {
-    if (!FD_VALID (fd)) {
-        current->rc = -EBADF;
-        return;
-    }
+	if (!FD_VALID(fd)) {
+		current->rc = -EBADF;
+		return;
+	}
 
-    struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-    current->rc = dev_op->dvioctl ? dev_op->dvioctl (fd, cmd, vargs) : ENXIO;
+	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	current->rc = dev_op->dvioctl ? dev_op->dvioctl(fd, cmd, vargs) : ENXIO;
 }

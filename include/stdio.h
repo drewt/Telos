@@ -16,8 +16,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __STDIO_H_
-#define __STDIO_H_
+#ifndef _STDIO_H_
+#define _STDIO_H_
 
 #include <stddef.h>
 #include <stdarg.h>
@@ -25,28 +25,28 @@
 #define EOF (-1)
 
 typedef struct {
-    int fd;
+	int fd;
 } FILE;
 
 extern FILE *stdin;
 extern FILE *stdout;
 extern FILE *stderr;
 
-int vsnprintf (char *str, size_t size, const char *fmt, va_list ap);
-int snprintf (char *str, size_t size, const char *fmt, ...);
-int vsprintf (char *str, const char *fmt, va_list ap);
-int sprintf (char *str, const char *fmt, ...);
-int printf (const char *fmt, ...);
-int vprintf (const char *fmt, va_list ap);
-int fprintf (FILE *stream, const char *fmt, ...);
-int vfprintf (FILE *stream, const char *fmt, va_list ap);
-int puts (const char *s);
+int vsnprintf(char *str, size_t size, const char *fmt, va_list ap);
+int snprintf(char *str, size_t size, const char *fmt, ...);
+int vsprintf(char *str, const char *fmt, va_list ap);
+int sprintf(char *str, const char *fmt, ...);
+int printf(const char *fmt, ...);
+int vprintf(const char *fmt, va_list ap);
+int fprintf(FILE *stream, const char *fmt, ...);
+int vfprintf(FILE *stream, const char *fmt, va_list ap);
+int puts(const char *s);
 int putchar(int c);
 
-size_t fwrite (const void *ptr, size_t size, size_t nmemb, FILE *stream);
-size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
-int getchar (void);
-char *gets (char *s, int size);
+int getchar(void);
+char *gets(char *s, int size);
 
-#endif // __STDIO_H_
+#endif

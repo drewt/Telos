@@ -1,6 +1,3 @@
-/* process.h : process control system calls
- */
-
 /*  Copyright 2013 Drew T.
  *
  *  This file is part of Telos.
@@ -19,10 +16,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PROCESS_H_
-#define __PROCESS_H_
+#ifndef _TELOS_PROCESS_H_
+#define _TELOS_PROCESS_H_
 
-int syscreate (void(*func)(int,char**), int argc, char *argv[]);
-void sysyield (void);
+int syscreate(void(*func)(int,char**), int argc, char *argv[]);
+void sysyield(void);
 
 #endif

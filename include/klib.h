@@ -16,10 +16,15 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-char *itoa_2 (unsigned int val, char *buf);
-char *itoa_16 (unsigned int val, char *buf);
-char *itoa (int val, char *str, int base);
+#ifndef _KLIB_H_
+#define _KLIB_H_
+
+char *itoa_2(unsigned int val, char *buf);
+char *itoa_16(unsigned int val, char *buf);
+char *itoa(int val, char *str, int base);
 
 /* mem.c */
-unsigned int kbtoa (unsigned char code);
-int regmatch (const char *regex, char *text);
+unsigned int kbtoa(unsigned char code);
+int regmatch(const char *regex, char *text);
+
+#endif

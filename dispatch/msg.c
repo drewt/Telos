@@ -29,162 +29,163 @@
  * Sends a message to another process.  If ibuf is not NULL, then the sending
  * process will block until it receives a reply from the receiving process */
 //-----------------------------------------------------------------------------
-void sys_send (int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
+void sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 {
-    int tmp;
-    struct pcb *dest;
+	int tmp;
+	struct pcb *dest;
 
-    if (olen <= 0 || dest_pid <= 0) {
-        current->rc = -(EINVAL);
-        return;
-    }
+	if (olen <= 0 || dest_pid <= 0) {
+		current->rc = -(EINVAL);
+		return;
+	}
 
-    tmp = PT_INDEX (dest_pid);
-    if (proctab[tmp].pid != dest_pid) {
-        current->rc = -(ESRCH);
-        return;
-    }
+	tmp = PT_INDEX(dest_pid);
+	if (proctab[tmp].pid != dest_pid) {
+		current->rc = -(ESRCH);
+		return;
+	}
 
-    dest = &proctab[tmp];
+	dest = &proctab[tmp];
 
-    if (ibuf) {
-        current->reply_blk = (struct pbuf)
-            { .buf = ibuf, .len = ilen, .id = dest_pid };
-    }
+	if (ibuf) {
+		current->reply_blk = (struct pbuf)
+				{ .buf = ibuf, .len = ilen, .id = dest_pid };
+	}
 
-    // if dest is ready to receive from sending process...
-    if (dest->state == STATE_BLOCKED &&
-            (!dest->pbuf.id || dest->pbuf.id == current->pid)) {
+	/* if dest is ready to receive from sending process... */
+	if (dest->state == STATE_BLOCKED &&
+			(!dest->pbuf.id || dest->pbuf.id == current->pid)) {
 
-        if (!dest->pbuf.id)
-            copy_to_userspace (dest->pgdir, dest->parg, &current->pid, sizeof (int));
-            //*((int*) dest->parg) = current->pid;
+		if (!dest->pbuf.id)
+			copy_to_userspace(dest->pgdir, dest->parg,
+					&current->pid, sizeof(int));
+		//*((int*) dest->parg) = current->pid;
 
-        // unblock receiver
-        list_remove (&current->recv_q, (list_entry_t) dest);
-        ready (dest);
+		/* unblock receiver */
+		list_remove(&current->recv_q, (list_entry_t) dest);
+		ready(dest);
 
-        // send message
-        tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
-        copy_through_userspace (dest->pgdir, current->pgdir, dest->pbuf.buf,
-                obuf, tmp);
-        dest->rc = tmp;
+		/* send message */
+		tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
+		copy_through_userspace(dest->pgdir, current->pgdir, dest->pbuf.buf,
+				obuf, tmp);
+		dest->rc = tmp;
 
-        // if sender expects reply, block in receiver's reply queue
-        if (ibuf) {
-            enqueue (&dest->repl_q, (list_entry_t) current);
-            current->state = STATE_BLOCKED;
-            new_process ();
-        }
-    } else {
-        // block sender on receiver's recv queue
-        current->pbuf = (struct pbuf)
-            { .buf = obuf, .len = olen, .id = dest_pid };
-        enqueue (&dest->send_q, (list_entry_t) current);
-        current->state = STATE_BLOCKED;
-        new_process ();
-    }
+		/* if sender expects reply, block in receiver's reply queue */
+		if (ibuf) {
+			enqueue(&dest->repl_q, (list_entry_t) current);
+			current->state = STATE_BLOCKED;
+			new_process();
+		}
+	} else {
+		/* block sender on receiver's recv queue */
+		current->pbuf = (struct pbuf)
+				{ .buf = obuf, .len = olen, .id = dest_pid };
+		enqueue(&dest->send_q, (list_entry_t) current);
+		current->state = STATE_BLOCKED;
+		new_process();
+	}
 }
 
 /*-----------------------------------------------------------------------------
  * Receives a message from another process */
 //-----------------------------------------------------------------------------
-void sys_recv (int *pid_ptr, void *buffer, int length)
+void sys_recv(int *pid_ptr, void *buffer, int length)
 {
-    int tmp, src_pid;
-    struct pcb *src = NULL;
+	int tmp, src_pid;
+	struct pcb *src = NULL;
 
-    copy_from_userspace (current->pgdir, &src_pid, pid_ptr, sizeof (int));
+	copy_from_userspace(current->pgdir, &src_pid, pid_ptr, sizeof(int));
 
-    if (length <= 0 || src_pid < 0) {
-        current->rc = -(EINVAL);
-        return;
-    }
+	if (length <= 0 || src_pid < 0) {
+		current->rc = -(EINVAL);
+		return;
+	}
 
-    if (src_pid == 0) {
-        if (list_empty (&current->send_q)) {
-            /* no process waiting to send: block */
-            current->pbuf.buf = buffer;
-            current->pbuf.len = length;
-            current->pbuf.id  = 0;
-            current->state = STATE_BLOCKED;
-            current->parg = pid_ptr;
-            new_process ();
-            return;
-        } else {
-            /* set *src_pid and pretend it was set all along... */
-            src_pid = ((struct pcb*) list_first (&current->send_q))->pid;
-            copy_to_userspace (current->pgdir, pid_ptr, &src_pid, sizeof(int));
-        }
-    }
+	if (src_pid == 0) {
+		if (list_empty(&current->send_q)) {
+			/* no process waiting to send: block */
+			current->pbuf.buf = buffer;
+			current->pbuf.len = length;
+			current->pbuf.id  = 0;
+			current->state = STATE_BLOCKED;
+			current->parg = pid_ptr;
+			new_process();
+			return;
+		} else {
+			/* set *src_pid and pretend it was set all along... */
+			src_pid = ((struct pcb*) list_first(&current->send_q))->pid;
+			copy_to_userspace(current->pgdir, pid_ptr, &src_pid, sizeof(int));
+		}
+	}
 
-    tmp = PT_INDEX (src_pid);
-    if (proctab[tmp].pid != src_pid) {
-        current->rc = -ESRCH;
-        return;
-    }
+	tmp = PT_INDEX(src_pid);
+	if (proctab[tmp].pid != src_pid) {
+		current->rc = -ESRCH;
+		return;
+	}
 
-    src = &proctab[tmp];
+	src = &proctab[tmp];
 
-    // block receiver if src isn't ready to send
-    if (src->state != STATE_BLOCKED || src->pbuf.id != current->pid) {
-        current->pbuf = (struct pbuf)
-            { .buf = buffer, .len = length, .id = src->pid };
-        current->state = STATE_BLOCKED;
-        enqueue (&src->recv_q, (list_entry_t) current);
-        new_process ();
-    } else {
-        // unblock sender if no-reply send, otherwise move to reply queue
-        list_remove (&current->send_q, (list_entry_t) src);
-        if (!src->reply_blk.id)
-            ready (src);
-        else
-            enqueue (&current->repl_q, (list_entry_t) src);
+	/* block receiver if src isn't ready to send */
+	if (src->state != STATE_BLOCKED || src->pbuf.id != current->pid) {
+		current->pbuf = (struct pbuf)
+				{ .buf = buffer, .len = length, .id = src->pid };
+		current->state = STATE_BLOCKED;
+		enqueue(&src->recv_q, (list_entry_t) current);
+		new_process();
+	} else {
+		/* unblock sender if no-reply send, otherwise move to reply queue */
+		list_remove(&current->send_q, (list_entry_t) src);
+		if (!src->reply_blk.id)
+			ready(src);
+		else
+			enqueue(&current->repl_q, (list_entry_t) src);
 
-        // receive message
-        tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
-        copy_through_userspace (current->pgdir, src->pgdir, buffer,
-                src->pbuf.buf, tmp);
-        current->rc = tmp;
-    }
+		/* receive message */
+		tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
+		copy_through_userspace(current->pgdir, src->pgdir, buffer,
+				src->pbuf.buf, tmp);
+		current->rc = tmp;
+	}
 }
 
 /*-----------------------------------------------------------------------------
  * Sends a reply to another process */
 //-----------------------------------------------------------------------------
-void sys_reply (int src_pid, void *buffer, int length)
+void sys_reply(int src_pid, void *buffer, int length)
 {
-    int tmp;
-    struct pcb *src;
+	int tmp;
+	struct pcb *src;
 
-    if (length < 0 || src_pid <= 0) {
-        current->rc = -EINVAL;
-        return;
-    }
+	if (length < 0 || src_pid <= 0) {
+		current->rc = -EINVAL;
+		return;
+	}
 
-    tmp = PT_INDEX (src_pid);
-    if (proctab[tmp].pid != src_pid) {
-        current->rc = -ESRCH;
-        return;
-    }
+	tmp = PT_INDEX(src_pid);
+	if (proctab[tmp].pid != src_pid) {
+		current->rc = -ESRCH;
+		return;
+	}
 
-    src = &proctab[tmp];
+	src = &proctab[tmp];
 
-    // it is an error to reply before a corresponding send
-    if (src->state != STATE_BLOCKED || src->reply_blk.id != current->pid) {
-        current->rc = -EBADMSG; // XXX: better errno for this?
-        return;
-    }
+	/* it is an error to reply before a corresponding send */
+	if (src->state != STATE_BLOCKED || src->reply_blk.id != current->pid) {
+		current->rc = -EBADMSG; // XXX: better errno for this?
+		return;
+	}
 
-    // send reply
-    tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
-    copy_through_userspace (src->pgdir, current->pgdir, src->reply_blk.buf,
-            buffer, tmp);
-    current->rc = tmp;
-    src->rc = tmp;
+	/* send reply */
+	tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
+	copy_through_userspace(src->pgdir, current->pgdir, src->reply_blk.buf,
+			buffer, tmp);
+	current->rc = tmp;
+	src->rc = tmp;
 
-    // unblock sender
-    src->reply_blk.id = 0;
-    list_remove (&current->repl_q, (list_entry_t) src);
-    ready (src);
+	/* unblock sender */
+	src->reply_blk.id = 0;
+	list_remove(&current->repl_q, (list_entry_t) src);
+	ready(src);
 }

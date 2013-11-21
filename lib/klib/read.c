@@ -24,29 +24,33 @@ FILE *stdin  = &((FILE) { .fd = 0 });
 FILE *stdout = &((FILE) { .fd = 1 });
 FILE *stderr = &((FILE) { .fd = 2 });
 
-int getchar (void) {
-    unsigned char c;
-    if (!read (STDIN_FILENO, &c, 1))
-        return EOF;
-    return (int) c;
+int getchar(void)
+{
+	unsigned char c;
+	if (!read(STDIN_FILENO, &c, 1))
+		return EOF;
+	return (int) c;
 }
 
-char *gets (char *s, int size) {
-    int rv;
+char *gets(char *s, int size)
+{
+	int rv;
 
-    rv = read (STDIN_FILENO, s, size-1);
-    if (rv <= 0)
-        return NULL;
-    s[rv] = '\0';
-    return s;
+	rv = read(STDIN_FILENO, s, size-1);
+	if (rv <= 0)
+		return NULL;
+	s[rv] = '\0';
+	return s;
 }
 
-size_t fwrite (const void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    int rv = write (stream->fd, ptr, size * nmemb);
-    return (rv < 0) ? 0 : rv;
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+	int rv = write(stream->fd, ptr, size * nmemb);
+	return (rv < 0) ? 0 : rv;
 }
 
-size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    int rv = read (stream->fd, ptr, size * nmemb);
-    return (rv < 0) ? 0 : rv;
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+	int rv = read(stream->fd, ptr, size * nmemb);
+	return (rv < 0) ? 0 : rv;
 }

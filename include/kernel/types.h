@@ -26,26 +26,26 @@ typedef unsigned short dev_t;
 typedef unsigned long pte_t;
 typedef unsigned long* pmap_t;
 
-typedef unsigned char  uchar;
-typedef unsigned short ushort;
-typedef unsigned long  ulong;
+typedef unsigned char	uchar;
+typedef unsigned short	ushort;
+typedef unsigned long	ulong;
 
 // XXX: arch/implementation dependent
-typedef signed   char      s8;
-typedef unsigned char      u8;
+typedef signed   char		s8;
+typedef unsigned char		u8;
 
-typedef signed   short     s16;
-typedef unsigned short     u16;
+typedef signed   short		s16;
+typedef unsigned short		u16;
 
-typedef signed   long      s32;
-typedef unsigned long      u32;
+typedef signed   long		s32;
+typedef unsigned long		u32;
 
-typedef signed   long long s64;
-typedef unsigned long long u64;
+typedef signed   long long	s64;
+typedef unsigned long long	u64;
 
-#define bool  _Bool
-#define true  1
-#define false 0
+#define bool	_Bool
+#define true	1
+#define false	0
 
 #endif /* __KERNEL__ */
 #endif /* _KERNEL_TYPES_H_ */

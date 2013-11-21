@@ -16,19 +16,19 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __STDLIB_H_
-#define __STDLIB_H_
+#ifndef _STDLIB_H_
+#define _STDLIB_H_
 
 #include <stddef.h>
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
-void *palloc (void);
-void *malloc (size_t size);
-void *calloc (size_t nmemb, size_t size);
-void *realloc (void *ptr, size_t size);
-void free (void *ptr);
-void exit (int status);
+void *palloc(void);
+void *malloc(size_t size);
+void *calloc(size_t nmemb, size_t size);
+void *realloc(void *ptr, size_t size);
+void free(void *ptr);
+void exit(int status);
 
-#endif // __STDLIB_H_
+#endif

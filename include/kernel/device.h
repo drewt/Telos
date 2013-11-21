@@ -26,33 +26,33 @@
 #define IO_INCOMPLETE (-1)
 
 enum {
-    DEV_KBD,
-    DEV_KBD_ECHO,
-    DEV_CONSOLE_0,
-    DEV_CONSOLE_1,
-    DEV_SERIAL
+	DEV_KBD,
+	DEV_KBD_ECHO,
+	DEV_CONSOLE_0,
+	DEV_CONSOLE_1,
+	DEV_SERIAL
 };
 
 struct device_operations;
 
 struct device {
-    int dvnum;
-    char *dvname;
-    void *dvioblk;
-    struct device_operations *dv_op;
+	int dvnum;
+	char *dvname;
+	void *dvioblk;
+	struct device_operations *dv_op;
 };
 
 struct device_operations {
-    int (*dvinit)(void);
-    int (*dvopen)(dev_t devno);
-    int (*dvclose)(dev_t devno);
-    int (*dvread)(int fd, void *buf, int nbytes);
-    int (*dvwrite)(int fd, void *buf, int nbytes);
-    int (*dvioctl)(int fd, unsigned long request, va_list vargs);
-    void (*dviint)(void);
-    void (*dvoint)(void);
+	int(*dvinit)(void);
+	int(*dvopen)(dev_t devno);
+	int(*dvclose)(dev_t devno);
+	int(*dvread)(int fd, void *buf, int nbytes);
+	int(*dvwrite)(int fd, void *buf, int nbytes);
+	int(*dvioctl)(int fd, unsigned long request, va_list vargs);
+	void(*dviint)(void);
+	void(*dvoint)(void);
 };
 
 extern struct device devtab[DT_SIZE];
 
-#endif /* _KERNEL_DEVICE_H_ */
+#endif

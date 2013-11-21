@@ -22,45 +22,51 @@
 /*-----------------------------------------------------------------------------
  * Registers an action for a given signal */
 //-----------------------------------------------------------------------------
-int sigaction (int sig, struct sigaction *act, struct sigaction *oact) {
-    return syscall3 (SYS_SIGACTION, (void*) sig, act, oact);
+int sigaction(int sig, struct sigaction *act, struct sigaction *oact)
+{
+	return syscall3(SYS_SIGACTION, (void*) sig, act, oact);
 }
 
 /*-----------------------------------------------------------------------------
  * Sets the signal handler for a given signal */
 //-----------------------------------------------------------------------------
-void (*signal(int sig, void (*func)(int)))(int) {
-    return (void(*)(int)) syscall2 (SYS_SIGNAL, (void*) sig, func);
+void(*signal(int sig, void(*func)(int)))(int)
+{
+	return (void(*)(int)) syscall2(SYS_SIGNAL, (void*) sig, func);
 }
 
 /*-----------------------------------------------------------------------------
  * Alters the signal mask, either by blocking the given signals, unblocking
  * them, or setting the signal mask to the given set */
 //-----------------------------------------------------------------------------
-int sigprocmask (int how, sigset_t *set, sigset_t *oset) {
-    return syscall3 (SYS_SIGMASK, (void*) how, set, oset);
+int sigprocmask(int how, sigset_t *set, sigset_t *oset)
+{
+	return syscall3(SYS_SIGMASK, (void*) how, set, oset);
 }
 
 /*-----------------------------------------------------------------------------
  * Sends a signal to a process */
 //-----------------------------------------------------------------------------
-int kill (pid_t pid, int signal_number) {
-    return syscall2 (SYS_KILL, (void*) pid, (void*) signal_number);
+int kill(pid_t pid, int signal_number)
+{
+	return syscall2(SYS_KILL, (void*) pid, (void*) signal_number);
 }
 
 /*-----------------------------------------------------------------------------
  * Sends a signal to a process, with an associated value */
 //-----------------------------------------------------------------------------
-int sigqueue (pid_t pid, int sig, const union sigval value) {
-    return syscall3 (SYS_SIGQUEUE, (void*) pid, (void*) sig,
-            value.sigval_ptr);
+int sigqueue(pid_t pid, int sig, const union sigval value)
+{
+	return syscall3(SYS_SIGQUEUE, (void*) pid, (void*) sig,
+			value.sigval_ptr);
 }
 
 /*-----------------------------------------------------------------------------
  * Suspends execution of the calling process until it receives a signal */
 //-----------------------------------------------------------------------------
-int sigwait (void) {
-    return syscall0 (SYS_SIGWAIT);
+int sigwait(void)
+{
+	return syscall0(SYS_SIGWAIT);
 }
 
 

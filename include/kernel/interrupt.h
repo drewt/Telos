@@ -20,15 +20,15 @@
 #define _KERNEL_INTERRUPT_H_
 
 /* vectors into the IDT; also serve as vectors into the sysactions table */
-#define DBZ_EXN         0x00
-#define ILLOP_EXN       0x06
-#define GP_EXN          0x0D
-#define PF_EXN          0x0E
-#define TIMER_INTR      0x20
-#define KBD_INTR        0x21
+#define DBZ_EXN		0x00
+#define ILLOP_EXN	0x06
+#define GP_EXN		0x0D
+#define PF_EXN		0x0E
+#define TIMER_INTR	0x20
+#define KBD_INTR	0x21
 
-#define FPE_EXN         DBZ_EXN
-#define ILL_EXN         ILLOP_EXN
-#define SYSCALL_INTR    0x80
+#define FPE_EXN		DBZ_EXN
+#define ILL_EXN		ILLOP_EXN
+#define SYSCALL_INTR	0x80
 
-#endif /* _KERNEL_INTERRUPT_H_ */
+#endif
