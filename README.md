@@ -1,6 +1,12 @@
 Telos
 =====
 
+Copyright © 2013 Drew Thoreson
+
+Some code is adapted from or inspired by Mach, Linux, tutorials on the net,
+etc..  Details are in the code.
+
+
 About
 -----
 
@@ -16,7 +22,9 @@ Telos is a simple x86 kernel, supporting:
 Building
 --------
 
-$ make
+You'll need a recent version of gcc with support for the i386 target.
+
+    $ make
 
 
 Running
@@ -24,11 +32,11 @@ Running
 
 To run the kernel in QEMU,
 
-$ ./qemu
+    $ ./qemu
 
 or Bochs,
 
-$ bochs
+    $ bochs
 
 
 TSH
@@ -36,4 +44,11 @@ TSH
 
 Telos comes with a basic shell and a few programs (mostly tests).  Type 'help'
 at the prompt for a list of commands.
+
+Git Repository
+--------------
+
+https://github.com/drewt/Telos
+
+    $ git clone https://github.com/drewt/Telos.git
 
