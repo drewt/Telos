@@ -20,6 +20,7 @@
 #define _STRING_H_
 
 #include <stddef.h>
+#include <stdarg.h>
 
 void memcpy(void *restrict dest, const void *restrict src, size_t n);
 void *memset(void *s, char c, size_t n);
@@ -36,11 +37,19 @@ int strncmp(const char *s1, const char *s2, size_t n);
 char *strcpy(char *restrict dest, const char *restrict src);
 char *strncpy(char *dest, const char *src, size_t n);
 size_t strlen(const char *s);
+size_t strnlen(const char *s, size_t n);
 char *strpbrk(const char *s, const char *accept);
 size_t strspn(const char *s, const char *accept);
 size_t strcspn(const char *s, const char *reject);
 char *strtok(char *restrict str, const char *restrict delim);
 char *strtok_r(char *restrict s, const char *restrict delim, char **restrict last);
 char *telos_strtok(char *restrict str, const char *restrict delim, char *d);
+
+#ifdef __KERNEL__
+int vsnprintf(char *str, size_t size, const char *fmt, va_list ap);
+int snprintf(char *str, size_t size, const char *fmt, ...);
+int vsprintf(char *str, const char *fmt, va_list ap);
+int sprintf(char *str, const char *fmt, ...);
+#endif
 
 #endif

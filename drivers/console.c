@@ -235,51 +235,15 @@ static inline void kputs(char *s, unsigned char attr)
 /*-----------------------------------------------------------------------------
  * Prints a formatted string to the visible console */
 //-----------------------------------------------------------------------------
-int kvprintf(unsigned char clr, const char *fmt, va_list ap)
-{
-	int i;
-	char buf[33];
+int kvprintf(unsigned char clr, const char *fmt, va_list ap) {
+	int ret;
+	char buf[1024];
 
-	for (i = 0; fmt[i] != '\0'; i++) {
-		if (fmt[i] == '%') {
-			i++;
-			switch (fmt[i]) {
-			/* numbers */
-			case 'b':
-				kputs(itoa_2(va_arg(ap, int), buf), NUM_CLR);
-				break;
-			case 'd':
-			case 'i':
-				kputs(itoa(va_arg(ap, int), buf, 10), NUM_CLR);
-				break;
-			case 'o':
-				kputs(itoa(va_arg(ap, int), buf, 8), NUM_CLR);
-				break;
-			case 'x':
-				kputs("0x", NUM_CLR);
-				kputs(itoa_16(va_arg(ap, int), buf), NUM_CLR);
-				break;
-			/* strings n chars */
-			case 'c':
-				console_putc(va_arg(ap, int), clr, visible);
-				break;
-			case 's':
-				kputs(va_arg(ap, char*), TXT_CLR);
-				break;
-			case '%':
-				console_putc('%', clr, visible);
-				break;
-			default:
-				goto end;
-			}
-		} else {
-			console_putc(fmt[i], clr, visible);
-		}
-	}
-end:
-	return i;
+	ret = vsnprintf(buf, 1024, fmt, ap);
+	kputs(buf, clr);
+
+	return ret;
 }
-
 
 /*-----------------------------------------------------------------------------
  * Variadic wrapper for kvprintf */

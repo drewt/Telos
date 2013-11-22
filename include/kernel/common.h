@@ -31,7 +31,17 @@
 #define wprintf(fmt, ...) kprintf_clr(0xC, "WARNING: "fmt"\n", __VA_ARGS__)
 #define wprints(str) kprintf_clr(0xC, "WARNING: "str"\n")
 
-extern int kprintf(const char *fmt, ...);
+/* linux */
+#define likely(x) x
+#define unlikely(x) x
+#define WARN_ON_ONCE(x) x
+
+#define ULLONG_MAX (~0ULL)
+#define INT_MAX ((int)(~0U>>1))
+#define USHRT_MAX ((u16)(~0U))
+#define SHRT_MAX ((s16)(USHRT_MAX>>1))
+
+extern int kprintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
 extern int kprintf_clr(unsigned char clr, const char *fmt, ...);
 extern void clear_console(void);
 

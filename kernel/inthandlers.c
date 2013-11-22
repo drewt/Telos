@@ -51,25 +51,25 @@ static char *exns[20] = {
 static void dump_registers(struct gp_regs *reg)
 {
 	kprintf("Dumping registers...\n");
-	kprintf("\t%%eax=%x\n", reg->eax);
-	kprintf("\t%%ecx=%x\n", reg->ecx);
-	kprintf("\t%%edx=%x\n", reg->edx);
-	kprintf("\t%%ebx=%x\n", reg->ebx);
-	kprintf("\t%%esi=%x\n", reg->esi);
-	kprintf("\t%%edi=%x\n", reg->edi);
-	kprintf("\t%%esp=%x\n", reg->esp);
-	kprintf("\t%%ebp=%x\n", reg->ebp);
+	kprintf("\t%%eax=%lx\n", reg->eax);
+	kprintf("\t%%ecx=%lx\n", reg->ecx);
+	kprintf("\t%%edx=%lx\n", reg->edx);
+	kprintf("\t%%ebx=%lx\n", reg->ebx);
+	kprintf("\t%%esi=%lx\n", reg->esi);
+	kprintf("\t%%edi=%lx\n", reg->edi);
+	kprintf("\t%%esp=%lx\n", reg->esp);
+	kprintf("\t%%ebp=%lx\n", reg->ebp);
 }
 
 static void print_cpu_context(struct ctxt *context)
 {
 	struct gp_regs *reg = (struct gp_regs*) &context->reg;
-	kprintf("stack[0]=%x\n", reg->stack[0]);
-	kprintf("stack[1]=%x\n", reg->stack[1]);
-	kprintf("stack[2]=%x\n", reg->stack[2]);
-	kprintf("stack[3]=%x\n", reg->stack[3]);
-	kprintf("stack[4]=%x\n", reg->stack[4]);
-	kprintf("stack[5]=%x\n", reg->stack[5]);
+	kprintf("stack[0]=%lx\n", reg->stack[0]);
+	kprintf("stack[1]=%lx\n", reg->stack[1]);
+	kprintf("stack[2]=%lx\n", reg->stack[2]);
+	kprintf("stack[3]=%lx\n", reg->stack[3]);
+	kprintf("stack[4]=%lx\n", reg->stack[4]);
+	kprintf("stack[5]=%lx\n", reg->stack[5]);
 	kprintf("Current process is %d\n", current->pid);
 	dump_registers(reg);
 }
@@ -97,14 +97,14 @@ void exn_page_fault(void)
 
 	kprintf("\nPage fault!\n");
 	if (error & 1) {
-	kprintf("\t%s-mode %s %x\n",
+	kprintf("\t%s-mode %s %lx\n",
 			error & 4 ? "user" : "supervisor",
 			error & 2 ? "write to" : "read from",
 			addr);
 	} else {
-		kprintf("\tpage not present: %x\n", addr);
+		kprintf("\tpage not present: %lx\n", addr);
 	}
-	kprintf("\teip=%x\n\n", eip);
+	kprintf("\teip=%lx\n\n", eip);
 
 	dump_registers(current->esp);
 

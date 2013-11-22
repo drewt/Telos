@@ -43,6 +43,11 @@ typedef unsigned long		u32;
 typedef signed   long long	s64;
 typedef unsigned long long	u64;
 
+typedef signed   long long	int64_t;
+typedef unsigned long long	uint64_t;
+
+typedef long			ptrdiff_t;
+
 #define bool	_Bool
 #define true	1
 #define false	0

@@ -222,6 +222,13 @@ size_t strlen(const char *s)
 	return i;
 }
 
+size_t strnlen(const char *s, size_t n)
+{
+	size_t i;
+	for (i = 0; s[i] != '\0' && i < n; i++);
+	return i;
+}
+
 /*-----------------------------------------------------------------------------
  * Locates the first occurrence in the string s of any of the bytes in the
  * string accept */
