@@ -1,9 +1,7 @@
-ROOT = ..
-include ../config.mk
-
-OBJECTS = ctsw.o devinit.o gdt.o inthandlers.o intr.o kernel.o mem.o pic.o \
+objects = ctsw.o devinit.o gdt.o inthandlers.o intr.o kernel.o mem.o pic.o \
 	  sighandlers.o paging.o sysproc.o
+clean = $(objects)
 
-all: $(OBJECTS)
+all: $(objects)
 
-include ../common.mk
+include $(topdir)/rules.mk

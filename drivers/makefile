@@ -1,8 +1,6 @@
-ROOT = ..
-include ../config.mk
+objects = console.o keyboard.o serial.o
+clean = $(objects)
 
-OBJECTS = console.o keyboard.o serial.o
+all: $(objects)
 
-all: $(OBJECTS)
-
-include ../common.mk
+include $(topdir)/rules.mk

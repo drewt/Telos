@@ -1,25 +1,30 @@
-ROOT = ..
-include ../config.mk
-
-OBJECTS = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
+objects = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
 	  printserver.o proctest.o sigtest.o strtest.o exntest.o tsh.o
-TARGET  = usr.a
+targets = usr.a
+clean = $(objects) $(targets)
 
-all: $(TARGET)
+all: $(targets)
 
-$(TARGET): $(OBJECTS)
-	$(AR) rcs $@ $^
+include $(topdir)/rules.mk
+
+usr.a: $(objects)
+	$(call cmd,ar)
+
+#
+# Userland programs are statically linked with their own copy of the C library.
+# This is needed for crappy functions like strtok which have state.
+#
+# Argument: list of exported functions
+#
+quiet_cmd_ucc = CC      $@
+      cmd_ucc = $(CC) $(ALLCFLAGS) $(CPPFLAGS) -c $< -o tmp.$@ && \
+		$(LD) -r tmp.$@ ../lib/klib.a -o $@ && \
+		$(OBJCOPY) $(foreach var,$(1),-G $(var)) $@ && \
+		rm tmp.$@
 
 printserver.o: printserver.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o tmp.$@
-	$(LD) -r tmp.$@ ../lib/klib.a -o $@
-	$(OBJCOPY) -G printserver -G printclient $@
-	rm tmp.$@
+	$(call cmd,ucc,printserver printclient)
 
+# default: main function is basename of source/object file
 %.o: %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o tmp.$@
-	$(LD) -r tmp.$@ ../lib/klib.a -o $@
-	$(OBJCOPY) -G $(basename $<) $@
-	rm tmp.$@
-
-include ../common.mk
+	$(call cmd,ucc,$(basename $@))

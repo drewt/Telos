@@ -1,8 +1,6 @@
-ROOT = ..
-include ../config.mk
+objects = dispatch.o io.o mem.o msg.o process.o signal.o sysprint.o time.o
+clean = $(objects)
 
-OBJECTS = dispatch.o io.o mem.o msg.o process.o signal.o sysprint.o time.o
+all: $(objects)
 
-all: $(OBJECTS)
-
-include ../common.mk
+include $(topdir)/rules.mk
