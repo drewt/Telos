@@ -136,7 +136,7 @@ int paging_init(ulong start, ulong end)
 
 	for (unsigned i = 0; i < nr_frames; i++) {
 		frame_table[i].addr = start + (i * FRAME_SIZE);
-		list_insert_tail(&frame_pool, (list_entry_t) &frame_table[i]);
+		list_add_tail((struct list_head*) &frame_table[i], &frame_pool);
 	}
 
 	/* disable R/W flag for read-only sections */
@@ -156,7 +156,7 @@ int paging_init(ulong start, ulong end)
  * 'page_list' */
 //-----------------------------------------------------------------------------
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
-		list_t page_list)
+		struct list_head *page_list)
 {
 	pte_t *pte;
 	struct pf_info *frame;
@@ -167,7 +167,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 			return -ENOMEM;
 		memset((void*) frame->addr, 0, FRAME_SIZE);
 		*pte = frame->addr | attr | PE_P;
-		list_insert_tail(page_list, (list_entry_t) frame);
+		list_add_tail((struct list_head*)frame, page_list);
 	}
 
 	pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI(start);
@@ -175,7 +175,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		if ((frame = kalloc_page()) == NULL)
 			return -ENOMEM;
 		*pte = frame->addr | attr | PE_P;
-		list_insert_tail(page_list, (list_entry_t) frame);
+		list_add_tail((struct list_head*)frame, page_list);
 	}
 
 	return 0;
@@ -396,7 +396,7 @@ int copy_user_string(pmap_t pgdir, char *dst, const char *src, size_t len)
  * Allocate and initialize a page directory.  The returned directory will map
  * the kernel, but nothing more */
 //-----------------------------------------------------------------------------
-pmap_t pgdir_create(list_t page_list)
+pmap_t pgdir_create(struct list_head *page_list)
 {
 	struct pf_info *page;
 	ulong vaddr;
@@ -414,7 +414,7 @@ pmap_t pgdir_create(list_t page_list)
 	pdi = ADDR_TO_PDI((ulong) &KERNEL_PAGE_OFFSET);
 	((pmap_t) vaddr)[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
 
-	list_insert_head(page_list, (list_entry_t) page);
+	list_add((struct list_head*)page, page_list);
 	return (pmap_t) page->addr;
 }
 
@@ -428,7 +428,7 @@ struct pf_info *kalloc_page(void)
 	if (list_empty(&frame_pool))
 		return NULL;
 
-	page = (void*) stack_pop(&frame_pool);
+	page = (void*) list_pop(&frame_pool);
 	return page;
 }
 
@@ -459,5 +459,5 @@ struct pf_info *kzalloc_page(void)
 //-----------------------------------------------------------------------------
 void kfree_page(struct pf_info *page)
 {
-	stack_push(&frame_pool, (list_entry_t) page);
+	list_push((struct list_head*)page, &frame_pool);
 }

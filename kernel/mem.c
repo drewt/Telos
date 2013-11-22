@@ -50,7 +50,7 @@
 static LIST_HEAD(free_list);
 
 struct mem_area {
-	list_chain_t chain;
+	struct list_head chain;
 	unsigned long addr;
 	unsigned long size;
 };
@@ -91,7 +91,7 @@ unsigned long mem_init(struct multiboot_info **info)
 	heap = (void*) KERNEL_END;
 	heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - KERNEL_END;
 	heap->magic = MAGIC_FREE;
-	list_insert_head(&free_list, (list_entry_t) heap);
+	list_add((struct list_head*) heap, &free_list);
 
 	paging_init(0x00400000, PAGE_BASE(MULTIBOOT_MEM_MAX(&mb_info)));
 
@@ -107,23 +107,25 @@ unsigned long mem_init(struct multiboot_info **info)
 void *hmalloc(unsigned int size, struct mem_header **hdr)
 {
 	struct mem_header *p, *r;
+	struct list_head *it;
 
 	size = PARAGRAPH_ALIGN(size);
 
 	/* find a large enough segment of free memory */
-	list_iterate (&free_list, p, struct mem_header*, chain) {
+	list_for_each(it, &free_list) {
+		p = (struct mem_header*) it;
 		if (p->size >= size)
 			break;
 	}
 
 	/* not enough memory */
-	if (list_end(&free_list, (list_entry_t) p))
+	if ((struct list_head*)p == &free_list)
 		return NULL;
 
 	/* if p is a perfect fit... */
 	if (p->size - size <= sizeof(struct mem_header)) {
 		p->magic = MAGIC_OK;
-		list_remove(&free_list, (list_entry_t) p);
+		list_del((struct list_head*) p);
 	} else {
 		/* split p into adjacent segments p and r */
 		r = (struct mem_header*) (p->data + size);
@@ -135,7 +137,7 @@ void *hmalloc(unsigned int size, struct mem_header **hdr)
 		p->magic = MAGIC_OK;
 
 		/* replace p with r in the free list */
-		list_replace_entry((list_entry_t) p, (list_entry_t) r);
+		list_replace((struct list_head*)p, (struct list_head*)r);
 	}
 
 	if (hdr)
@@ -161,5 +163,5 @@ void hfree(struct mem_header *hdr)
 	}
 
 	/* insert freed at the beginning of the free list */
-	list_insert_head(&free_list, (list_entry_t) hdr);
+	list_add((struct list_head*)hdr, &free_list);
 }

@@ -65,15 +65,15 @@ extern unsigned long _kroend;		// end of kernel read-only memory
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
-	list_chain_t	chain;	// chain for free/allocated lists
-	unsigned long	size;	// size of an allocated block
-	unsigned long	magic;	// padding/sanity check
-	unsigned char	data[];	// start of allocated block
+	struct list_head	chain;	// chain for free/allocated lists
+	unsigned long		size;	// size of an allocated block
+	unsigned long		magic;	// padding/sanity check
+	unsigned char		data[];	// start of allocated block
 };
 
 /* page frame info */
 struct pf_info {
-	list_chain_t chain;
+	struct list_head chain;
 	unsigned long addr;
 };
 
@@ -85,10 +85,10 @@ void hfree(struct mem_header *hdr);
 struct pf_info *kalloc_page(void);
 void kfree_page(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
-pmap_t pgdir_create(list_t page_list);
+pmap_t pgdir_create(struct list_head *page_list);
 ulong virt_to_phys(pmap_t pgdir, ulong addr);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
-		list_t page_list);
+		struct list_head *page_list);
 
 static inline struct mem_header *mem_ptoh(void *addr)
 {

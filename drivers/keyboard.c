@@ -94,7 +94,7 @@ static void kbd_interrupt(void)
 			reader->rc = usr_buf_next;
 			ready(reader);
 
-			if ((reader = (struct pcb*) dequeue(&work_q))) {
+			if ((reader = (struct pcb*) list_dequeue(&work_q))) {
 				echo = (reader->fds[reader->pbuf.id] == DEV_KBD_ECHO);
 				usr_buf = reader->pbuf.buf;
 				usr_buf_len = reader->pbuf.len;
@@ -112,7 +112,7 @@ static int kbd_read(int fd, void *buf, int buf_len)
 	if (reading) {
 		current->pbuf = (struct pbuf)
 			{ .buf = buf, .len = buf_len, .id = fd };
-		enqueue(&work_q, (list_entry_t) current);
+		list_add_tail((struct list_head*)current, &work_q);
 		new_process();
 		return 0;
 	}

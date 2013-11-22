@@ -55,7 +55,7 @@ struct pbuf {
 
 /* process control block */
 struct pcb {
-	list_chain_t chain;
+	struct list_head chain;
 	/* metadata */
 	int		pid;		// process ID
 	int		parent_pid;	// parent process's pid
@@ -79,14 +79,14 @@ struct pcb {
 	/* message passing IPC */
 	struct pbuf	pbuf;		// saved buffer
 	struct pbuf	reply_blk;
-	list_head_t	send_q;		// processes waiting to send
-	list_head_t	recv_q;		// processes waiting to receive
-	list_head_t	repl_q;		// processes waiting for a reply
+	struct list_head send_q;	// processes waiting to send
+	struct list_head recv_q;	// processes waiting to receive
+	struct list_head repl_q;	// processes waiting for a reply
 	/* */
 	void		*parg;		// pointer to... something
 	dev_t		fds[FDT_SIZE];	// file descriptors
-	list_head_t	heap_mem;		// heap allocated memory
-	list_head_t	page_mem;
+	struct list_head heap_mem;	// heap allocated memory
+	struct list_head page_mem;
 };
 
 extern struct pcb proctab[];

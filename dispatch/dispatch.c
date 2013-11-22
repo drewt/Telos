@@ -33,7 +33,7 @@ extern void tick(void);
 struct pcb *current = NULL;	/* the running process */
 static LIST_HEAD(ready_queue); 	/* queue of ready processes */
 
-#define next() ((struct pcb*) dequeue(&ready_queue))
+#define next() ((struct pcb*) list_dequeue(&ready_queue))
 
 struct sysaction {
 	isr_t func;
@@ -147,7 +147,7 @@ void dispatch(void)
 void ready(struct pcb *p)
 {
 	p->state = STATE_READY;
-	enqueue(&ready_queue, (list_entry_t) p);
+	list_add_tail((struct list_head*)p, &ready_queue);
 }
 
 /*-----------------------------------------------------------------------------

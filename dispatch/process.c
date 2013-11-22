@@ -59,11 +59,11 @@ static void pcb_init(struct pcb *p)
 		p->fds[i] = FD_NONE;
 
 	/* init lists */
-	list_init(&p->send_q);
-	list_init(&p->recv_q);
-	list_init(&p->repl_q);
-	list_init(&p->heap_mem);
-	list_init(&p->page_mem);
+	INIT_LIST_HEAD(&p->send_q);
+	INIT_LIST_HEAD(&p->recv_q);
+	INIT_LIST_HEAD(&p->repl_q);
+	INIT_LIST_HEAD(&p->heap_mem);
+	INIT_LIST_HEAD(&p->page_mem);
 }
 
 void sys_create(void(*func)(int,char*), int argc, char **argv)
@@ -92,7 +92,7 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
 		return -ENOMEM;
-	list_insert_tail(&p->heap_mem, (list_entry_t) mem_ptoh(stack_mem));
+	list_add_tail((struct list_head*) mem_ptoh(stack_mem), &p->heap_mem);
 
 	frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
 	put_iret_frame_super(frame, (ulong) func);
@@ -209,15 +209,15 @@ void sys_exit(int status)
 	__kill(pit, SIGCHLD);
 
 	// free memory allocated to process
-	dequeue_iterate (&current->page_mem, mit, struct pf_info*)
+	dequeue_iterate (mit, struct pf_info*, &current->page_mem)
 		kfree_page(mit);
-	dequeue_iterate (&current->heap_mem, hit, struct mem_header*)
+	dequeue_iterate (hit, struct mem_header*, &current->heap_mem)
 		kfree(hit->data);
 
 	current->state = STATE_STOPPED;
 
 	#define CLEAR_MSG_QUEUE(q)			\
-	dequeue_iterate ((q), pit, struct pcb*) {	\
+	dequeue_iterate (pit, struct pcb*, (q)) {	\
 		pit->rc = SYSERR;			\
 		ready(pit);				\
 	}
