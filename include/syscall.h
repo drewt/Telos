@@ -19,8 +19,8 @@
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
-#ifndef SYSCALL_INTR
-#define SYSCALL_INTR 0x80
+#ifndef INTR_SYSCALL
+#define INTR_SYSCALL 0x80
 #endif
 
 enum syscall_id {
@@ -72,7 +72,7 @@ static inline int syscall0(int call)
 	"int  %[xnum]		\n"
 	"movl %%eax,   %[rc]	\n"
 	: [rc] "=g" (rc)
-	: [call] "g" (call), [xnum] "i" (SYSCALL_INTR)
+	: [call] "g" (call), [xnum] "i" (INTR_SYSCALL)
 	: "%eax"
 	);
 	return rc;
@@ -87,7 +87,7 @@ static inline int syscall1(int call, void *arg0)
 	"int  %[xnum]		\n"
 	"movl %%eax, %[rc]	\n"
 	: [rc] "=g" (rc)
-	: [call] "g" (call), [arg0] "g" (arg0), [xnum] "i" (SYSCALL_INTR)
+	: [call] "g" (call), [arg0] "g" (arg0), [xnum] "i" (INTR_SYSCALL)
 	: "%eax", "%ebx"
 	);
 	return rc;
@@ -104,7 +104,7 @@ static inline int syscall2(int call, void *arg0, void *arg1)
 	"movl %%eax, %[rc]	\n"
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
-	  [xnum] "i" (SYSCALL_INTR)
+	  [xnum] "i" (INTR_SYSCALL)
 	: "%eax", "%ebx", "%ecx"
 	);
 	return rc;
@@ -122,7 +122,7 @@ static inline int syscall3(int call, void *arg0, void *arg1, void *arg2)
 	"movl %%eax, %[rc]	\n"
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
-	  [arg2] "g" (arg2), [xnum] "i" (SYSCALL_INTR)
+	  [arg2] "g" (arg2), [xnum] "i" (INTR_SYSCALL)
 	: "%eax", "%ebx", "%ecx", "%edx"
 	);
 	return rc;
@@ -142,7 +142,7 @@ static inline int syscall4(int call, void *arg0, void *arg1, void *arg2,
 	"movl %%eax, %[rc]	\n"
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
-	  [arg2] "g" (arg2), [arg3] "g" (arg3), [xnum] "i" (SYSCALL_INTR)
+	  [arg2] "g" (arg2), [arg3] "g" (arg3), [xnum] "i" (INTR_SYSCALL)
 	: "%eax", "%ebx", "%ecx", "%edx", "%edi"
 	);
 	return rc;
@@ -164,7 +164,7 @@ static inline int syscall5(int call, void *arg0, void *arg1, void *arg2,
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
 	  [arg2] "g" (arg2), [arg3] "g" (arg3), [arg4] "g" (arg4),
-	  [xnum] "i" (SYSCALL_INTR)
+	  [xnum] "i" (INTR_SYSCALL)
 	: "%eax", "%ebx", "%ecx", "%edx", "%edi", "%esi"
 	);
 	return rc;

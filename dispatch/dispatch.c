@@ -43,10 +43,10 @@ struct sysaction {
 /* table of actions to be taken for interrupts/system calls */
 static struct sysaction sysactions[SYSCALL_MAX] = {
 /*	INDEX			ACTION			NR ARGS */
-	[FPE_EXN]	= { (isr_t) exn_fpe,		0 },
-	[ILL_EXN]	= { (isr_t) exn_ill_instr,	0 },
-	[PF_EXN]	= { (isr_t) exn_page_fault,	0 },
-	[TIMER_INTR]	= { (isr_t) tick,		0 },
+	[EXN_FPE]	= { (isr_t) exn_fpe,		0 },
+	[EXN_ILL]	= { (isr_t) exn_ill_instr,	0 },
+	[EXN_PF]	= { (isr_t) exn_page_fault,	0 },
+	[INTR_TIMER]	= { (isr_t) tick,		0 },
 	[SYS_CREATE]	= { (isr_t) sys_create,		3 },
 	[SYS_YIELD]	= { (isr_t) sys_yield,		0 },
 	[SYS_STOP]	= { (isr_t) sys_exit,		1 },
@@ -86,7 +86,7 @@ static inline void set_action(unsigned int vector, isr_t f, int nargs)
 void dispatch_init(void)
 {
 	/* initialize actions that can't be initialized statically */
-	set_action(KBD_INTR, (isr_t) devtab[DEV_KBD].dv_op->dviint, 0);
+	set_action(INTR_KBD, (isr_t) devtab[DEV_KBD].dv_op->dviint, 0);
 }
 
 /*-----------------------------------------------------------------------------

@@ -32,12 +32,12 @@ void syscall_entry_point(void);
 
 void isr_init(void)
 {
-	set_gate(DBZ_EXN,	(ulong) fpe_entry_point,	SEG_KCODE);
-	set_gate(ILLOP_EXN,	(ulong) ill_entry_point,	SEG_KCODE);
-	set_gate(PF_EXN,	(ulong) pgf_entry_point,	SEG_KCODE);
-	set_gate(TIMER_INTR,	(ulong) timer_entry_point,	SEG_KCODE);
-	set_gate(KBD_INTR,	(ulong) kbd_entry_point,	SEG_KCODE);
-	set_gate(SYSCALL_INTR,	(ulong) syscall_entry_point,	SEG_KCODE);
+	set_gate(EXN_DBZ,	(ulong) fpe_entry_point,	SEG_KCODE);
+	set_gate(EXN_ILLOP,	(ulong) ill_entry_point,	SEG_KCODE);
+	set_gate(EXN_PF,	(ulong) pgf_entry_point,	SEG_KCODE);
+	set_gate(INTR_TIMER,	(ulong) timer_entry_point,	SEG_KCODE);
+	set_gate(INTR_KBD,	(ulong) kbd_entry_point,	SEG_KCODE);
+	set_gate(INTR_SYSCALL,	(ulong) syscall_entry_point,	SEG_KCODE);
 }
 
 #define __STR(x) #x
@@ -84,11 +84,11 @@ unsigned int context_switch(struct pcb *p)
 	"popa				\n" // restore user context
 	"iret				\n" // return to user process
 
-	ISR_ENTRY(pgf_entry_point,	PF_EXN)
-	ISR_ENTRY(fpe_entry_point,	FPE_EXN)
-	ISR_ENTRY(ill_entry_point,	ILL_EXN)
-	ISR_ENTRY(timer_entry_point,	TIMER_INTR)
-	ISR_ENTRY(kbd_entry_point,	KBD_INTR)
+	ISR_ENTRY(pgf_entry_point,	EXN_PF)
+	ISR_ENTRY(fpe_entry_point,	EXN_FPE)
+	ISR_ENTRY(ill_entry_point,	EXN_ILL)
+	ISR_ENTRY(timer_entry_point,	INTR_TIMER)
+	ISR_ENTRY(kbd_entry_point,	INTR_KBD)
 "syscall_entry_point: "
 	"pusha				\n"
 "common_isr: "
