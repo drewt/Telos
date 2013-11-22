@@ -62,10 +62,10 @@ struct gdt_entry {
 
 struct gdt_entry gdt[GDT_N_ENTRIES] = {
 	[0]		= SEG_NULL,
-	[KCODE_SEGN]	= SEG(0, 0xFFFFFFFF, 0x9A),
-	[KDATA_SEGN]	= SEG(0, 0xFFFFFFFF, 0x92),
-	[UCODE_SEGN]	= SEG(0, 0xFFFFFFFF, 0xFA),
-	[UDATA_SEGN]	= SEG(0, 0xFFFFFFFF, 0xF2)
+	[SEGNR_KCODE]	= SEG(0, 0xFFFFFFFF, 0x9A),
+	[SEGNR_KDATA]	= SEG(0, 0xFFFFFFFF, 0x92),
+	[SEGNR_UCODE]	= SEG(0, 0xFFFFFFFF, 0xFA),
+	[SEGNR_UDATA]	= SEG(0, 0xFFFFFFFF, 0xF2)
 };
 
 struct tss_entry tss = {
@@ -86,7 +86,7 @@ void gdt_install(void)
 {
 	unsigned long tss_base  = (unsigned long) &tss;
 	unsigned long tss_limit = tss_base + sizeof tss;
-	gdt[TSS_SEGN] = (struct gdt_entry) SEG(tss_base, tss_limit, 0xE9);
+	gdt[SEGNR_TSS] = (struct gdt_entry) SEG(tss_base, tss_limit, 0xE9);
 
 	load_gdt(&gdt, sizeof gdt); // -1?
 	load_tss(SEG_TSS | 3); // load tss with RPL 3
