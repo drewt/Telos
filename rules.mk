@@ -61,7 +61,7 @@ quiet_cmd_dep   = DEP     $@
 
 # call submake
 quiet_cmd_smake = MAKE    $@
-      cmd_smake = cd $@ && $(MAKE)
+      cmd_smake = cd $@ && $(MAKE) $(1)
 
 # concatenate prerequisites
 quiet_cmd_cat    = GEN     $@

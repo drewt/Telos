@@ -26,8 +26,6 @@ all: kernel.img
 
 include rules.mk
 
-do_submake = +@$(if $(quiet),echo '  MAKE    $@' &&) cd $@ && $(MAKE)
-
 quiet_cmd_ldgen  = GEN     linker.ld
       cmd_ldgen  = printf "INPUT ( %s )\n" \
 		   "boot/loader.o `$(findobj)` usr/usr.a lib/klib.a" \
@@ -37,16 +35,16 @@ quiet_cmd_padgen = GEN     $@
       cmd_padgen = dd if=/dev/zero of=$@ bs=1 count=750 &> /dev/null
 
 dispatch:
-	$(do_submake)
+	+$(call cmd,smake)
 
 drivers:
-	$(do_submake)
+	+$(call cmd,smake)
 
 kernel:
-	$(do_submake)
+	+$(call cmd,smake)
 
 usr:
-	$(do_submake)
+	+$(call cmd,smake)
 
 boot/loader.o: boot/loader.s
 	$(call cmd,as)
