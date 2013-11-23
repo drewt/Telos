@@ -51,7 +51,7 @@ void sys_malloc(unsigned int size, void **p)
 	}
 
 	/* add h to list of allocated memory for current process */
-	list_add_tail((struct list_head*)h, &current->heap_mem);
+	list_add_tail(&h->chain, &current->heap_mem);
 
 	current->rc = 0;
 }
@@ -61,7 +61,7 @@ void sys_free(void *ptr)
 	struct mem_header *h = mem_ptoh(ptr);
 
 	// XXX: unsafe!  Memory might be unallocated or allocated to another process
-	list_del((struct list_head*)h);
+	list_del(&h->chain);
 	hfree(h);
 }
 
@@ -74,7 +74,7 @@ void sys_palloc(void **p)
 		return;
 	}
 
-	list_add_tail((struct list_head*)page, &current->page_mem);
+	list_add_tail(&page->chain, &current->page_mem);
 
 	*p = (void*) page->addr;
 	current->rc = 0;

@@ -58,7 +58,7 @@ void sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 		//*((int*) dest->parg) = current->pid;
 
 		/* unblock receiver */
-		list_del((struct list_head*)dest);
+		list_del(&dest->chain);
 		ready(dest);
 
 		/* send message */
@@ -69,7 +69,7 @@ void sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 
 		/* if sender expects reply, block in receiver's reply queue */
 		if (ibuf) {
-			list_add_tail((struct list_head*)current, &dest->repl_q);
+			list_add_tail(&current->chain, &dest->repl_q);
 			current->state = STATE_BLOCKED;
 			new_process();
 		}
@@ -77,7 +77,7 @@ void sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 		/* block sender on receiver's recv queue */
 		current->pbuf = (struct pbuf)
 				{ .buf = obuf, .len = olen, .id = dest_pid };
-		list_add_tail((struct list_head*)current, &dest->send_q);
+		list_add_tail(&current->chain, &dest->send_q);
 		current->state = STATE_BLOCKED;
 		new_process();
 	}
@@ -128,15 +128,15 @@ void sys_recv(int *pid_ptr, void *buffer, int length)
 		current->pbuf = (struct pbuf)
 				{ .buf = buffer, .len = length, .id = src->pid };
 		current->state = STATE_BLOCKED;
-		list_add_tail((struct list_head*)current, &src->recv_q);
+		list_add_tail(&current->chain, &src->recv_q);
 		new_process();
 	} else {
 		/* unblock sender if no-reply send, otherwise move to reply queue */
-		list_del((struct list_head*)src);
+		list_del(&src->chain);
 		if (!src->reply_blk.id)
 			ready(src);
 		else
-			list_add_tail((struct list_head*)src, &current->repl_q);
+			list_add_tail(&src->chain, &current->repl_q);
 
 		/* receive message */
 		tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
@@ -182,6 +182,6 @@ void sys_reply(int src_pid, void *buffer, int length)
 
 	/* unblock sender */
 	src->reply_blk.id = 0;
-	list_del((struct list_head*)src);
+	list_del(&src->chain);
 	ready(src);
 }

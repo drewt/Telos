@@ -92,7 +92,7 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
 		return -ENOMEM;
-	list_add_tail((struct list_head*) mem_ptoh(stack_mem), &p->heap_mem);
+	list_add_tail(&(mem_ptoh(stack_mem))->chain, &p->heap_mem);
 
 	frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
 	put_iret_frame_super(frame, (ulong) func);

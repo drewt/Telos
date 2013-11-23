@@ -146,7 +146,7 @@ void dispatch(void)
 void ready(struct pcb *p)
 {
 	p->state = STATE_READY;
-	list_add_tail((struct list_head*)p, &ready_queue);
+	list_add_tail(&p->chain, &ready_queue);
 }
 
 /*-----------------------------------------------------------------------------

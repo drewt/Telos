@@ -44,8 +44,8 @@ static int grow_timers(void)
 
 	i = FRAME_SIZE / sizeof(struct timer);
 
-	for (; i > 0; i--)
-		list_enqueue((struct list_head*)timer++, &free_timers);
+	for (; i > 0; i--, timer++)
+		list_enqueue(&timer->chain, &free_timers);
 
 	return 0;
 }
@@ -55,15 +55,14 @@ struct timer *get_timer(void)
 	if (list_empty(&free_timers) && grow_timers() == -1)
 		return NULL;
 
-	return (struct timer*) list_dequeue(&free_timers);
+	return list_entry(list_dequeue(&free_timers), struct timer, chain);
 }
 
 struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,
 		unsigned int flags)
 {
 	int ticks;
-	struct timer *timer;
-	struct list_head *it;
+	struct timer *timer, *t;
 
 	if ((timer = get_timer()) == NULL)
 		return NULL;
@@ -75,26 +74,25 @@ struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,
 
 	ticks = (ms % 10) ? ms/10 + 1 : ms/10;
 
-	list_for_each(it, &timers) {
-		struct timer *t = (struct timer*) it;
+	list_for_each_entry(t, &timers, chain) {
 		if (ticks < t->delta)
 			break;
 		ticks -= t->delta;
 	}
 
-	if (it != &timers)
-		((struct timer*)it)->delta -= ticks;
+	if (&t->chain != &timers)
+		t->delta -= ticks;
 
 	timer->delta = ticks;
-	list_add_tail((struct list_head*)timer, it);
+	list_add_tail(&timer->chain, &t->chain);
 
 	return timer;
 }
 
 int __timer_destroy(struct timer *timer)
 {
-	list_del((struct list_head*)timer);
-	list_add((struct list_head*)timer, &free_timers);
+	list_del(&timer->chain);
+	list_add(&timer->chain, &free_timers);
 
 	if (timer->flags & TF_ALWAYS && timer->delta > 0)
 		timer->action(timer->data);
@@ -108,12 +106,11 @@ int __timer_destroy(struct timer *timer)
  */
 int timer_remove(struct timer *timer)
 {
-	struct list_head *it;
+	struct timer *t;
 	int ticks = 0;
 	int phase = 0;
 
-	list_for_each(it, &timers) {
-		struct timer *t = (struct timer*) it;
+	list_for_each_entry(t, &timers, chain) {
 
 		/* phase 0: count ticks */
 		if (phase == 0) {
@@ -127,8 +124,8 @@ int timer_remove(struct timer *timer)
 		t->delta += timer->delta;
 	}
 
-	list_del((struct list_head*)timer);
-	list_add((struct list_head*)timer, &zombie_timers);
+	list_del(&timer->chain);
+	list_add(&timer->chain, &zombie_timers);
 	timer_unref(timer);
 
 	return ticks;
@@ -139,21 +136,20 @@ int timer_remove(struct timer *timer)
  */
 void timers_tick(void)
 {
-	struct list_head *it, *n;
+	struct timer *t, *n;
 
 	if (list_empty(&timers))
 		return;
 
-	((struct timer*)timers.next)->delta--;
+	(list_entry(timers.next, struct timer, chain))->delta--;
 
-	list_for_each_safe(it, n, &timers) {
-		struct timer *t = (struct timer*) it;
+	list_for_each_entry_safe(t, n, &timers, chain) {
 		if (t->delta > 0)
 			break;
 
 		t->action(t->data);
-		list_del(it);
-		list_add(it, &zombie_timers);
+		list_del(&t->chain);
+		list_add(&t->chain, &zombie_timers);
 		timer_unref(t);
 	}
 }

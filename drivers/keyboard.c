@@ -128,7 +128,7 @@ static int kbd_read(int fd, void *buf, int buf_len)
 	if (reading) {
 		current->pbuf = (struct pbuf)
 			{ .buf = buf, .len = buf_len, .id = fd };
-		list_add_tail((struct list_head*)current, &work_q);
+		list_add_tail(&current->chain, &work_q);
 		new_process();
 		return 0;
 	}

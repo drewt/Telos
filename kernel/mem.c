@@ -36,20 +36,9 @@
 
 #define KERNEL_END \
 	(PAGE_ALIGN((ulong)&_kend))
-//	(PAGE_ALIGN((unsigned long)&_kend) - (unsigned long)&KERNEL_PAGE_OFFSET)
 
 /* free list for kernel heap */
 static LIST_HEAD(free_list);
-
-struct mem_area {
-	struct list_head chain;
-	unsigned long addr;
-	unsigned long size;
-};
-
-/* Statically allocated space for use by mem_init() */
-int rmem_i = 0;
-struct mem_area rmem[256];
 
 /* Multiboot info structure */
 static struct multiboot_info mb_info;
@@ -83,7 +72,7 @@ unsigned long mem_init(struct multiboot_info **info)
 	heap = (void*) KERNEL_END;
 	heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - KERNEL_END;
 	heap->magic = MAGIC_FREE;
-	list_add((struct list_head*) heap, &free_list);
+	list_add(&heap->chain, &free_list);
 
 	paging_init(0x00400000, PAGE_BASE(MULTIBOOT_MEM_MAX(&mb_info)));
 
@@ -111,13 +100,13 @@ void *hmalloc(unsigned int size, struct mem_header **hdr)
 	}
 
 	/* not enough memory */
-	if ((struct list_head*)p == &free_list)
+	if (&p->chain == &free_list)
 		return NULL;
 
 	/* if p is a perfect fit... */
 	if (p->size - size <= sizeof(struct mem_header)) {
 		p->magic = MAGIC_OK;
-		list_del((struct list_head*) p);
+		list_del(&p->chain);
 	} else {
 		/* split p into adjacent segments p and r */
 		r = (struct mem_header*) (p->data + size);
@@ -129,7 +118,7 @@ void *hmalloc(unsigned int size, struct mem_header **hdr)
 		p->magic = MAGIC_OK;
 
 		/* replace p with r in the free list */
-		list_replace((struct list_head*)p, (struct list_head*)r);
+		list_replace(&p->chain, &r->chain);
 	}
 
 	if (hdr)
@@ -155,5 +144,5 @@ void hfree(struct mem_header *hdr)
 	}
 
 	/* insert freed at the beginning of the free list */
-	list_add((struct list_head*)hdr, &free_list);
+	list_add(&hdr->chain, &free_list);
 }
