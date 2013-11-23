@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew Thoresonoreson.
+/*  Copyright 2013 Drew Thoreson.
  *
  *  This file is part of the Telos C Library.
  *  
