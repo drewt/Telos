@@ -18,195 +18,84 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/timer.h>
 #include <signal.h>
-
-static int delta_list_rm(int evno, struct pcb *p);
-static void delta_list_tick(void);
-static int delta_list_insert(unsigned int evno, struct pcb *p,
-		unsigned int ms, void(*act)(struct pcb*));
-
-#define N_EVENTS 2
-enum event_types {
-	EVENT_WAKE,
-	EVENT_ALRM
-};
-
-/* Event structure.  When the event occurs, action(proc) will be called */
-struct event {
-	void(*action)(struct pcb*);
-	int  delta;
-	struct pcb *proc;
-	struct event *next;
-	struct event *prev;
-};
-
-/* the event queue */
-static struct event events[PT_SIZE][N_EVENTS];
-static struct event *dl_head = NULL;
 
 unsigned int tick_count = 0; /* global tick count */
 
-/*-----------------------------------------------------------------------------
- * Wakes a sleeping process */
-//-----------------------------------------------------------------------------
-static void wake_action(struct pcb *p)
+/*
+ * Wakes a sleeping process.
+ */
+static void wake_action(void *data)
 {
+	struct pcb *p = (struct pcb*) data;
 	p->rc = 0;
 	ready(p);
+
+	timer_unref(p->t_sleep);
+	p->t_sleep = NULL;
 }
 
-/*-----------------------------------------------------------------------------
- * Sends SIGALRM to the process */
-//-----------------------------------------------------------------------------
-static void alrm_action(struct pcb *p)
+/*
+ * Sends SIGALRM to the process.
+ */
+static void alrm_action(void *data)
 {
+	struct pcb *p = (struct pcb*) data;
 	__kill(p, SIGALRM);
+
+	timer_unref(p->t_alarm);
+	p->t_alarm = NULL;
 }
 
-/*-----------------------------------------------------------------------------
- * Puts the current process to sleep for a given number of milliseconds */
-//-----------------------------------------------------------------------------
+/*
+ * Puts the current process to sleep for a given number of milliseconds.
+ */
 void sys_sleep(unsigned int seconds)
 {
-	delta_list_insert(EVENT_WAKE, current, seconds * 100, wake_action);
+	current->t_sleep = timer_create(seconds*100, wake_action, current,
+			TF_ALWAYS | TF_REF);
+	if (current->t_sleep == NULL) {
+		current->rc = -ENOMEM;
+		return;
+	}
 	new_process();
 }
 
-/*-----------------------------------------------------------------------------
+/*
  * Registers an alarm for the current process, to go off in the given number of
- * seconds */
-//-----------------------------------------------------------------------------
+ * seconds.
+ */
 void sys_alarm(unsigned int seconds)
 {
-	int ticks = seconds ?
-		delta_list_insert(EVENT_ALRM, current, seconds*100, alrm_action)
-		: delta_list_rm(EVENT_ALRM, current);
-
-	current->rc = ticks / 10;
-}
-
-/*-----------------------------------------------------------------------------
- * Removes a process from the sleeping queue, returning the total number of 
- * ticks left to sleep */
-//-----------------------------------------------------------------------------
-int sq_rm(struct pcb *p)
-{
-	return delta_list_rm(EVENT_WAKE, p);
-}
-
-/*-----------------------------------------------------------------------------
- * Schedule an event */
-//-----------------------------------------------------------------------------
-static int delta_list_insert(unsigned int evno, struct pcb *p,
-		unsigned int ms, void(*act)(struct pcb*))
-{
-	int rv;
-	int ticks;
-	int pti = PT_INDEX(p->pid);
-	struct event *it, *last = NULL;
-	struct event *nev = &events[pti][evno];
-
-	rv = nev->delta; /* ticks until previously scheduled event, or 0 */
-	if (rv)
-		delta_list_rm(evno, p);
-
-	/* convert milliseconds to timer intervals */
-	ticks = (ms % 10) ? ms/10 + 1 : ms/10;
-	nev->proc   = p;
-	nev->action = act;
-
-	/* empty list; p becomes the head */
-	if (!dl_head) {
-		dl_head = nev;
-		nev->next = NULL;
-		nev->prev = NULL;
+	if (current->t_alarm != NULL) {
+		current->rc = timer_remove(current->t_alarm) / 10;
+		timer_unref(current->t_alarm);
+		current->t_alarm = NULL;
 	} else {
-		/* find p's place in the list, updating delta along the way */
-		for (it = dl_head; it; it = it->next) {
-			if (ticks > it->delta)
-				ticks -= it->delta;
-			else
-				break;
-			last = it;
-		}
-
-		/* if last is NULL, p goes at the head of the queue;
-		 * otherwise p goes between last and it
-		 */
-		if (!last) {
-			nev->next = dl_head;
-			dl_head = nev;
-		} else {
-			last->next = nev;
-			nev->next = it;
-		}
-		nev->prev = last;
-		if (it)
-			it->delta -= ticks;
+		current->rc = 0;
 	}
-	nev->delta = ticks;
 
-	return rv;
-}
-
-/*-----------------------------------------------------------------------------
- * Remove an event from the event queue, returning the number of ticks left
- * before the event would have occurred */
-//-----------------------------------------------------------------------------
-static int delta_list_rm(int evno, struct pcb *p)
-{
-	int ticks = 0;
-	struct event *it;
-	struct event *del = &events[PT_INDEX(p->pid)][evno];
-	if (!del->delta)
-		return 0;
-
-	for (it = dl_head; it && it != del; it = it->next)
-		ticks += it->delta;
-	if (!it)
-		return -1;
-	if (it == dl_head) {
-		dl_head = it->next;
-		dl_head->prev = NULL;
-	} else {
-		it->prev->next = it->next;
-		if (it->next)
-			it->next->prev = it->prev;
-	}
-	for (it = it->next; it; it = it->next)
-		it->delta += del->delta;
-	return ticks + del->delta;
-}
-
-/*-----------------------------------------------------------------------------
- * Move the event queue one tick forward, and execute any events that become
- * pending */
-//-----------------------------------------------------------------------------
-static void delta_list_tick(void)
-{
-	if (!dl_head)
+	if (seconds == 0)
 		return;
 
-	struct event *tmp;
-	dl_head->delta--;
-	while (dl_head && dl_head->delta <= 0) {
-		tmp = dl_head;
-		tmp->delta = 0;
-		dl_head = dl_head->next;
-		dl_head->prev = NULL;
-		tmp->action(tmp->proc);
+	current->t_alarm = timer_create(seconds*100, alrm_action, current,
+			TF_REF);
+	if (current->t_alarm == NULL) {
+		current->rc = -ENOMEM;
+		return;
 	}
 }
 
-/*-----------------------------------------------------------------------------
+/*
  * Called on every timer interrupt; updates global tick count, the event queue,
- * and switches to another process */
-//-----------------------------------------------------------------------------
+ * and switches to another process
+ */
 void tick(void)
 {
 	tick_count++;
 
-	delta_list_tick();
+	timers_tick();
 
 	/* choose new process to run */
 	ready(current);

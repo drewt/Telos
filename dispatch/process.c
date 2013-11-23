@@ -60,6 +60,10 @@ static void pcb_init(struct pcb *p)
 	INIT_LIST_HEAD(&p->repl_q);
 	INIT_LIST_HEAD(&p->heap_mem);
 	INIT_LIST_HEAD(&p->page_mem);
+
+	/* init timers */
+	p->t_alarm = NULL;
+	p->t_sleep = NULL;
 }
 
 void sys_create(void(*func)(int,char*), int argc, char **argv)

@@ -52,6 +52,8 @@ struct pbuf {
 	int  id;   // id (context dependent)
 };
 
+struct timer;
+
 /* process control block */
 struct pcb {
 	struct list_head chain;
@@ -69,6 +71,8 @@ struct pcb {
 	unsigned long	*pgdir;		// page directory
 	/* time */
 	unsigned int	timestamp;	// creation time
+	struct timer	*t_alarm;	// alarm timer
+	struct timer	*t_sleep;	// sleep timer
 	/* signals */
 	struct sigaction sigactions[_TELOS_SIGMAX];	// signal handlers
 	struct siginfo   siginfos[_TELOS_SIGMAX];	// signal information

@@ -18,6 +18,7 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/timer.h>
 
 #include <syscall.h>
 #include <signal.h>
@@ -282,8 +283,8 @@ void __kill(struct pcb *p, int sig_no)
 			p->rc = -128;
 			ready(p);
 		} else if (p->state == STATE_SLEEPING) {
-			p->rc = sq_rm(p) * 10;
-			ready(p);
+			/* sleep timer has TF_ALWAYS */
+			p->rc = timer_remove(p->t_sleep);
 		}
 	}
 }

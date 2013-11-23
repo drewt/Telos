@@ -32,7 +32,6 @@ void dispatch_init(void);
 void dispatch(void);
 void ready(struct pcb *p);
 void new_process(void);
-int sq_rm(struct pcb *p);
 
 void __kill(struct pcb *p, int sig_no);
 
