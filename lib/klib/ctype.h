@@ -1,3 +1,7 @@
+/*
+ * Stolen from linux.
+ */
+
 #ifndef _LINUX_CTYPE_H
 #define _LINUX_CTYPE_H
 

@@ -1,3 +1,7 @@
+/*
+ * Stolen from linux.
+ */
+
 #ifndef _LIB_KSTRTOX_H
 #define _LIB_KSTRTOX_H
 

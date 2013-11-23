@@ -1,4 +1,8 @@
 /*
+ * Stolen from linux.
+ */
+
+/*
  * Convert integer string representation to an integer.
  * If an integer doesn't fit into specified type, -E is returned.
  *
