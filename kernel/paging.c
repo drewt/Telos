@@ -421,7 +421,7 @@ struct pf_info *kalloc_page(void)
 	if (list_empty(&frame_pool))
 		return NULL;
 
-	page = (void*) list_pop(&frame_pool);
+	page = list_pop(&frame_pool, struct pf_info, chain);
 	return page;
 }
 

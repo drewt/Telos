@@ -55,7 +55,7 @@ struct timer *get_timer(void)
 	if (list_empty(&free_timers) && grow_timers() == -1)
 		return NULL;
 
-	return list_entry(list_dequeue(&free_timers), struct timer, chain);
+	return list_dequeue(&free_timers, struct timer, chain);
 }
 
 struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,

@@ -32,7 +32,7 @@ extern void tick(void);
 struct pcb *current = NULL;	/* the running process */
 static LIST_HEAD(ready_queue); 	/* queue of ready processes */
 
-#define next() ((struct pcb*) list_dequeue(&ready_queue))
+#define next() (list_dequeue(&ready_queue, struct pcb, chain))
 
 struct sysaction {
 	isr_t func;

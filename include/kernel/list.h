@@ -69,7 +69,7 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
 }
 
 /* stack and queue interfaces */
-#define list_pop list_dequeue
+#define list_pop list_remove_head
 #define list_push list_add
 #define list_dequeue list_remove_head
 #define list_enqueue list_add_tail
@@ -77,10 +77,13 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
 /* Iterate of each item in the queue, dequeing after each iteration.
  * Generates a for loop, setting pos to each item in turn.
  */
-#define dequeue_iterate(pos, type, head)		\
-	for (pos = (type) list_dequeue(head);		\
+#define dequeue_iterate(pos, type, member, head)	\
+	for (pos = list_dequeue(head, type, member);	\
 			pos;				\
-			pos = (type) list_dequeue(head))
+			pos = list_dequeue(head, type, member))
+
+#define list_remove_head(head, type, member)	\
+	list_entry(__list_remove_head(head), type, member)
 
 /*
  * Insert a new entry between two known consecutive entries.
@@ -156,7 +159,7 @@ static inline void list_del(struct list_head *entry)
 	entry->prev = LIST_POISON2;
 }
 
-static inline struct list_head *list_remove_head(struct list_head *head)
+static inline struct list_head *__list_remove_head(struct list_head *head)
 {
 	struct list_head *ret = head->next;
 	if (head == ret)

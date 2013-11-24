@@ -209,15 +209,15 @@ void sys_exit(int status)
 	__kill(pit, SIGCHLD);
 
 	// free memory allocated to process
-	dequeue_iterate (mit, struct pf_info*, &current->page_mem)
+	dequeue_iterate (mit, struct pf_info, chain, &current->page_mem)
 		kfree_page(mit);
-	dequeue_iterate (hit, struct mem_header*, &current->heap_mem)
+	dequeue_iterate (hit, struct mem_header, chain, &current->heap_mem)
 		kfree(hit->data);
 
 	current->state = STATE_STOPPED;
 
 	#define CLEAR_MSG_QUEUE(q)			\
-	dequeue_iterate (pit, struct pcb*, (q)) {	\
+	dequeue_iterate (pit, struct pcb, chain, (q)) {	\
 		pit->rc = SYSERR;			\
 		ready(pit);				\
 	}

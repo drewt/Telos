@@ -110,7 +110,7 @@ static void kbd_interrupt(void)
 			reader->rc = usr_buf_next;
 			ready(reader);
 
-			if ((reader = (struct pcb*) list_dequeue(&work_q))) {
+			if ((reader = list_dequeue(&work_q, struct pcb, chain))) {
 				echo = (reader->fds[reader->pbuf.id] == DEV_KBD_ECHO);
 				usr_buf = reader->pbuf.buf;
 				usr_buf_len = reader->pbuf.len;
