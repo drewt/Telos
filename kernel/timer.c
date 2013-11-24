@@ -33,14 +33,11 @@ static LIST_HEAD(timers);
 
 static int grow_timers(void)
 {
-	struct pf_info *page;
 	struct timer *timer;
 	int i;
 
-	if ((page = kalloc_page()) == NULL)
+	if ((timer = kmalloc(FRAME_SIZE)) == NULL)
 		return -1;
-
-	timer = (struct timer*) page->addr;
 
 	i = FRAME_SIZE / sizeof(struct timer);
 
