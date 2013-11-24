@@ -48,6 +48,14 @@ void isr_init(void)
 		"movl  $"STR(ident)", %%eax	\n"	\
 		"jmp   common_isr		\n"
 
+/* Sets the segment registers to the given value */
+#define SET_SEGS(val, reg)		\
+	"movw "val", "reg"	\n"	\
+	"movw "reg", %%ds	\n"	\
+	"movw "reg", %%es	\n"	\
+	"movw "reg", %%fs	\n"	\
+	"movw "reg", %%gs	\n"
+
 extern unsigned long _kernel_pgd;
 extern unsigned long KERNEL_PAGE_OFFSET;
 
@@ -74,11 +82,7 @@ unsigned int context_switch(struct pcb *p)
 	"movl  %[RET],  EAX(%%esp)	\n" // syscall return code in %eax
 	"cmp   $0x0,    %[SPR]		\n"
 	"jne   skip_seg_set		\n"
-	"movw  %[UDS],  %%ax		\n" // switch to user data segment
-	"movw  %%ax,    %%ds		\n"
-	"movw  %%ax,    %%es		\n"
-	"movw  %%ax,    %%fs		\n"
-	"movw  %%ax,    %%gs		\n"
+	SET_SEGS("%[UDS]", "%%ax")
 "skip_seg_set: "
 	"popa				\n" // restore user context
 	"iret				\n" // return to user process
@@ -91,11 +95,7 @@ unsigned int context_switch(struct pcb *p)
 "syscall_entry_point: "
 	"pusha				\n"
 "common_isr: "
-	"movw  %[KDS],  %%cx		\n" // switch to kernel data segment
-	"movw  %%cx,    %%ds		\n"
-	"movw  %%cx,    %%es		\n"
-	"movw  %%cx,    %%fs		\n"
-	"movw  %%cx,    %%gs		\n"
+	SET_SEGS("%[KDS]", "%%cx")
 	"movl  %%esp,   %%ecx		\n" // switch stacks
 	"movl  %[KSP],  %%esp		\n"
 	"movl  %[KPD],  %%ebx		\n"
