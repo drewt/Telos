@@ -53,12 +53,13 @@ static void alrm_action(void *data)
  */
 void sys_sleep(unsigned int seconds)
 {
-	current->t_sleep = timer_create(seconds*100, wake_action, current,
+	current->t_sleep = timer_create(wake_action, current,
 			TF_ALWAYS | TF_REF);
 	if (current->t_sleep == NULL) {
 		current->rc = -ENOMEM;
 		return;
 	}
+	timer_start(current->t_sleep, seconds*100);
 	new_process();
 }
 
@@ -79,12 +80,12 @@ void sys_alarm(unsigned int seconds)
 	if (seconds == 0)
 		return;
 
-	current->t_alarm = timer_create(seconds*100, alrm_action, current,
-			TF_REF);
+	current->t_alarm = timer_create(alrm_action, current, TF_REF);
 	if (current->t_alarm == NULL) {
 		current->rc = -ENOMEM;
 		return;
 	}
+	timer_start(current->t_alarm, seconds*100);
 }
 
 /*

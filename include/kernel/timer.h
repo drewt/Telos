@@ -30,8 +30,8 @@ struct timer {
 	int ref;
 };
 
-struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,
-		unsigned int flags);
+struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags);
+int timer_start(struct timer *timer, unsigned int ms);
 int __timer_destroy(struct timer *timer);
 int timer_remove(struct timer *timer);
 void timers_tick(void);

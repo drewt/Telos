@@ -55,19 +55,10 @@ struct timer *get_timer(void)
 	return list_dequeue(&free_timers, struct timer, chain);
 }
 
-struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,
-		unsigned int flags)
+int timer_start(struct timer *timer, unsigned int ms)
 {
 	int ticks;
-	struct timer *timer, *t;
-
-	if ((timer = get_timer()) == NULL)
-		return NULL;
-
-	timer->action = act;
-	timer->data = data;
-	timer->flags = flags;
-	timer->ref = flags & TF_REF ? 2 : 1;
+	struct timer *t;
 
 	ticks = (ms % 10) ? ms/10 + 1 : ms/10;
 
@@ -81,7 +72,24 @@ struct timer *timer_create(unsigned int ms, void(*act)(void*), void *data,
 		t->delta -= ticks;
 
 	timer->delta = ticks;
+	timer_ref(timer);
 	list_add_tail(&timer->chain, &t->chain);
+
+	return 0;
+}
+
+struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags)
+{
+	int ticks;
+	struct timer *timer, *t;
+
+	if ((timer = get_timer()) == NULL)
+		return NULL;
+
+	timer->action = act;
+	timer->data = data;
+	timer->flags = flags;
+	timer->ref = flags & TF_REF ? 1 : 0;
 
 	return timer;
 }
