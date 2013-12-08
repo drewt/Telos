@@ -3,7 +3,7 @@
 
 " integer types
 syn keyword telosType s8 s16 s32 s64
-syn keyword telosType u8 u16 u32 u63
+syn keyword telosType u8 u16 u32 u64
 syn keyword telosType uchar ushort ulong
 
 " Telos '*_t' types
@@ -13,7 +13,7 @@ syn keyword telosType list_t list_head_t list_chain_t list_entry_t
 hi def link telosType Type
 
 " keyword-like macros
-syn keyword telosMacro dequeue_iterate list_for_each list_for_each_prev list_for_each_safe list_for_each_prev_safe list_for_each_entry list_for_each_entry_reverse list_for_each_entry_continue list_for_each_entry_from list_for_each_entry_safe list_for_each_entry_safe_continue list_for_each_entry_safe_from list_for_each_entry_safe_reverse hlist_for_each hlist_for_each_safe hlist_for_each_entry hlist_for_each_entry_continue hlist_for_each_entry_from hlist_for_each_entry_safe
+syn keyword telosMacro dequeue_iterate list_for_each list_for_each_prev list_for_each_safe list_for_each_prev_safe list_for_each_entry list_for_each_entry_reverse list_for_each_entry_continue list_for_each_entry_continue_reverse list_for_each_entry_from list_for_each_entry_safe list_for_each_entry_safe_continue list_for_each_entry_safe_from list_for_each_entry_safe_reverse hlist_for_each hlist_for_each_safe hlist_for_each_entry hlist_for_each_entry_continue hlist_for_each_entry_from hlist_for_each_entry_safe
 hi def link telosMacro Statement
 
 " symbolic constants
