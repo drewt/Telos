@@ -21,6 +21,7 @@
 #define __KERNEL__
 
 #include <kernel/types.h>
+#include <kernel/compiler.h>
 #include <errnodefs.h>
 
 #define SYSERR (-1)
@@ -31,8 +32,6 @@
 #define wprints(str) kprintf_clr(0xC, "WARNING: "str"\n")
 
 /* linux */
-#define likely(x) x
-#define unlikely(x) x
 #define WARN_ON_ONCE(x) x
 
 #define ULLONG_MAX (~0ULL)
