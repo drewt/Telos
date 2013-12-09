@@ -31,6 +31,7 @@ stack:            .space STACKSIZE
 .long CHECKSUM
 
 loader:
+    # temporarily use physical address for stack
     mov  $(stack + STACKSIZE), %esp
     subl $KERNEL_PAGE_OFFSET, %esp
 
@@ -40,6 +41,7 @@ loader:
 
     call boot_init_paging
 
+    # set up the stack and enter the kernel proper
     addl $KERNEL_PAGE_OFFSET, %esp
     mov  %esp, %ebp
     call kmain
@@ -50,21 +52,20 @@ hang:
     jmp hang
 
 boot_init_paging:
-
-    mov  $_kernel_pgd, %eax
-    mov  $_kernel_low_pgt, %ebx
-    sub  $KERNEL_PAGE_OFFSET, %eax
+    mov  $_kernel_pgd, %ebx
+    mov  $_kernel_low_pgt, %edx
     sub  $KERNEL_PAGE_OFFSET, %ebx
+    sub  $KERNEL_PAGE_OFFSET, %edx
 
-    or   $0x7, %ebx
-    mov  $0x0, %edx
+    or   $0x7, %edx
+    mov  $0x0, %ecx
 
     # initialize page directory
     _set_pgt_loop:
-        mov  %ebx, (%eax, %edx, 4)
-        add  $0x1000, %ebx
-        inc  %edx
-        cmp  $NR_LOW_PGTS, %edx
+        mov  %edx, (%ebx, %ecx, 4)
+        add  $0x1000, %edx
+        inc  %ecx
+        cmp  $NR_LOW_PGTS, %ecx
         jl   _set_pgt_loop
     
     # initialize page tables
