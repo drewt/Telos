@@ -80,8 +80,7 @@ int timer_start(struct timer *timer, unsigned int ms)
 
 struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags)
 {
-	int ticks;
-	struct timer *timer, *t;
+	struct timer *timer;
 
 	if ((timer = get_timer()) == NULL)
 		return NULL;
@@ -103,6 +102,7 @@ int __timer_destroy(struct timer *timer)
 		timer->action(timer->data);
 
 	timer->delta = -1;
+	return 0;
 }
 
 /*
