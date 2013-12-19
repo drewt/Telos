@@ -18,8 +18,13 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/time.h>
 #include <kernel/timer.h>
 #include <signal.h>
+
+#include <kernel/hashtable.h>
+
+DEFINE_HASHTABLE(posix_timers, 9);
 
 unsigned int tick_count = 0; /* global tick count */
 
@@ -86,6 +91,29 @@ void sys_alarm(unsigned int seconds)
 		return;
 	}
 	timer_start(current->t_alarm, seconds*100);
+}
+
+void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
+		timer_t *timerid)
+{
+	current->rc = -ENOTSUP;
+}
+
+void sys_timer_delete(timer_t timerid)
+{
+	current->rc = -ENOTSUP;
+}
+
+void sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
+{
+	current->rc = -ENOTSUP;
+}
+
+void sys_timer_settime(timer_t timerid, int flags,
+		const struct itimerspec *new_value,
+		struct itimerspec *old_value)
+{
+	current->rc = -ENOTSUP;
 }
 
 /*

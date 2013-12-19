@@ -22,6 +22,9 @@
 #include <kernel/process.h>
 
 struct sigaction;
+struct sigevent;
+
+struct itimerspec;
 
 extern struct pcb *current;
 
@@ -77,5 +80,12 @@ void sys_close(int fd);
 void sys_read(int fd, void *buf, int nbyte);
 void sys_write(int fd, void *buf, int nbyte);
 void sys_ioctl(int fd, unsigned long command, va_list vargs);
+void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
+		timer_t *timerid);
+void sys_timer_delete(timer_t timerid);
+void sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value);
+void sys_timer_settime(timer_t timerid, int flags,
+		const struct itimerspec *new_value,
+		struct itimerspec *old_value);
 
 #endif
