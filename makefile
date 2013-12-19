@@ -18,7 +18,7 @@ export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS LD OBJCOPY
 
 findobj = find kernel dispatch drivers -name '*.o' | tr '\n' ' '
 
-submakes = dispatch drivers kernel usr
+submakes = dispatch drivers kernel usr lib
 clean = kernel.img kernel.bin boot/loader.o
 distclean = pad
 
@@ -46,6 +46,9 @@ kernel:
 usr:
 	+$(call cmd,smake)
 
+lib:
+	+$(call cmd,smake)
+
 boot/loader.o: boot/loader.s
 	$(call cmd,as)
 
@@ -68,6 +71,7 @@ topclean:
 	@cd drivers && $(MAKE) clean
 	@cd kernel && $(MAKE) clean
 	@cd usr && $(MAKE) clean
+	@cd lib && $(MAKE) clean
 
 distclean: topdistclean
 topdistclean:
@@ -75,5 +79,6 @@ topdistclean:
 	@cd drivers && $(MAKE) distclean
 	@cd kernel && $(MAKE) distclean
 	@cd usr && $(MAKE) distclean
+	@cd lib && $(MAKE) distclean
 
 .PHONY: $(submakes) linker.ld topclean topdistclean

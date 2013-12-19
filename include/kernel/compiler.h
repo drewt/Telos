@@ -25,8 +25,9 @@
  * value is always the same.  This idea is taken from a similar patch
  * written by Daniel Walker.
  */
-#define likely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 1))
-#define unlikely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 0))
-
+//#define likely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 1))
+//#define unlikely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 0))
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 #endif
