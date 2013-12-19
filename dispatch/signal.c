@@ -17,12 +17,12 @@
 
 #include <kernel/common.h>
 #include <kernel/i386.h>
+#include <kernel/bitops.h>
 #include <kernel/dispatch.h>
 #include <kernel/timer.h>
 
 #include <syscall.h>
 #include <signal.h>
-#include <bit.h>
 
 /* signals which cannot be ignored by the user */
 #define SIG_NOIGNORE (BIT(SIGKILL) | BIT(SIGSTOP))
@@ -100,9 +100,9 @@ static int send_signal_user(struct pcb *p, int sig_no)
 
 	p->ifp = p->esp;
 	p->esp = (void*) u_sigframe;
-	p->sig_pending &= ~(BIT(sig_no));
 	p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
 			: (u32) (~0 << (sig_no + 1));
+	clear_bit(sig_no, &p->sig_pending);
 
 	kunmap_range((ulong) sig_frame, U_CONTEXT_SIZE * 2);
 	return 0;
@@ -124,9 +124,9 @@ static int send_signal_super(struct pcb *p, int sig_no)
 	old_ctxt->reg.eax = p->sig_ignore;
 
 	p->esp = sig_frame;
-	p->sig_pending &= ~(BIT(sig_no));
 	p->sig_ignore = siginfo ? p->sig_ignore & ~(act->sa_mask)
 			: (u32) (~0 << (sig_no + 1));
+	clear_bit(sig_no, &p->sig_pending);
 	return 0;
 }
 
@@ -186,19 +186,19 @@ void sys_sigwait(void)
 //-----------------------------------------------------------------------------
 void sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 {
+	struct sigaction *sap = &current->sigactions[sig];
+
 	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
 		current->rc = -EINVAL;
 		return;
 	}
 
 	if (oact)
-		copy_to_userspace(current->pgdir, oact, &current->sigactions[sig],
-				sizeof(struct sigaction));
+		copy_to_userspace(current->pgdir, oact, sap, sizeof(*sap));
 
 	if (act) {
-		copy_from_userspace(current->pgdir, &current->sigactions[sig], act,
-				sizeof(struct sigaction));
-		current->sig_accept |= BIT(sig);
+		copy_from_userspace(current->pgdir, sap, act, sizeof(*sap));
+		set_bit(sig, &current->sig_accept);
 	}
 
 	current->rc = 0;
@@ -217,14 +217,14 @@ void sys_signal(int sig, void(*func)(int))
 	current->rc = (long) current->sigactions[sig].sa_handler;
 
 	if (func == SIG_IGN) {
-		current->sig_accept &= ~(1 << sig);
+		clear_bit(sig, &current->sig_accept);
 	} else if (func == SIG_DFL) {
 		// ???
 	} else {
 		current->sigactions[sig].sa_handler = func;
 		current->sigactions[sig].sa_mask    = 0;
 		current->sigactions[sig].sa_flags   = 0;
-		current->sig_accept |= BIT(sig);
+		set_bit(sig, &current->sig_accept);
 	}
 }
 
@@ -263,11 +263,9 @@ void sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 //-----------------------------------------------------------------------------
 void __kill(struct pcb *p, int sig_no)
 {
-	u32 sig_bit = 1 << sig_no;
-
 	/* record signal if process accepts it */
-	if (p->sig_accept & sig_bit) {
-		p->sig_pending |= sig_bit;
+	if (p->sig_accept & BIT(sig_no)) {
+		set_bit(sig_no, &p->sig_pending);
 
 		if (p->sigactions[sig_no].sa_flags & SA_SIGINFO) {
 			p->siginfos[sig_no].si_errno = 0;
