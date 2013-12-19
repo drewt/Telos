@@ -9,8 +9,9 @@ AR        = $(CCPREFIX)ar
 ARFLAGS   = rcs
 AS        = $(CCPREFIX)as --32
 CC        = $(CCPREFIX)gcc -m32 -march=i386
-CFLAGS    = -Wall -Wextra -Wno-unused-parameter
-ALLCFLAGS = -I $(incdir) -fno-builtin -ffreestanding -std=gnu99
+CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
+	    -Wno-attributes
+ALLCFLAGS = $(CFLAGS) -I $(incdir) -fno-builtin -ffreestanding -std=gnu99
 LD        = $(CCPREFIX)ld -m elf_i386
 OBJCOPY   = $(CCPREFIX)objcopy
 
