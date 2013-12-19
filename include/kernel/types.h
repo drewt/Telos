@@ -34,7 +34,14 @@ typedef int ssize_t;
 
 typedef int pid_t;
 
+typedef int clockid_t;
+typedef unsigned long timer_t;
+
+typedef unsigned long time_t;
+
 #ifdef __KERNEL__
+
+#define BITS_PER_LONG 32
 
 typedef unsigned short port_t;
 
@@ -50,15 +57,23 @@ typedef unsigned long	ulong;
 // XXX: arch/implementation dependent
 typedef signed   char		s8;
 typedef unsigned char		u8;
+typedef unsigned long		__s8;
+typedef unsigned long		__u8;
 
 typedef signed   short		s16;
 typedef unsigned short		u16;
+typedef unsigned long		__s16;
+typedef unsigned long		__u16;
 
 typedef signed   long		s32;
 typedef unsigned long		u32;
+typedef unsigned long		__s32;
+typedef unsigned long		__u32;
 
 typedef signed   long long	s64;
 typedef unsigned long long	u64;
+typedef unsigned long long	__s64;
+typedef unsigned long long	__u64;
 
 typedef signed   long long	int64_t;
 typedef unsigned long long	uint64_t;

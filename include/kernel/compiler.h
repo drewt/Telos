@@ -18,15 +18,12 @@
 #ifndef _KERNEL_COMPILER_H_
 #define _KERNEL_COMPILER_H_
 
+/* Optimization barrier */
+/* The "volatile" is due to gcc bugs */
+#define barrier() __asm__ __volatile__("": : :"memory")
+
 #define __always_inline __attribute__((always_inline))
 
-/*
- * Using __builtin_constant_p(x) to ignore cases where the return
- * value is always the same.  This idea is taken from a similar patch
- * written by Daniel Walker.
- */
-//#define likely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 1))
-//#define unlikely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 0))
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
