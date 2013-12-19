@@ -104,4 +104,36 @@ static inline void kfree(void *addr)
 	hfree(mem_ptoh(addr));
 }
 
+/*
+ * Defines page-at-a-time allocation functions for the given type.
+ *
+ * @name the name of the allocation function
+ * @type the type of object to allocate
+ * @list the &struct list_head to add newly allocated objects to
+ * @member the name of the struct list_head within the struct
+ */
+#define DEFINE_ALLOCATOR(name, type, list, member)	\
+static int __ ## name(void)				\
+{							\
+	type *__tmp;					\
+	int __i;					\
+							\
+	if ((__tmp = kmalloc(FRAME_SIZE)) == NULL)	\
+		return -1;				\
+							\
+	__i = FRAME_SIZE / sizeof(type);		\
+	for (; __i > 0; __i--, __tmp++)			\
+		list_enqueue(&__tmp->member, list);	\
+							\
+	return 0;					\
+}							\
+							\
+type *name(void)					\
+{							\
+	if (list_empty(list) && __ ## name() == -1)	\
+		return NULL;				\
+	return list_dequeue(list, type, member);	\
+}
+
+
 #endif

@@ -31,29 +31,7 @@ static LIST_HEAD(zombie_timers);
 static LIST_HEAD(free_timers);
 static LIST_HEAD(timers);
 
-static int grow_timers(void)
-{
-	struct timer *timer;
-	int i;
-
-	if ((timer = kmalloc(FRAME_SIZE)) == NULL)
-		return -1;
-
-	i = FRAME_SIZE / sizeof(struct timer);
-
-	for (; i > 0; i--, timer++)
-		list_enqueue(&timer->chain, &free_timers);
-
-	return 0;
-}
-
-struct timer *get_timer(void)
-{
-	if (list_empty(&free_timers) && grow_timers() == -1)
-		return NULL;
-
-	return list_dequeue(&free_timers, struct timer, chain);
-}
+DEFINE_ALLOCATOR(get_timer, struct timer, &free_timers, chain)
 
 int timer_start(struct timer *timer, unsigned int ms)
 {
