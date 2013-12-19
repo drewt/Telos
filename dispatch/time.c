@@ -18,15 +18,29 @@
 #include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
+#include <kernel/mem.h>
 #include <kernel/time.h>
 #include <kernel/timer.h>
 #include <signal.h>
 
 #include <kernel/hashtable.h>
 
+struct posix_timer {
+	struct list_head chain;
+	struct hlist_node t_hash;
+	struct sigevent sev;
+	struct itimerspec spec;
+	struct timer *timer;
+	pid_t pid;
+	timer_t timerid;
+};
+
+LIST_HEAD(free_timers);
 DEFINE_HASHTABLE(posix_timers, 9);
 
 unsigned int tick_count = 0; /* global tick count */
+
+DEFINE_ALLOCATOR(get_posix_timer, struct posix_timer, &free_timers, chain)
 
 /*
  * Wakes a sleeping process.
@@ -93,15 +107,89 @@ void sys_alarm(unsigned int seconds)
 	timer_start(current->t_alarm, seconds*100);
 }
 
+static struct posix_timer *get_timer_by_id(timer_t timerid)
+{
+	struct posix_timer *it;
+
+	hash_for_each_possible(posix_timers, it, t_hash, timerid) {
+		if (it->pid == current->pid && it->timerid == timerid)
+			return it;
+	}
+	return NULL;
+}
+
+static void posix_timer_action(void *data)
+{
+	struct posix_timer *pt = data;
+	struct pcb *p = &proctab[PT_INDEX(pt->pid)];
+
+	current->siginfos[pt->sev.sigev_signo].si_value =
+		pt->sev.sigev_value;
+
+	__kill(p, pt->sev.sigev_signo);
+}
+
 void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid)
 {
-	current->rc = -ENOTSUP;
+	struct posix_timer *pt;
+
+	if (clockid != CLOCK_REALTIME) {
+		current->rc = -ENOTSUP;
+		return;
+	}
+
+	if ((pt = get_posix_timer()) == NULL) {
+		current->rc = -ENOMEM;
+		return;
+	}
+
+	pt->pid = current->pid;
+	pt->timerid = current->posix_timer_id++;
+
+	if (sevp == NULL) {
+		pt->sev.sigev_notify = SIGEV_SIGNAL;
+		pt->sev.sigev_signo = SIGALRM;
+		pt->sev.sigev_value.sigval_int = pt->timerid;
+	} else {
+		copy_from_userspace(current->pgdir, &pt->sev, sevp,
+				sizeof(*sevp));
+		if (pt->sev.sigev_notify != SIGEV_SIGNAL) {
+			current->rc = -ENOTSUP;
+			goto err0;
+		}
+	}
+
+	pt->timer = timer_create(posix_timer_action, pt, TF_REF);
+	if (pt->timer == NULL) {
+		current->rc = -ENOMEM;
+		goto err0;
+	}
+
+	list_add_tail(&pt->chain, &current->posix_timers);
+	hash_add(posix_timers, &pt->t_hash, pt->timerid);
+
+	copy_to_userspace(current->pgdir, timerid, &pt->timerid, sizeof(*timerid));
+	current->rc = 0;
+	return;
+err0:
+	list_add(&pt->chain, &free_timers);
 }
 
 void sys_timer_delete(timer_t timerid)
 {
-	current->rc = -ENOTSUP;
+	struct posix_timer *pt = get_timer_by_id(timerid);
+
+	if (pt == NULL) {
+		current->rc = -EINVAL;
+		return;
+	}
+
+	list_del(&pt->chain);
+	list_add(&pt->chain, &free_timers);
+	hash_del(&pt->t_hash);
+
+	current->rc = 0;
 }
 
 void sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
@@ -113,7 +201,18 @@ void sys_timer_settime(timer_t timerid, int flags,
 		const struct itimerspec *new_value,
 		struct itimerspec *old_value)
 {
-	current->rc = -ENOTSUP;
+	struct posix_timer *pt = get_timer_by_id(timerid);
+	struct itimerspec *v = &pt->spec;
+
+	if (pt == NULL) {
+		current->rc = -EINVAL;
+		return;
+	}
+
+	copy_from_userspace(current->pgdir, v, new_value, sizeof(*new_value));
+
+	timer_start(pt->timer, v->it_value.tv_sec*100 + v->it_value.tv_nsec);
+	current->rc = 0;
 }
 
 /*

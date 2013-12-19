@@ -20,6 +20,11 @@
 
 #include <kernel/types.h>
 
+enum {
+	CLOCK_REALTIME,
+	CLOCK_MONOTONIC,
+};
+
 struct timespec {
 	time_t tv_sec;
 	long tv_nsec;

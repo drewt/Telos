@@ -73,6 +73,8 @@ struct pcb {
 	unsigned int	timestamp;	// creation time
 	struct timer	*t_alarm;	// alarm timer
 	struct timer	*t_sleep;	// sleep timer
+	struct list_head posix_timers;
+	timer_t		posix_timer_id;
 	/* signals */
 	struct sigaction sigactions[_TELOS_SIGMAX];	// signal handlers
 	struct siginfo   siginfos[_TELOS_SIGMAX];	// signal information

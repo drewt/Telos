@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <telos/process.h>
@@ -66,8 +67,46 @@ static void alarm_test(void)
 		puts("error");
 }
 
+static void timer_action(int signo, siginfo_t *info, void *context)
+{
+	printf("TIMER!\n");
+}
+
+static void timer_test(void)
+{
+	timer_t tid;
+	sigset_t mask;
+	struct sigaction act;
+	struct itimerspec time = {
+		.it_interval = {0},
+		.it_value = {
+			.tv_sec = 1,
+			.tv_nsec = 0,
+		},
+	};
+
+	sigprocmask(SIG_BLOCK, NULL, &mask);
+	act.sa_mask = mask;
+	act.sa_flags = SA_SIGINFO;
+	act.sa_sigaction = timer_action;
+
+	if (sigaction(SIGALRM, &act, NULL) == -1) {
+		printf("sigaction() failed\n");
+	}
+
+	if (timer_create(CLOCK_REALTIME, NULL, &tid) < 0) {
+		printf("timer_create() failed\n");
+	}
+
+	if (timer_settime(tid, 0, &time, NULL) < 0) {
+		printf("timer_settime() failed\n");
+	}
+	sleep(2);
+}
+
 void eventtest(int argc, char *argv[])
 {
 	sleep_test();
 	alarm_test();
+	timer_test();
 }

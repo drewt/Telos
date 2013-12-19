@@ -74,6 +74,12 @@ enum {
 	SI_MESGQ
 };
 
+enum {
+	SIGEV_NONE,
+	SIGEV_SIGNAL,
+	SIGEV_THREAD,
+};
+
 enum sigprocmask_flags { SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK };
 
 int kill(pid_t pid, int signal_number);

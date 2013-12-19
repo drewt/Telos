@@ -20,8 +20,10 @@
 #define _TIME_H_
 
 #include <kernel/time.h>
+#include <stddef.h> /* NULL */
 #include <sys/types.h>
-#include <sigdefs.h>
+
+struct sigevent;
 
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid);
