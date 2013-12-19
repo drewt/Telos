@@ -16,6 +16,7 @@
  */
 
 #include <kernel/common.h>
+#include <kernel/bitops.h>
 #include <kernel/dispatch.h>
 #include <kernel/device.h>
 #include <kernel/interrupt.h>
@@ -98,18 +99,14 @@ void dispatch_init(void)
 //*----------------------------------------------------------------------------
 void dispatch(void)
 {
-	unsigned int req, sig_no;
+	unsigned int req;
 	struct sys_args args;
 
 	current = next();
 	for (;;) {
 
-		if (current->sig_pending & current->sig_ignore) {
-			sig_no = 31;
-			while (sig_no && !(current->sig_pending >> sig_no))
-				sig_no--;
-			send_signal(current, sig_no);
-		}
+		if (current->sig_pending & current->sig_ignore)
+			send_signal(current, fls(current->sig_pending)-1);
 
 		req  = context_switch(current);
 
