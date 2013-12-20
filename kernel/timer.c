@@ -39,7 +39,7 @@ int timer_start(struct timer *timer, unsigned long ticks)
 
 	timer_ref(timer);
 	timer->expires = tick_count + ticks;
-	//timer->expires = tick_count + ((ms % 10) ? ms/10 + 1 : ms/10);
+	timer->flags |= TF_ARMED;
 
 	/* overflow */
 	if (timer->expires < tick_count) {
@@ -71,10 +71,7 @@ struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags)
 	if ((timer = get_timer()) == NULL)
 		return NULL;
 
-	timer->action = act;
-	timer->data = data;
-	timer->flags = flags;
-	timer->ref = flags & TF_REF ? 1 : 0;
+	timer_init(timer, act, data, flags);
 
 	return timer;
 }
@@ -120,6 +117,7 @@ void timers_tick(void)
 		if (t->expires > tick_count)
 			break;
 
+		t->flags &= ~TF_ARMED;
 		t->action(t->data);
 		list_del(&t->chain);
 		list_add(&t->chain, &zombie_timers);

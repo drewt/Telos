@@ -49,9 +49,6 @@ static void wake_action(void *data)
 	struct pcb *p = (struct pcb*) data;
 	p->rc = 0;
 	ready(p);
-
-	timer_unref(p->t_sleep);
-	p->t_sleep = NULL;
 }
 
 /*
@@ -61,9 +58,6 @@ static void alrm_action(void *data)
 {
 	struct pcb *p = (struct pcb*) data;
 	__kill(p, SIGALRM);
-
-	timer_unref(p->t_alarm);
-	p->t_alarm = NULL;
 }
 
 /*
@@ -71,11 +65,8 @@ static void alrm_action(void *data)
  */
 long sys_sleep(unsigned long ticks)
 {
-	current->t_sleep = timer_create(wake_action, current,
-			TF_ALWAYS | TF_REF);
-	if (current->t_sleep == NULL)
-		return -ENOMEM;
-	timer_start(current->t_sleep, ticks);
+	timer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_REF);
+	timer_start(&current->t_sleep, ticks);
 	new_process();
 	return 0;
 }
@@ -88,10 +79,8 @@ long sys_alarm(unsigned long ticks)
 {
 	long rc;
 
-	if (current->t_alarm != NULL) {
-		rc = timer_remove(current->t_alarm);
-		timer_unref(current->t_alarm);
-		current->t_alarm = NULL;
+	if (current->t_alarm.flags & TF_ARMED) {
+		rc = timer_remove(&current->t_alarm);
 	} else {
 		rc = 0;
 	}
@@ -99,10 +88,8 @@ long sys_alarm(unsigned long ticks)
 	if (ticks == 0)
 		return rc;
 
-	current->t_alarm = timer_create(alrm_action, current, TF_REF);
-	if (current->t_alarm == NULL)
-		return -ENOMEM;
-	timer_start(current->t_alarm, ticks);
+	timer_init(&current->t_alarm, alrm_action, current, TF_REF);
+	timer_start(&current->t_alarm, ticks);
 	return rc;
 }
 

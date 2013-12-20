@@ -20,6 +20,7 @@
 
 #define TF_ALWAYS 1 /* call the handler if the timer is prematurely destroyed */
 #define TF_REF    2 /* directive to timer_create to add an extra ref */
+#define TF_ARMED  4 /* timer is currently armed */
 
 struct timer {
 	struct list_head chain;
@@ -35,6 +36,15 @@ int timer_start(struct timer *timer, unsigned long ticks);
 int __timer_destroy(struct timer *timer);
 unsigned long timer_remove(struct timer *timer);
 void timers_tick(void);
+
+static inline void timer_init(struct timer *dst, void(*act)(void*), void *data,
+		unsigned int flags)
+{
+	dst->action = act;
+	dst->data = data;
+	dst->flags = flags & ~TF_ARMED;
+	dst->ref = flags & TF_REF ? 1 : 0;
+}
 
 static inline void timer_ref(struct timer *timer)
 {

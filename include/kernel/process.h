@@ -21,6 +21,7 @@
 #include <kernel/device.h>
 #include <kernel/list.h>
 #include <kernel/signal.h>
+#include <kernel/timer.h>
 
 #define PT_SIZE  256
 #define PID_MASK (PT_SIZE - 1)
@@ -51,8 +52,6 @@ struct pbuf {
 	int  id;   // id (context dependent)
 };
 
-struct timer;
-
 /* process control block */
 struct pcb {
 	struct list_head chain;
@@ -70,8 +69,8 @@ struct pcb {
 	unsigned long	*pgdir;		// page directory
 	/* time */
 	unsigned int	timestamp;	// creation time
-	struct timer	*t_alarm;	// alarm timer
-	struct timer	*t_sleep;	// sleep timer
+	struct timer	t_alarm;	// alarm timer
+	struct timer	t_sleep;	// sleep timer
 	struct list_head posix_timers;
 	timer_t		posix_timer_id;
 	/* signals */
