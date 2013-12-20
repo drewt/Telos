@@ -94,7 +94,7 @@ static void timer_test(void)
 		printf("sigaction() failed\n");
 	}
 
-	if (timer_create(CLOCK_REALTIME, NULL, &tid) < 0) {
+	if (timer_create(CLOCK_MONOTONIC, NULL, &tid) < 0) {
 		printf("timer_create() failed\n");
 	}
 

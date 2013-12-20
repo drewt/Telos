@@ -127,4 +127,12 @@ static inline int sigismember(const sigset_t *set, int signum)
 	return *set & (1 << signum);
 }
 
+#ifdef __KERNEL__
+
+static inline int signo_valid(int signo)
+{
+	return signo > 0 && signo < _TELOS_SIGMAX;
+}
+
+#endif /* __KERNEL__ */
 #endif

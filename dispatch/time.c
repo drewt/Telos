@@ -125,7 +125,29 @@ static void posix_timer_action(void *data)
 	current->siginfos[pt->sev.sigev_signo].si_value =
 		pt->sev.sigev_value;
 
-	__kill(p, pt->sev.sigev_signo);
+	switch (pt->sev.sigev_notify) {
+	case SIGEV_SIGNAL:
+		__kill(p, pt->sev.sigev_signo);
+		break;
+	default:
+		break;
+	}
+}
+
+static inline int sigev_valid(struct sigevent *sevp)
+{
+	switch (sevp->sigev_notify) {
+	case SIGEV_NONE:
+	case SIGEV_SIGNAL:
+		break;
+	default:
+		return 0;
+	}
+
+	if (!signo_valid(sevp->sigev_signo))
+		return 0;
+
+	return 1;
 }
 
 long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
@@ -134,7 +156,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 	long error;
 	struct posix_timer *pt;
 
-	if (clockid != CLOCK_REALTIME)
+	if (clockid != CLOCK_MONOTONIC)
 		return -ENOTSUP;
 
 	if ((pt = get_posix_timer()) == NULL)
@@ -149,8 +171,8 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		pt->sev.sigev_value.sigval_int = pt->timerid;
 	} else {
 		copy_from_current(&pt->sev, sevp, sizeof(*sevp));
-		if (pt->sev.sigev_notify != SIGEV_SIGNAL) {
-			error = -ENOTSUP;
+		if (!sigev_valid(&pt->sev)) {
+			error = -EINVAL;
 			goto err0;
 		}
 	}
@@ -213,7 +235,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	copy_from_current(v, new_value, sizeof(*new_value));
 
-	timer_start(pt->timer, v->it_value.tv_sec*100 + v->it_value.tv_nsec);
+	timer_start(pt->timer, v->it_value.tv_sec*100);
 	return 0;
 }
 
