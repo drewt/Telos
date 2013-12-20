@@ -53,38 +53,38 @@ void exn_fpe(void);
 void exn_ill_instr(void);
 
 /* service routines */
-void sys_malloc(unsigned int size, void **p);
-void sys_free(void *ptr);
-void sys_palloc(void **p);
-void sys_create(void(*func)(int,char*), int argc, char **argv);
-void sys_yield(void);
-void sys_exit(int status);
-void sys_getpid(void);
-void sys_puts(char *s);
-void sys_report(char *s);
-void sys_sleep(unsigned int milliseconds);
-void sys_alarm(unsigned int seconds);
-void sig_restore(void *osp);
-void sys_sigaction(int sig, struct sigaction *act,
+long sys_malloc(unsigned int size, void **p);
+long sys_free(void *ptr);
+long sys_palloc(void **p);
+long sys_create(void(*func)(int,char*), int argc, char **argv);
+long sys_yield(void);
+long sys_exit(int status);
+long sys_getpid(void);
+long sys_puts(char *s);
+long sys_report(char *s);
+long sys_sleep(unsigned int milliseconds);
+long sys_alarm(unsigned int seconds);
+long sig_restore(void *osp);
+long sys_sigaction(int sig, struct sigaction *act,
 		struct sigaction *oact);
-void sys_signal(int sig, void(*func)(int));
-void sys_sigprocmask(int how, sigset_t *set, sigset_t *oset);
-void sys_kill(pid_t pid, int sig);
-void sys_sigqueue(pid_t pid, int sig, const union sigval value);
-void sys_sigwait(void);
-void sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-void sys_recv(int *src_pid, void *buffer, int length);
-void sys_reply(int src_pid, void *buffer, int length);
-void sys_open(const char *pathname, int flags, ...);
-void sys_close(int fd);
-void sys_read(int fd, void *buf, int nbyte);
-void sys_write(int fd, void *buf, int nbyte);
-void sys_ioctl(int fd, unsigned long command, va_list vargs);
-void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
+long sys_signal(int sig, void(*func)(int));
+long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset);
+long sys_kill(pid_t pid, int sig);
+long sys_sigqueue(pid_t pid, int sig, const union sigval value);
+long sys_sigwait(void);
+long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
+long sys_recv(int *src_pid, void *buffer, int length);
+long sys_reply(int src_pid, void *buffer, int length);
+long sys_open(const char *pathname, int flags, ...);
+long sys_close(int fd);
+long sys_read(int fd, void *buf, int nbyte);
+long sys_write(int fd, void *buf, int nbyte);
+long sys_ioctl(int fd, unsigned long command, va_list vargs);
+long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid);
-void sys_timer_delete(timer_t timerid);
-void sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value);
-void sys_timer_settime(timer_t timerid, int flags,
+long sys_timer_delete(timer_t timerid);
+long sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value);
+long sys_timer_settime(timer_t timerid, int flags,
 		const struct itimerspec *new_value,
 		struct itimerspec *old_value);
 

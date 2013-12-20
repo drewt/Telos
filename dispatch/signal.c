@@ -147,10 +147,11 @@ int send_signal(struct pcb *p, int sig_no)
 /*-----------------------------------------------------------------------------
  * Restore CPU & signal context that was active before the current signal */
 //-----------------------------------------------------------------------------
-void sig_restore(void *osp)
+long sig_restore(void *osp)
 {
 	// TODO: verify that osp is in valid range and properly aligned
 	//struct ctxt *cx = osp;
+	long old_rc;
 	current->esp = osp;
 	current->ifp = (void*) ((ulong) osp + U_CONTEXT_SIZE);
 
@@ -166,32 +167,33 @@ void sig_restore(void *osp)
 
 	// restore old signal mask and return value
 	current->sig_ignore = cx->reg.eax;
-	current->rc         = rc[-2];
+	old_rc = rc[-2];
 
 	kunmap_range((ulong) cx, U_CONTEXT_SIZE);
 	kunmap_range((ulong) rc, sizeof(ulong));
+
+	return old_rc;
 }
 
 /*-----------------------------------------------------------------------------
  * Wait for a signal */
 //-----------------------------------------------------------------------------
-void sys_sigwait(void)
+long sys_sigwait(void)
 {
 	current->state = STATE_SIGWAIT;
 	new_process();
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Registers a signal action */
 //-----------------------------------------------------------------------------
-void sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
+long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 {
 	struct sigaction *sap = &current->sigactions[sig];
 
-	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig))
+		return -EINVAL;
 
 	if (oact)
 		copy_to_userspace(current->pgdir, oact, sap, sizeof(*sap));
@@ -201,20 +203,18 @@ void sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 		set_bit(sig, &current->sig_accept);
 	}
 
-	current->rc = 0;
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Registers a signal handling function for a given signal */
 //-----------------------------------------------------------------------------
-void sys_signal(int sig, void(*func)(int))
+long sys_signal(int sig, void(*func)(int))
 {
-	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig)) {
-		current->rc = -EINVAL;
-		return;
-	}
+	long rv = (long) current->sigactions[sig].sa_handler;;
 
-	current->rc = (long) current->sigactions[sig].sa_handler;
+	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig))
+		return -EINVAL;
 
 	if (func == SIG_IGN) {
 		clear_bit(sig, &current->sig_accept);
@@ -226,12 +226,13 @@ void sys_signal(int sig, void(*func)(int))
 		current->sigactions[sig].sa_flags   = 0;
 		set_bit(sig, &current->sig_accept);
 	}
+	return rv;
 }
 
 /*-----------------------------------------------------------------------------
  * Alters the signal mask */
 //-----------------------------------------------------------------------------
-void sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
+long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
 	if (oset) {
 		u32 tmp = ~(current->sig_ignore);
@@ -251,11 +252,10 @@ void sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 			current->sig_ignore |= *set;
 			break;
 		default:
-			current->rc = -EINVAL;
-			return;
+			return -EINVAL;
 		}
 	}
-	current->rc = 0;
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
@@ -287,53 +287,41 @@ void __kill(struct pcb *p, int sig_no)
 	}
 }
 
-void sys_kill(pid_t pid, int sig)
+long sys_kill(pid_t pid, int sig)
 {
 	int i = PT_INDEX(pid);
 
-	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid) {
-		current->rc = -ESRCH;
-		return;
-	}
+	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
+		return -ESRCH;
 
-	if (sig == 0) {
-		current->rc = 0;
-		return;
-	}
+	if (sig == 0)
+		return 0;
 
-	if (SIGNO_INVALID(sig)) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (SIGNO_INVALID(sig))
+		return -EINVAL;
 
 	proctab[i].siginfos[sig].si_code = SI_USER;
 
 	__kill(&proctab[i], sig);
-	current->rc = 0;
+	return 0;
 }
 
-void sys_sigqueue(pid_t pid, int sig, const union sigval value)
+long sys_sigqueue(pid_t pid, int sig, const union sigval value)
 {
 	int i = PT_INDEX(pid);
 
-	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid) {
-		current->rc = -ESRCH;
-		return;
-	}
+	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
+		return -ESRCH;
 
-	if (sig == 0) {
-		current->rc = 0;
-		return;
-	}
+	if (sig == 0)
+		return 0;
 
-	if (SIGNO_INVALID(sig)) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (SIGNO_INVALID(sig))
+		return -EINVAL;
 
 	proctab[i].siginfos[sig].si_value = value;
 	proctab[i].siginfos[sig].si_code = SI_QUEUE;
 
 	__kill(&proctab[i], sig);
-	current->rc = 0;
+	return 0;
 }

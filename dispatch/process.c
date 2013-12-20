@@ -67,9 +67,9 @@ static void pcb_init(struct pcb *p)
 	p->t_sleep = NULL;
 }
 
-void sys_create(void(*func)(int,char*), int argc, char **argv)
+long sys_create(void(*func)(int,char*), int argc, char **argv)
 {
-	current->rc = create_user_process(func, argc, argv, 0);
+	return create_user_process(func, argc, argv, 0);
 }
 
 int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
@@ -190,16 +190,17 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 /*-----------------------------------------------------------------------------
  * Yeild control to another process */
 //-----------------------------------------------------------------------------
-void sys_yield(void)
+long sys_yield(void)
 {
 	ready(current);
 	new_process();
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Stop the current process and free all resources associated with it */
 //-----------------------------------------------------------------------------
-void sys_exit(int status)
+long sys_exit(int status)
 {
 	struct pcb		*pit;
 	struct mem_header	*hit;
@@ -231,12 +232,13 @@ void sys_exit(int status)
 			sys_close(current->fds[i]);
 
 	new_process();
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * Return the current process's pid */
 //-----------------------------------------------------------------------------
-void sys_getpid(void)
+long sys_getpid(void)
 {
-	current->rc = current->pid;
+	return current->pid;
 }

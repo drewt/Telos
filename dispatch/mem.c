@@ -30,52 +30,45 @@
 
 #define MAX_ALLOC 0x4000
 
-void sys_malloc(unsigned int size, void **p)
+long sys_malloc(unsigned int size, void **p)
 {
 	struct mem_header *h;
 
-	if (size == 0) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (size == 0)
+		return -EINVAL;
 
 	// TODO: limit memory use in a more `global' way
-	if (size > MAX_ALLOC) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if (size > MAX_ALLOC)
+		return -ENOMEM;
 
-	if (!(*p = hmalloc(size, &h))) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if (!(*p = hmalloc(size, &h)))
+		return -ENOMEM;
 
 	/* add h to list of allocated memory for current process */
 	list_add_tail(&h->chain, &current->heap_mem);
 
-	current->rc = 0;
+	return 0;
 }
 
-void sys_free(void *ptr)
+long sys_free(void *ptr)
 {
 	struct mem_header *h = mem_ptoh(ptr);
 
 	// XXX: unsafe!  Memory might be unallocated or allocated to another process
 	list_del(&h->chain);
 	hfree(h);
+	return 0;
 }
 
-void sys_palloc(void **p)
+long sys_palloc(void **p)
 {
 	struct pf_info *page;
 
-	if ((page = kalloc_page()) == NULL) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if ((page = kalloc_page()) == NULL)
+		return -ENOMEM;
 
 	list_add_tail(&page->chain, &current->page_mem);
 
 	*p = (void*) page->addr;
-	current->rc = 0;
+	return 0;
 }

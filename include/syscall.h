@@ -24,6 +24,7 @@
 
 enum syscall_id {
 	/* 0-47 reserved for hardware interrupts */
+	SYSCALL_MIN = 48,
 	SYS_CREATE = 48,
 	SYS_YIELD,
 	SYS_STOP,

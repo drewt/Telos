@@ -23,7 +23,7 @@
 #include <kernel/list.h>
 #include <syscall.h>
 
-typedef void(*isr_t)();
+typedef long(*isr_t)();
 
 /* routines defined in other files */
 extern unsigned int context_switch(struct pcb *p);
@@ -99,8 +99,9 @@ void dispatch_init(void)
 //*----------------------------------------------------------------------------
 void dispatch(void)
 {
-	unsigned int req;
+	unsigned req;
 	struct sys_args args;
+	struct pcb *p;
 
 	current = next();
 	for (;;) {
@@ -110,33 +111,39 @@ void dispatch(void)
 
 		req  = context_switch(current);
 
-		if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
+		if (req < SYSCALL_MIN && sysactions[req].func != NULL) {
+			sysactions[req].func();
+		} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
 
 			if (sysactions[req].nargs > 0)
 				copy_from_userspace(current->pgdir, &args,
 						current->esp, sizeof args);
 
+			p = current;
 			switch (sysactions[req].nargs) {
 			case 0:
-				sysactions[req].func();
+				p->rc = sysactions[req].func();
 				break;
 			case 1:
-				sysactions[req].func(args.arg0);
+				p->rc = sysactions[req].func(args.arg0);
 				break;
 			case 2:
-				sysactions[req].func(args.arg0, args.arg1);
+				p->rc = sysactions[req].func(args.arg0,
+						args.arg1);
 				break;
 			case 3:
-				sysactions[req].func(args.arg0, args.arg1,
-						args.arg2);
+				p->rc = sysactions[req].func(args.arg0,
+						args.arg1, args.arg2);
 				break;
 			case 4:
-				sysactions[req].func(args.arg0, args.arg1,
-						args.arg2, args.arg3);
+				p->rc = sysactions[req].func(args.arg0,
+						args.arg1, args.arg2,
+						args.arg3);
 				break;
 			case 5:
-				sysactions[req].func(args.arg0, args.arg1,
-						args.arg2, args.arg3, args.arg4);
+				p->rc = sysactions[req].func(args.arg0,
+						args.arg1, args.arg2,
+						args.arg3, args.arg4);
 				break;
 			}
 		} else {

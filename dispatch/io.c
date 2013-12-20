@@ -34,7 +34,7 @@ static const char *devmap[4] = {
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_open(const char *pathname, int flags, ...)
+long sys_open(const char *pathname, int flags, ...)
 {
 	dev_t fd;
 	int devno;
@@ -49,83 +49,69 @@ void sys_open(const char *pathname, int flags, ...)
 
 	kunmap_range((ulong) path, 1024);
 
-	if (devno == 4) {
-		current->rc = -ENOENT;
-		return;
-	}
+	if (devno == 4)
+		return -ENOENT;
 
 	for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);
-	if (fd == FDT_SIZE) {
-		current->rc = -ENFILE;
-		return;
-	}
+	if (fd == FDT_SIZE)
+		return -ENFILE;
 
 	if (devtab[devno].dv_op->dvopen == NULL)
-		return;
+		return -1; /* FIXME */
 	if ((current->rc = devtab[devno].dv_op->dvopen(devno)))
-		return;
+		return -1; /* FIXME */
 
 	current->fds[fd] = devno;
-	current->rc = fd;
+	return fd;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_close(int fd)
+long sys_close(int fd)
 {
 	dev_t devno = current->fds[fd];
-	if (!FD_VALID(fd)) {
-		current->rc = -EBADF;
-		return;
-	}
-	if (devtab[devno].dv_op->dvclose &&devtab[devno].dv_op->dvclose(devno)) {
-		current->rc = -EIO;
-		return;
-	}
+	if (!FD_VALID(fd))
+		return -EBADF;
+	if (devtab[devno].dv_op->dvclose &&devtab[devno].dv_op->dvclose(devno))
+		return -EIO;
 
 	current->fds[fd] = FD_NONE;
-	current->rc = 0;
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_read(int fd, void *buf, int nbyte)
+long sys_read(int fd, void *buf, int nbyte)
 {
-	if (!FD_VALID(fd)) {
-		current->rc = -EBADF;
-		return;
-	}
+	if (!FD_VALID(fd))
+		return -EBADF;
 
 	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-	current->rc = dev_op->dvread ? dev_op->dvread(fd, buf, nbyte) : ENXIO;
+	return dev_op->dvread ? dev_op->dvread(fd, buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_write(int fd, void *buf, int nbyte)
+long sys_write(int fd, void *buf, int nbyte)
 {
-	if (!FD_VALID(fd)) {
-		current->rc = -EBADF;
-		return;
-	}
+	if (!FD_VALID(fd))
+		return -EBADF;
 
 	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-	current->rc = dev_op->dvwrite ? dev_op->dvwrite(fd, buf, nbyte) : ENXIO;
+	return dev_op->dvwrite ? dev_op->dvwrite(fd, buf, nbyte) : ENXIO;
 }
 
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-void sys_ioctl(int fd, ulong cmd, va_list vargs)
+long sys_ioctl(int fd, ulong cmd, va_list vargs)
 {
-	if (!FD_VALID(fd)) {
-		current->rc = -EBADF;
-		return;
-	}
+	if (!FD_VALID(fd))
+		return -EBADF;
 
 	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
-	current->rc = dev_op->dvioctl ? dev_op->dvioctl(fd, cmd, vargs) : ENXIO;
+	return dev_op->dvioctl ? dev_op->dvioctl(fd, cmd, vargs) : ENXIO;
 }

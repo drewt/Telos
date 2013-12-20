@@ -18,12 +18,12 @@
 #include <kernel/common.h>
 #include <kernel/dispatch.h>
 
-void sys_puts(char *s)
+long sys_puts(char *s)
 {
-	kprintf("%s", s);
+	return kprintf("%s", s);
 }
 
-void sys_report(char *s)
+long sys_report(char *s)
 {
-	kprintf("%d: %s", current->pid, s);
+	return kprintf("%d: %s", current->pid, s);
 }

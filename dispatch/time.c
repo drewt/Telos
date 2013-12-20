@@ -70,41 +70,41 @@ static void alrm_action(void *data)
 /*
  * Puts the current process to sleep for a given number of milliseconds.
  */
-void sys_sleep(unsigned int seconds)
+long sys_sleep(unsigned int seconds)
 {
 	current->t_sleep = timer_create(wake_action, current,
 			TF_ALWAYS | TF_REF);
-	if (current->t_sleep == NULL) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if (current->t_sleep == NULL)
+		return -ENOMEM;
 	timer_start(current->t_sleep, seconds*100);
 	new_process();
+	return 0;
 }
 
 /*
  * Registers an alarm for the current process, to go off in the given number of
  * seconds.
  */
-void sys_alarm(unsigned int seconds)
+long sys_alarm(unsigned int seconds)
 {
+	long rc;
+
 	if (current->t_alarm != NULL) {
-		current->rc = timer_remove(current->t_alarm) / 10;
+		rc = timer_remove(current->t_alarm) / 10;
 		timer_unref(current->t_alarm);
 		current->t_alarm = NULL;
 	} else {
-		current->rc = 0;
+		rc = 0;
 	}
 
 	if (seconds == 0)
-		return;
+		return rc;
 
 	current->t_alarm = timer_create(alrm_action, current, TF_REF);
-	if (current->t_alarm == NULL) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if (current->t_alarm == NULL)
+		return -ENOMEM;
 	timer_start(current->t_alarm, seconds*100);
+	return rc;
 }
 
 static struct posix_timer *get_timer_by_id(timer_t timerid)
@@ -129,20 +129,17 @@ static void posix_timer_action(void *data)
 	__kill(p, pt->sev.sigev_signo);
 }
 
-void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
+long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid)
 {
+	long error;
 	struct posix_timer *pt;
 
-	if (clockid != CLOCK_REALTIME) {
-		current->rc = -ENOTSUP;
-		return;
-	}
+	if (clockid != CLOCK_REALTIME)
+		return -ENOTSUP;
 
-	if ((pt = get_posix_timer()) == NULL) {
-		current->rc = -ENOMEM;
-		return;
-	}
+	if ((pt = get_posix_timer()) == NULL)
+		return -ENOMEM;
 
 	pt->pid = current->pid;
 	pt->timerid = current->posix_timer_id++;
@@ -155,14 +152,14 @@ void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		copy_from_userspace(current->pgdir, &pt->sev, sevp,
 				sizeof(*sevp));
 		if (pt->sev.sigev_notify != SIGEV_SIGNAL) {
-			current->rc = -ENOTSUP;
+			error = -ENOTSUP;
 			goto err0;
 		}
 	}
 
 	pt->timer = timer_create(posix_timer_action, pt, TF_REF);
 	if (pt->timer == NULL) {
-		current->rc = -ENOMEM;
+		error = -ENOMEM;
 		goto err0;
 	}
 
@@ -170,49 +167,45 @@ void sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 	hash_add(posix_timers, &pt->t_hash, pt->timerid);
 
 	copy_to_userspace(current->pgdir, timerid, &pt->timerid, sizeof(*timerid));
-	current->rc = 0;
-	return;
+	return 0;
 err0:
 	list_add(&pt->chain, &free_timers);
+	return error;
 }
 
-void sys_timer_delete(timer_t timerid)
+long sys_timer_delete(timer_t timerid)
 {
 	struct posix_timer *pt = get_timer_by_id(timerid);
 
-	if (pt == NULL) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (pt == NULL)
+		return -EINVAL;
 
 	list_del(&pt->chain);
 	list_add(&pt->chain, &free_timers);
 	hash_del(&pt->t_hash);
 
-	current->rc = 0;
+	return 0;
 }
 
-void sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
+long sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 {
-	current->rc = -ENOTSUP;
+	return -ENOTSUP;
 }
 
-void sys_timer_settime(timer_t timerid, int flags,
+long sys_timer_settime(timer_t timerid, int flags,
 		const struct itimerspec *new_value,
 		struct itimerspec *old_value)
 {
 	struct posix_timer *pt = get_timer_by_id(timerid);
 	struct itimerspec *v = &pt->spec;
 
-	if (pt == NULL) {
-		current->rc = -EINVAL;
-		return;
-	}
+	if (pt == NULL)
+		return -EINVAL;
 
 	copy_from_userspace(current->pgdir, v, new_value, sizeof(*new_value));
 
 	timer_start(pt->timer, v->it_value.tv_sec*100 + v->it_value.tv_nsec);
-	current->rc = 0;
+	return 0;
 }
 
 /*
