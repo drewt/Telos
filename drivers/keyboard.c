@@ -71,8 +71,7 @@ static struct pcb *reader;
 
 static inline void send_to_reader(void)
 {
-	copy_to_userspace(reader->pgdir, usr_buf+usr_buf_next, cpy_buf,
-			cpy_buf_next);
+	copy_to_user(reader, usr_buf+usr_buf_next, cpy_buf, cpy_buf_next);
 	usr_buf_next += cpy_buf_next;
 }
 

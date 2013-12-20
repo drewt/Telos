@@ -149,8 +149,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		pt->sev.sigev_signo = SIGALRM;
 		pt->sev.sigev_value.sigval_int = pt->timerid;
 	} else {
-		copy_from_userspace(current->pgdir, &pt->sev, sevp,
-				sizeof(*sevp));
+		copy_from_current(&pt->sev, sevp, sizeof(*sevp));
 		if (pt->sev.sigev_notify != SIGEV_SIGNAL) {
 			error = -ENOTSUP;
 			goto err0;
@@ -166,7 +165,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 	list_add_tail(&pt->chain, &current->posix_timers);
 	hash_add(posix_timers, &pt->t_hash, pt->timerid);
 
-	copy_to_userspace(current->pgdir, timerid, &pt->timerid, sizeof(*timerid));
+	copy_to_current(timerid, &pt->timerid, sizeof(*timerid));
 	return 0;
 err0:
 	list_add(&pt->chain, &free_timers);
@@ -202,7 +201,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 	if (pt == NULL)
 		return -EINVAL;
 
-	copy_from_userspace(current->pgdir, v, new_value, sizeof(*new_value));
+	copy_from_current(v, new_value, sizeof(*new_value));
 
 	timer_start(pt->timer, v->it_value.tv_sec*100 + v->it_value.tv_nsec);
 	return 0;

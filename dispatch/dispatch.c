@@ -116,8 +116,8 @@ void dispatch(void)
 		} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
 
 			if (sysactions[req].nargs > 0)
-				copy_from_userspace(current->pgdir, &args,
-						current->esp, sizeof args);
+				copy_from_user(current, &args, current->esp,
+						sizeof args);
 
 			p = current;
 			switch (sysactions[req].nargs) {

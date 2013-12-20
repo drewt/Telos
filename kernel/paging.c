@@ -329,10 +329,10 @@ void kunmap_range(ulong addr, size_t len)
 	}
 }
 
-int copy_from_userspace(pmap_t pgdir, void *dst, const void *src, size_t len)
+int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
 	ulong addr;
-	if ((addr = kmap_tmp_range(pgdir, (ulong) src, len)) == 0)
+	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
 		return -1;
 
 	memcpy(dst, (void*) addr, len);
@@ -341,10 +341,10 @@ int copy_from_userspace(pmap_t pgdir, void *dst, const void *src, size_t len)
 	return 0;
 }
 
-int copy_to_userspace(pmap_t pgdir, void *dst, const void *src, size_t len)
+int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
 	ulong addr;
-	if ((addr = kmap_tmp_range(pgdir, (ulong) dst, len)) == 0)
+	if ((addr = kmap_tmp_range(p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
 	memcpy((void*) addr, src, len);
@@ -353,15 +353,15 @@ int copy_to_userspace(pmap_t pgdir, void *dst, const void *src, size_t len)
 	return 0;
 }
 
-int copy_through_userspace(pmap_t dst_dir, pmap_t src_dir, void *dst,
+int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len)
 {
 	ulong dst_addr, src_addr;
 
-	if ((dst_addr = kmap_tmp_range(dst_dir, (ulong) dst, len)) == 0)
+	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
-	if ((src_addr = kmap_tmp_range(src_dir, (ulong) src, len)) == 0) {
+	if ((src_addr = kmap_tmp_range(src_p->pgdir, (ulong) src, len)) == 0) {
 		kunmap_range(dst_addr, len);
 		return -1;
 	}
@@ -373,15 +373,15 @@ int copy_through_userspace(pmap_t dst_dir, pmap_t src_dir, void *dst,
 	return 0;
 }
 
-int copy_string_through_userspace(pmap_t dst_dir, pmap_t src_dir, void *dst,
+int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len)
 {
 	ulong dst_addr, src_addr;
 
-	if ((dst_addr = kmap_tmp_range(dst_dir, (ulong) dst, len)) == 0)
+	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
-	if ((src_addr = kmap_tmp_range(src_dir, (ulong) src, len)) == 0) {
+	if ((src_addr = kmap_tmp_range(src_p->pgdir, (ulong) src, len)) == 0) {
 		kunmap_range(dst_addr, len);
 		return -1;
 	}
@@ -393,10 +393,10 @@ int copy_string_through_userspace(pmap_t dst_dir, pmap_t src_dir, void *dst,
 	return 0;
 }
 
-int copy_user_string(pmap_t pgdir, char *dst, const char *src, size_t len)
+int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 {
 	ulong addr;
-	if ((addr = kmap_tmp_range(pgdir, (ulong) src, len)) == 0)
+	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
 		return -1;
 
 	strncpy(dst, (char*) addr, len);

@@ -49,8 +49,8 @@ long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 			(!dest->pbuf.id || dest->pbuf.id == current->pid)) {
 
 		if (!dest->pbuf.id)
-			copy_to_userspace(dest->pgdir, dest->parg,
-					&current->pid, sizeof(int));
+			copy_to_user(dest, dest->parg, &current->pid,
+					sizeof(int));
 
 		/* unblock receiver */
 		list_del(&dest->chain);
@@ -58,8 +58,7 @@ long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 
 		/* send message */
 		tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
-		copy_through_userspace(dest->pgdir, current->pgdir, dest->pbuf.buf,
-				obuf, tmp);
+		copy_through_user(dest, current, dest->pbuf.buf, obuf, tmp);
 		dest->rc = tmp;
 
 		/* if sender expects reply, block in receiver's reply queue */
@@ -87,7 +86,7 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 	int tmp, src_pid;
 	struct pcb *src = NULL;
 
-	copy_from_userspace(current->pgdir, &src_pid, pid_ptr, sizeof(int));
+	copy_from_current(&src_pid, pid_ptr, sizeof(int));
 
 	if (length <= 0 || src_pid < 0)
 		return -EINVAL;
@@ -105,7 +104,7 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 		} else {
 			/* set *src_pid and pretend it was set all along... */
 			src_pid = ((struct pcb*) current->send_q.next)->pid;
-			copy_to_userspace(current->pgdir, pid_ptr, &src_pid, sizeof(int));
+			copy_to_current(pid_ptr, &src_pid, sizeof(int));
 		}
 	}
 
@@ -132,8 +131,7 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 
 		/* receive message */
 		tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
-		copy_through_userspace(current->pgdir, src->pgdir, buffer,
-				src->pbuf.buf, tmp);
+		copy_through_user(current, src, buffer, src->pbuf.buf, tmp);
 		return tmp;
 	}
 	return 0;
@@ -162,8 +160,7 @@ long sys_reply(int src_pid, void *buffer, int length)
 
 	/* send reply */
 	tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
-	copy_through_userspace(src->pgdir, current->pgdir, src->reply_blk.buf,
-			buffer, tmp);
+	copy_through_user(src, current, src->reply_blk.buf, buffer, tmp);
 	src->rc = tmp;
 
 	/* unblock sender */

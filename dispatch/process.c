@@ -137,14 +137,14 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		return -ENOMEM;
 
 	char *kargv[argc];
-	copy_from_userspace(current->pgdir, kargv, argv, sizeof(char*) * argc);
+	copy_from_current(kargv, argv, sizeof(char*) * argc);
 
 	ulong arg_addr = v_heap + 128;
 	char ** uargv = (void*) kmap_tmp_range(p->pgdir, v_heap, 128);
 	for (int i = 0; i < argc; i++, arg_addr += 128) {
 		uargv[i] = (char*) arg_addr;
-		copy_string_through_userspace(p->pgdir, current->pgdir,
-				(void*) arg_addr, kargv[i], 128);
+		copy_string_through_user(p, current, (void*) arg_addr,
+				kargv[i], 128);
 	}
 
 	void *p_frame;

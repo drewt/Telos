@@ -196,10 +196,10 @@ long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 		return -EINVAL;
 
 	if (oact)
-		copy_to_userspace(current->pgdir, oact, sap, sizeof(*sap));
+		copy_to_current(oact, sap, sizeof(*sap));
 
 	if (act) {
-		copy_from_userspace(current->pgdir, sap, act, sizeof(*sap));
+		copy_from_current(sap, act, sizeof(*sap));
 		set_bit(sig, &current->sig_accept);
 	}
 
@@ -236,7 +236,7 @@ long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
 	if (oset) {
 		u32 tmp = ~(current->sig_ignore);
-		copy_to_userspace(current->pgdir, oset, &tmp, sizeof(u32));
+		copy_to_current(oset, &tmp, sizeof(u32));
 	}
 
 	if (set) {
