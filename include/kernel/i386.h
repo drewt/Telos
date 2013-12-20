@@ -18,8 +18,6 @@
 #ifndef _KERNEL_I386_H_
 #define _KERNEL_I386_H_
 
-#include <kernel/common.h>
-
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
 

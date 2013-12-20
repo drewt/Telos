@@ -15,7 +15,6 @@
  *
  * If -E is returned, result is not touched.
  */
-#include <kernel/common.h>
 #include "ctype.h"
 #include "kstrtox.h"
 

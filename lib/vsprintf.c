@@ -19,8 +19,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include <kernel/common.h>
-
 #include "ctype.h"
 #include "kstrtox.h"
 

@@ -20,7 +20,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include <kernel/common.h>
 #include <telos/process.h>
 
 /* half-assed "test" of sigqueue--verifies that it's substitutable for kill */

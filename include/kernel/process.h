@@ -18,7 +18,6 @@
 #ifndef _KERNEL_PROCESS_H_
 #define _KERNEL_PROCESS_H_
 
-#include <kernel/common.h>
 #include <kernel/device.h>
 #include <kernel/list.h>
 #include <signal.h>

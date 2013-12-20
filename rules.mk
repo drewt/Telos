@@ -57,7 +57,7 @@ quiet_cmd_sld   = LD      $@
 
 # generate dependencies file
 quiet_cmd_dep   = DEP     $@
-      cmd_dep   = echo "$@ `$(CC) -MM -I $(incdir) $(CPPFLAGS) $<`" > $@
+      cmd_dep   = echo "$@ `$(CC) $(ALLCFLAGS) -MM -I $(incdir) $(CPPFLAGS) $<`" > $@
 
 # call submake
 quiet_cmd_smake = MAKE    $@

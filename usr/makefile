@@ -1,3 +1,6 @@
+UCFLAGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
+	  -Wno-attributes -fno-builtin -ffreestanding -std=gnu99 -I $(incdir)
+
 objects = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
 	  printserver.o proctest.o sigtest.o strtest.o exntest.o tsh.o
 targets = usr.a
@@ -17,7 +20,7 @@ usr.a: $(objects)
 # Argument: list of exported functions
 #
 quiet_cmd_ucc = CC      $@
-      cmd_ucc = $(CC) $(ALLCFLAGS) $(CPPFLAGS) -c $< -o tmp.$@ && \
+      cmd_ucc = $(CC) $(UCFLAGS) $(CPPFLAGS) -c $< -o tmp.$@ && \
 		$(LD) -r tmp.$@ ../lib/klib.a -o $@ && \
 		$(OBJCOPY) $(foreach var,$(1),-G $(var)) $@ && \
 		rm tmp.$@

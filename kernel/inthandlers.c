@@ -15,7 +15,6 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/common.h>
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 #include <signal.h>

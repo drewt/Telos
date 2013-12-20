@@ -16,7 +16,6 @@
  */
 
 #include <kernel/kernel.h>
-#include <kernel/common.h>
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
 #include <kernel/i386.h>

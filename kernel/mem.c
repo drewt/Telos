@@ -15,7 +15,6 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/common.h>
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
 #include <kernel/list.h>

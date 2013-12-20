@@ -18,7 +18,6 @@
 #ifndef _KERNEL_DISPATCH_H_
 #define _KERNEL_DISPATCH_H_
 
-#include <kernel/common.h>
 #include <kernel/process.h>
 
 struct sigaction;

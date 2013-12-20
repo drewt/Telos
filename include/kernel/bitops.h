@@ -1,6 +1,5 @@
 #ifndef _LINUX_BITOPS_H
 #define _LINUX_BITOPS_H
-#include <kernel/common.h>
 #include <kernel/types.h>
 
 #ifdef	__KERNEL__

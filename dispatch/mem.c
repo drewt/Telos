@@ -23,7 +23,6 @@
  * user-space malloc routines.
  */
 
-#include <kernel/common.h>
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
 #include <kernel/mem.h>

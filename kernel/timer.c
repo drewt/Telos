@@ -15,7 +15,6 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/common.h>
 #include <kernel/list.h>
 #include <kernel/mem.h>
 #include <kernel/timer.h>
