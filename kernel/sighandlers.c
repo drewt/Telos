@@ -15,23 +15,19 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <telos/process.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
+#include <kernel/signal.h>
+#include <syscall.h>
 
 #define I SIG_IGN
 
 static void T(int signo)
 {
-	exit(1);
+	syscall1(SYS_STOP, (void*) 1);
 }
 
 static void A(int signo)
 {
-	exit(1);
+	syscall1(SYS_STOP, (void*) 1);
 }
 
 static void S(int signo)

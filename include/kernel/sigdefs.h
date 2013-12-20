@@ -15,8 +15,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SIGDEFS_H_
-#define _SIGDEFS_H_
+#ifndef _KERNEL_SIGDEFS_H_
+#define _KERNEL_SIGDEFS_H_
 
 #ifdef __KERNEL__
 #include <kernel/types.h>

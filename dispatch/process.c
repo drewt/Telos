@@ -21,8 +21,7 @@
 #include <kernel/mem.h>
 #include <kernel/device.h>
 #include <kernel/list.h>
-
-#include <signal.h>
+#include <kernel/signal.h>
 
 extern void exit(int status);
 

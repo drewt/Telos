@@ -19,9 +19,9 @@
 #include <kernel/bitops.h>
 #include <kernel/dispatch.h>
 #include <kernel/timer.h>
+#include <kernel/signal.h>
 
 #include <syscall.h>
-#include <signal.h>
 
 /* signals which cannot be ignored by the user */
 #define SIG_NOIGNORE (BIT(SIGKILL) | BIT(SIGSTOP))

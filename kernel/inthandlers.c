@@ -17,7 +17,7 @@
 
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
-#include <signal.h>
+#include <kernel/signal.h>
 
 /* names of some exceptions */
 static char *exns[20] = {

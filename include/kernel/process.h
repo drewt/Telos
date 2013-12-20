@@ -20,7 +20,7 @@
 
 #include <kernel/device.h>
 #include <kernel/list.h>
-#include <signal.h>
+#include <kernel/signal.h>
 
 #define PT_SIZE  256
 #define PID_MASK (PT_SIZE - 1)

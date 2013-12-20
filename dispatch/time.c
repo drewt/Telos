@@ -20,7 +20,7 @@
 #include <kernel/mem.h>
 #include <kernel/time.h>
 #include <kernel/timer.h>
-#include <signal.h>
+#include <kernel/signal.h>
 
 #include <kernel/hashtable.h>
 
