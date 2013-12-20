@@ -95,9 +95,9 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 		return -ENOMEM;
 	list_add_tail(&(mem_ptoh(stack_mem))->chain, &p->heap_mem);
 
-	frame = ((char*) stack_mem + STACK_SIZE - S_CONTEXT_SIZE - 128);
-	put_iret_frame_super(frame, (ulong) func);
-	args = (ulong*) ((ulong) frame + S_CONTEXT_SIZE);
+	frame = ((char*) stack_mem + STACK_SIZE - sizeof(struct kcontext) - 128);
+	put_iret_kframe(frame, (ulong) func);
+	args = (ulong*) ((ulong) frame + sizeof(struct kcontext));
 
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
@@ -152,12 +152,12 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	if (map_pages(p->pgdir, v_stack, 8, PE_U | PE_RW, &p->page_mem))
 		return -ENOMEM;
 
-	v_frame = (void*) (v_stack + 32 * U_CONTEXT_SIZE);
+	v_frame = (void*) (v_stack + 32 * sizeof(struct ucontext));
 	p_frame = (void*) kmap_tmp_range(p->pgdir, (ulong) v_frame,
-			U_CONTEXT_SIZE);
+			sizeof(struct ucontext));
 	esp = v_stack + STACK_SIZE - 128;
-	put_iret_frame(p_frame, (ulong) func, esp);
-	kunmap_range((ulong) p_frame, U_CONTEXT_SIZE);
+	put_iret_uframe(p_frame, (ulong) func, esp);
+	kunmap_range((ulong) p_frame, sizeof(struct ucontext));
 
 	args = (void*) kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
@@ -181,7 +181,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 #endif
 
 	p->esp = v_frame;
-	p->ifp = (void*) ((ulong) p->esp + U_CONTEXT_SIZE);
+	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
 
 	ready(p);
 	return p->pid;

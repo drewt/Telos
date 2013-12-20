@@ -53,18 +53,22 @@ struct gp_regs {
 	unsigned long stack[];
 }; 
 
-#define U_CONTEXT_SIZE (sizeof(struct ctxt) + 8)
-#define S_CONTEXT_SIZE (sizeof(struct ctxt))
+struct ucontext {
+	struct gp_regs reg;
+	unsigned long iret_eip;
+	unsigned long iret_cs;
+	unsigned long eflags;
+	unsigned long iret_esp;
+	unsigned long iret_ss;
+	unsigned long stack[];
+};
 
-/* process context before iret (in the kernel) */
-struct ctxt {
+struct kcontext {
 	struct gp_regs reg;
 	unsigned long iret_eip;
 	unsigned long iret_cs;
 	unsigned long eflags;
 	unsigned long stack[];
-	#define iret_esp stack[0]
-	#define iret_ss  stack[1]
 };
 
 struct tss_entry {
@@ -202,7 +206,7 @@ static inline void set_page_directory(void *addr)
 	asm volatile("mov %0, %%cr3" : : "r" (addr) :);
 }
 
-static inline void put_iret_frame(struct ctxt *f, unsigned long eip,
+static inline void put_iret_uframe(struct ucontext *f, unsigned long eip,
 		unsigned long esp)
 {
 	f->iret_cs  = SEG_UCODE | 3;
@@ -212,7 +216,7 @@ static inline void put_iret_frame(struct ctxt *f, unsigned long eip,
 	f->iret_ss  = SEG_UDATA | 3;
 }
 
-static inline void put_iret_frame_super(struct ctxt *f, unsigned long eip)
+static inline void put_iret_kframe(struct kcontext *f, unsigned long eip)
 {
 	f->iret_eip = eip;
 	f->iret_cs  = SEG_KCODE;

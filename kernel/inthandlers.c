@@ -57,7 +57,7 @@ static void dump_registers(struct gp_regs *reg)
 	kprintf("\t%%ebp=%lx\n", reg->ebp);
 }
 
-static void print_cpu_context(struct ctxt *context)
+static void print_cpu_context(struct ucontext *context)
 {
 	struct gp_regs *reg = (struct gp_regs*) &context->reg;
 	kprintf("stack[0]=%lx\n", reg->stack[0]);
@@ -74,7 +74,7 @@ static void print_cpu_context(struct ctxt *context)
  * XXX: grotesque hack to make up for dumb signal handling code
  *	which assumes no error code was pushed on the stack.
  */
-static inline void exn_kill(struct ctxt *cx, int sig)
+static inline void exn_kill(struct ucontext *cx, int sig)
 {
 	cx->stack[0] = cx->stack[1];
 	cx->stack[1] = cx->stack[2];

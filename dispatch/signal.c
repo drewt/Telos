@@ -80,20 +80,20 @@ static void place_sig_args(void* dst, struct pcb *p, void *osp, int sig_no)
 static int send_signal_user(struct pcb *p, int sig_no)
 {
 	ulong *sig_esp;
-	struct ctxt *old_ctxt, *sig_frame;
+	struct ucontext *old_ctxt, *sig_frame;
 	struct sigaction *act = &p->sigactions[sig_no];
 	bool siginfo = act->sa_flags & SA_SIGINFO;
 
 	ulong u_oldctxt = (ulong) p->esp;
-	ulong u_sigframe = u_oldctxt - U_CONTEXT_SIZE;
+	ulong u_sigframe = u_oldctxt - sizeof(struct ucontext);
 	ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
 
-	sig_frame = (struct ctxt*) kmap_tmp_range(p->pgdir, u_sigframe,
-			U_CONTEXT_SIZE * 2);
-	old_ctxt = (struct ctxt*) ((ulong) sig_frame + U_CONTEXT_SIZE);
+	sig_frame = (struct ucontext*) kmap_tmp_range(p->pgdir, u_sigframe,
+			sizeof(struct ucontext) * 2);
+	old_ctxt = (struct ucontext*) ((ulong) sig_frame + sizeof(struct ucontext));
 
 	sig_esp = ((ulong*) old_ctxt->iret_esp - (siginfo ? 12 : 5));
-	put_iret_frame(sig_frame, tramp_fn, (ulong) sig_esp);
+	put_iret_uframe(sig_frame, tramp_fn, (ulong) sig_esp);
 	place_sig_args(sig_esp, p, (void*) u_oldctxt, sig_no);
 
 	old_ctxt->reg.eax = p->sig_ignore;
@@ -104,21 +104,21 @@ static int send_signal_user(struct pcb *p, int sig_no)
 			: (u32) (~0 << (sig_no + 1));
 	clear_bit(sig_no, &p->sig_pending);
 
-	kunmap_range((ulong) sig_frame, U_CONTEXT_SIZE * 2);
+	kunmap_range((ulong) sig_frame, sizeof(struct ucontext) * 2);
 	return 0;
 }
 
 static int send_signal_super(struct pcb *p, int sig_no)
 {
-	struct ctxt *old_ctxt, *sig_frame;
+	struct kcontext *old_ctxt, *sig_frame;
 	struct sigaction *act = &p->sigactions[sig_no];
 
 	bool siginfo = act->sa_flags & SA_SIGINFO;
 	ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
 
 	old_ctxt = p->esp;
-	sig_frame = (struct ctxt*) (((ulong*) p->esp) - (siginfo ? 12 : 5)) - 1;
-	put_iret_frame_super(sig_frame, tramp_fn);
+	sig_frame = (struct kcontext*) (((ulong*) p->esp) - (siginfo ? 12 : 5)) - 1;
+	put_iret_kframe(sig_frame, tramp_fn);
 	place_sig_args(sig_frame->stack, p, old_ctxt, sig_no);
 
 	old_ctxt->reg.eax = p->sig_ignore;
@@ -153,10 +153,10 @@ long sig_restore(void *osp)
 	//struct ctxt *cx = osp;
 	long old_rc;
 	current->esp = osp;
-	current->ifp = (void*) ((ulong) osp + U_CONTEXT_SIZE);
+	current->ifp = (void*) ((ulong) osp + sizeof(struct ucontext));
 
-	struct ctxt *cx = (void*) kmap_tmp_range(current->pgdir, (ulong) osp,
-			U_CONTEXT_SIZE);
+	struct ucontext *cx = (void*) kmap_tmp_range(current->pgdir, (ulong) osp,
+			sizeof(struct ucontext));
 
 	ulong old_esp = current->flags & PFLAG_SUPER
 			? (ulong) osp
@@ -169,7 +169,7 @@ long sig_restore(void *osp)
 	current->sig_ignore = cx->reg.eax;
 	old_rc = rc[-2];
 
-	kunmap_range((ulong) cx, U_CONTEXT_SIZE);
+	kunmap_range((ulong) cx, sizeof(struct ucontext));
 	kunmap_range((ulong) rc, sizeof(ulong));
 
 	return old_rc;
@@ -271,7 +271,7 @@ void __kill(struct pcb *p, int sig_no)
 			p->siginfos[sig_no].si_errno = 0;
 			p->siginfos[sig_no].si_pid   = current->pid;
 			p->siginfos[sig_no].si_addr  =
-				(void*) ((struct ctxt*) p->esp)->iret_eip;
+				(void*) ((struct ucontext*) p->esp)->iret_eip;
 		}
 		/* ready process if it's blocked */
 		if (p->state == STATE_SIGWAIT) {
