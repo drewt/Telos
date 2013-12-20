@@ -25,15 +25,15 @@ struct timer {
 	struct list_head chain;
 	void(*action)(void*);
 	void *data;
-	int delta;
-	unsigned int flags;
+	unsigned long expires;
+	unsigned long flags;
 	int ref;
 };
 
 struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags);
 int timer_start(struct timer *timer, unsigned int ms);
 int __timer_destroy(struct timer *timer);
-int timer_remove(struct timer *timer);
+unsigned long timer_remove(struct timer *timer);
 void timers_tick(void);
 
 static inline void timer_ref(struct timer *timer)

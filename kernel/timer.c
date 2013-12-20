@@ -17,6 +17,7 @@
 
 #include <kernel/list.h>
 #include <kernel/mem.h>
+#include <kernel/time.h>
 #include <kernel/timer.h>
 
 /*
@@ -34,22 +35,29 @@ DEFINE_ALLOCATOR(get_timer, struct timer, &free_timers, chain)
 
 int timer_start(struct timer *timer, unsigned int ms)
 {
-	int ticks;
 	struct timer *t;
 
-	ticks = (ms % 10) ? ms/10 + 1 : ms/10;
+	timer_ref(timer);
+	timer->expires = tick_count + ((ms % 10) ? ms/10 + 1 : ms/10);
 
-	list_for_each_entry(t, &timers, chain) {
-		if (ticks < t->delta)
-			break;
-		ticks -= t->delta;
+	/* overflow */
+	if (timer->expires < tick_count) {
+		list_for_each_entry_reverse(t, &timers, chain) {
+			/* too far */
+			if (t->expires > tick_count) {
+				t = list_entry(t->chain.next, struct timer, chain);
+				break;
+			}
+			if (t->expires > timer->expires)
+				break;
+		}
+	} else {
+		list_for_each_entry(t, &timers, chain) {
+			if (t->expires > timer->expires)
+				break;
+		}
 	}
 
-	if (&t->chain != &timers)
-		t->delta -= ticks;
-
-	timer->delta = ticks;
-	timer_ref(timer);
 	list_add_tail(&timer->chain, &t->chain);
 
 	return 0;
@@ -75,10 +83,10 @@ int __timer_destroy(struct timer *timer)
 	list_del(&timer->chain);
 	list_add(&timer->chain, &free_timers);
 
-	if (timer->flags & TF_ALWAYS && timer->delta > 0)
+	if (timer->flags & TF_ALWAYS && timer->expires > tick_count)
 		timer->action(timer->data);
 
-	timer->delta = -1;
+	timer->expires = 0;
 	return 0;
 }
 
@@ -86,25 +94,9 @@ int __timer_destroy(struct timer *timer)
  * Stop a timer.  If the timer is not externally referenced, it is destroyed.
  * TODO: pause/resume functionality
  */
-int timer_remove(struct timer *timer)
+unsigned long timer_remove(struct timer *timer)
 {
-	struct timer *t;
-	int ticks = 0;
-	int phase = 0;
-
-	list_for_each_entry(t, &timers, chain) {
-
-		/* phase 0: count ticks */
-		if (phase == 0) {
-			ticks += t->delta;
-			if (t == timer)
-				phase = 1;
-			continue;
-		}
-
-		/* phase 1: adjust deltas */
-		t->delta += timer->delta;
-	}
+	int ticks = timer->expires - tick_count;
 
 	list_del(&timer->chain);
 	list_add(&timer->chain, &zombie_timers);
@@ -123,10 +115,8 @@ void timers_tick(void)
 	if (list_empty(&timers))
 		return;
 
-	(list_entry(timers.next, struct timer, chain))->delta--;
-
 	list_for_each_entry_safe(t, n, &timers, chain) {
-		if (t->delta > 0)
+		if (t->expires > tick_count)
 			break;
 
 		t->action(t->data);

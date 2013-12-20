@@ -37,7 +37,7 @@ struct itimerspec {
 
 #ifdef __KERNEL__
 
-extern unsigned int tick_count;
+extern unsigned long tick_count;
 
 #endif /* __KERNEL__ */
 #endif

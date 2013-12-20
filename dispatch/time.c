@@ -37,7 +37,7 @@ struct posix_timer {
 LIST_HEAD(free_timers);
 DEFINE_HASHTABLE(posix_timers, 9);
 
-unsigned int tick_count = 0; /* global tick count */
+unsigned long tick_count = 0; /* global tick count */
 
 DEFINE_ALLOCATOR(get_posix_timer, struct posix_timer, &free_timers, chain)
 
@@ -187,7 +187,18 @@ long sys_timer_delete(timer_t timerid)
 
 long sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 {
-	return -ENOTSUP;
+	unsigned long ticks;
+	struct posix_timer *pt = get_timer_by_id(timerid);
+
+	if (pt == NULL)
+		return -EINVAL;
+
+	ticks = pt->timer->expires - tick_count;
+	pt->spec.it_value.tv_sec = (ticks % 100) ? ticks/100 + 1 : ticks/100;
+	pt->spec.it_value.tv_nsec = 0;
+
+	copy_to_current(curr_value, &pt->spec, sizeof(*curr_value));
+	return 0;
 }
 
 long sys_timer_settime(timer_t timerid, int flags,
