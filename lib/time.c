@@ -20,6 +20,24 @@
 #include <errno.h>
 #include <syscall.h>
 
+#include <stdio.h>
+
+int nanosleep(const struct timespec *req, struct timespec *rem)
+{
+	unsigned long left;
+
+	if (req->tv_nsec < 0 || req->tv_nsec > 999999999)
+		return -1; /* EINVAL */
+
+	left = syscall1(SYS_SLEEP, (void*) __timespec_to_ticks(req));
+
+	if (left != 0) {
+		__ticks_to_timespec(rem, left);
+		return -1; /* EINTR */
+	}
+	return 0;
+}
+
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid)
 {

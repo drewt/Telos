@@ -28,6 +28,16 @@ static void sleep_proc(int argc, char *argv[])
 	printf("%d ", argc);
 }
 
+static void nanosleep_proc(int argc, char *argvp[])
+{
+	struct timespec spec = {
+		.tv_sec = argc,
+		.tv_nsec = 0
+	};
+	nanosleep(&spec, NULL);
+	printf("%d ", argc);
+}
+
 static void sleep_test(void)
 {
 	printf("Testing sleep...\nVerify ascending: ");
@@ -40,6 +50,12 @@ static void sleep_test(void)
 	syscreate(sleep_proc, 3, NULL);
 	syscreate(sleep_proc, 2, NULL);
 	syscreate(sleep_proc, 1, NULL);
+	sleep(4);
+
+	printf("\nVerify ascending: ");
+	syscreate(nanosleep_proc, 1, NULL);
+	syscreate(nanosleep_proc, 2, NULL);
+	syscreate(nanosleep_proc, 3, NULL);
 	sleep(4);
 	puts("");
 }

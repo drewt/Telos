@@ -25,6 +25,8 @@
 
 struct sigevent;
 
+int nanosleep(const struct timespec *req, struct timespec *rem);
+
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid);
 
