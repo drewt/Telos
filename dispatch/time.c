@@ -69,13 +69,13 @@ static void alrm_action(void *data)
 /*
  * Puts the current process to sleep for a given number of milliseconds.
  */
-long sys_sleep(unsigned int seconds)
+long sys_sleep(unsigned long ticks)
 {
 	current->t_sleep = timer_create(wake_action, current,
 			TF_ALWAYS | TF_REF);
 	if (current->t_sleep == NULL)
 		return -ENOMEM;
-	timer_start(current->t_sleep, seconds*100);
+	timer_start(current->t_sleep, ticks);
 	new_process();
 	return 0;
 }
@@ -84,25 +84,25 @@ long sys_sleep(unsigned int seconds)
  * Registers an alarm for the current process, to go off in the given number of
  * seconds.
  */
-long sys_alarm(unsigned int seconds)
+long sys_alarm(unsigned long ticks)
 {
 	long rc;
 
 	if (current->t_alarm != NULL) {
-		rc = timer_remove(current->t_alarm) / 10;
+		rc = timer_remove(current->t_alarm);
 		timer_unref(current->t_alarm);
 		current->t_alarm = NULL;
 	} else {
 		rc = 0;
 	}
 
-	if (seconds == 0)
+	if (ticks == 0)
 		return rc;
 
 	current->t_alarm = timer_create(alrm_action, current, TF_REF);
 	if (current->t_alarm == NULL)
 		return -ENOMEM;
-	timer_start(current->t_alarm, seconds*100);
+	timer_start(current->t_alarm, ticks);
 	return rc;
 }
 
@@ -235,7 +235,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	copy_from_current(v, new_value, sizeof(*new_value));
 
-	timer_start(pt->timer, v->it_value.tv_sec*100);
+	timer_start(pt->timer, v->it_value.tv_sec * __TICKS_PER_SEC);
 	return 0;
 }
 

@@ -16,6 +16,7 @@
  */
 
 #include <stdarg.h>
+#include <time.h>
 #include <unistd.h>
 #include <syscall.h>
 
@@ -24,7 +25,8 @@
 //-----------------------------------------------------------------------------
 unsigned int alarm(unsigned int seconds)
 {
-	return syscall1(SYS_ALARM, (void*) seconds);
+	return syscall1(SYS_ALARM, (void*) (seconds * __TICKS_PER_SEC))
+		* __TICKS_PER_SEC;
 }
 
 /*-----------------------------------------------------------------------------
@@ -32,7 +34,8 @@ unsigned int alarm(unsigned int seconds)
 //-----------------------------------------------------------------------------
 unsigned int sleep(unsigned int seconds)
 {
-	return syscall1(SYS_SLEEP, (void*) seconds);
+	return syscall1(SYS_SLEEP, (void*) (seconds * __TICKS_PER_SEC))
+		* __TICKS_PER_SEC;
 }
 
 /*-----------------------------------------------------------------------------

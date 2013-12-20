@@ -31,7 +31,7 @@ struct timer {
 };
 
 struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags);
-int timer_start(struct timer *timer, unsigned int ms);
+int timer_start(struct timer *timer, unsigned long ticks);
 int __timer_destroy(struct timer *timer);
 unsigned long timer_remove(struct timer *timer);
 void timers_tick(void);

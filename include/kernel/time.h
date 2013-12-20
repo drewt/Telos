@@ -20,6 +20,9 @@
 
 #include <kernel/types.h>
 
+#define __TICKS_PER_SEC 10
+#define __NSEC_PER_TICK 10000000
+
 enum {
 	CLOCK_REALTIME,
 	CLOCK_MONOTONIC,
@@ -34,6 +37,17 @@ struct itimerspec {
 	struct timespec it_interval;
 	struct timespec it_value;
 };
+
+static inline unsigned long __timespec_to_ticks(struct timespec *t)
+{
+	return t->tv_sec / __TICKS_PER_SEC + t->tv_nsec * __NSEC_PER_TICK;
+}
+
+static inline void __ticks_to_timespec(struct timespec *t, unsigned long ticks)
+{
+	t->tv_sec = ticks / __TICKS_PER_SEC;
+	t->tv_nsec = (ticks % __TICKS_PER_SEC) * __NSEC_PER_TICK;
+}
 
 #ifdef __KERNEL__
 

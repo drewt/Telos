@@ -33,12 +33,13 @@ static LIST_HEAD(timers);
 
 DEFINE_ALLOCATOR(get_timer, struct timer, &free_timers, chain)
 
-int timer_start(struct timer *timer, unsigned int ms)
+int timer_start(struct timer *timer, unsigned long ticks)
 {
 	struct timer *t;
 
 	timer_ref(timer);
-	timer->expires = tick_count + ((ms % 10) ? ms/10 + 1 : ms/10);
+	timer->expires = tick_count + ticks;
+	//timer->expires = tick_count + ((ms % 10) ? ms/10 + 1 : ms/10);
 
 	/* overflow */
 	if (timer->expires < tick_count) {
