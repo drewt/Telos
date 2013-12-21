@@ -22,6 +22,17 @@
 
 #include <stdio.h>
 
+#define YEAR0 1900
+#define SECS_PER_DAY (24L * 60L * 60L)
+#define LEAPYEAR(year) (!((year) % 4) && (((year) % 100) || !((year) % 400)))
+#define YEARSIZE(year) (LEAPYEAR(year) ? 366 : 365)
+
+
+static const unsigned _ytab[2][12] = {
+	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+};
+
 int nanosleep(const struct timespec *req, struct timespec *rem)
 {
 	unsigned long left;
@@ -36,6 +47,11 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 		return -1; /* EINTR */
 	}
 	return 0;
+}
+
+time_t time(time_t *t)
+{
+	return syscall1(SYS_TIME, t);
 }
 
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
@@ -61,4 +77,40 @@ int timer_settime(timer_t timerid, int flags,
 {
 	return syscall4(SYS_TIMER_SETTIME, (void*) timerid, (void*) flags,
 			(void*) new_value, old_value);
+}
+
+struct tm *gmtime_r(const time_t *timep, struct tm *result)
+{
+	unsigned long dayclock, dayno;
+	time_t time = *timep;
+	int year = 1970;
+
+	dayclock = (unsigned long)time % SECS_PER_DAY;
+	dayno    = (unsigned long)time / SECS_PER_DAY;
+
+	result->tm_sec = dayclock % 60;
+	result->tm_min = (dayclock % 3600) / 60;
+	result->tm_hour = dayclock / 3600;
+	result->tm_wday = (dayno + 4) % 7;
+	while (dayno >= YEARSIZE(year)) {
+		dayno -= YEARSIZE(year);
+		year++;
+	}
+	result->tm_year = year - YEAR0;
+	result->tm_yday = dayno;
+	result->tm_mon = 0;
+	while (dayno >= _ytab[LEAPYEAR(year)][result->tm_mon]) {
+		dayno -= _ytab[LEAPYEAR(year)][result->tm_mon];
+		result->tm_mon++;
+	}
+	result->tm_mday = dayno + 1;
+	result->tm_isdst = 0;
+
+	return result;
+}
+
+struct tm *gmtime(const time_t *timep)
+{
+	static struct tm tm;
+	return gmtime_r(timep, &tm);
 }

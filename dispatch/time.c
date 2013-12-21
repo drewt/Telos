@@ -38,6 +38,7 @@ LIST_HEAD(free_timers);
 DEFINE_HASHTABLE(posix_timers, 9);
 
 unsigned long tick_count = 0; /* global tick count */
+unsigned long system_clock;   /* seconds since the Epoch */
 
 DEFINE_ALLOCATOR(get_posix_timer, struct posix_timer, &free_timers, chain)
 
@@ -65,8 +66,8 @@ static void alrm_action(void *data)
  */
 long sys_sleep(unsigned long ticks)
 {
-	timer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_REF);
-	timer_start(&current->t_sleep, ticks);
+	ktimer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_REF);
+	ktimer_start(&current->t_sleep, ticks);
 	new_process();
 	return 0;
 }
@@ -80,7 +81,7 @@ long sys_alarm(unsigned long ticks)
 	long rc;
 
 	if (current->t_alarm.flags & TF_ARMED) {
-		rc = timer_remove(&current->t_alarm);
+		rc = ktimer_remove(&current->t_alarm);
 	} else {
 		rc = 0;
 	}
@@ -88,9 +89,18 @@ long sys_alarm(unsigned long ticks)
 	if (ticks == 0)
 		return rc;
 
-	timer_init(&current->t_alarm, alrm_action, current, TF_REF);
-	timer_start(&current->t_alarm, ticks);
+	ktimer_init(&current->t_alarm, alrm_action, current, TF_REF);
+	ktimer_start(&current->t_alarm, ticks);
 	return rc;
+}
+
+long sys_time(time_t *t)
+{
+	/* FIXME: check address */
+	if (t != NULL)
+		copy_to_current(t, &system_clock, sizeof(time_t));
+
+	return system_clock;
 }
 
 static struct posix_timer *get_timer_by_id(timer_t timerid)
@@ -164,7 +174,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		}
 	}
 
-	pt->timer = timer_create(posix_timer_action, pt, TF_REF);
+	pt->timer = ktimer_create(posix_timer_action, pt, TF_REF);
 	if (pt->timer == NULL) {
 		error = -ENOMEM;
 		goto err0;
@@ -222,7 +232,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	copy_from_current(v, new_value, sizeof(*new_value));
 
-	timer_start(pt->timer, v->it_value.tv_sec * __TICKS_PER_SEC);
+	ktimer_start(pt->timer, v->it_value.tv_sec * __TICKS_PER_SEC);
 	return 0;
 }
 
@@ -232,9 +242,10 @@ long sys_timer_settime(timer_t timerid, int flags,
  */
 void tick(void)
 {
-	tick_count++;
+	if ((++tick_count % __TICKS_PER_SEC) == 0)
+		system_clock++;
 
-	timers_tick();
+	ktimers_tick();
 
 	/* choose new process to run */
 	ready(current);

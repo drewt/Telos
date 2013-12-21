@@ -230,4 +230,9 @@ extern void enable_irq(unsigned char irq, bool disable);
 extern void pic_eoi(void);
 extern void pit_init(int div);
 
+struct tm;
+
+void rtc_date(struct tm *date);
+void clock_init(void);
+
 #endif

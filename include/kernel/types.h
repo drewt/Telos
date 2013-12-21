@@ -52,6 +52,7 @@ typedef unsigned long* pmap_t;
 
 typedef unsigned char	uchar;
 typedef unsigned short	ushort;
+typedef unsigned int	uint;
 typedef unsigned long	ulong;
 
 // XXX: arch/implementation dependent

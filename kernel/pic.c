@@ -33,9 +33,9 @@
 #define PIT_MODE	0x43
 
 /* PIT commands */
-#define PIT_SEL0	0x0
-#define PIT_16BIT	0x3
-#define PIT_RATEGEN	0x4
+#define PIT_SEL0	0x00
+#define PIT_16BIT	0x30
+#define PIT_RATEGEN	0x04
 
 #define PIT_FREQ 1193182
 #define PIT_DIV(x) ((PIT_FREQ+(x)/2)/(x))
@@ -94,7 +94,7 @@ void enable_irq(unsigned char irq, bool disable)
 }
 
 /*-----------------------------------------------------------------------------
- * Initializes the programmably interval timer */
+ * Initializes the programmable interval timer */
 //-----------------------------------------------------------------------------
 void pit_init(int div) {
 	/* program the PIT for rategen on channel 0 */

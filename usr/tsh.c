@@ -63,6 +63,7 @@ static struct program progtab[] = {
 	{ memtest,	"memtest"	},
 	{ consoletest,	"consoletest"	},
 	{ echo,		"echo"		},
+	{ date,		"date"		},
 	{ printserver,	"printserver"	},
 	{ printclient,	"printclient"	},
 	{ tsh,		"tsh"		}

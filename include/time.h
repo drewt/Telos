@@ -27,13 +27,14 @@ struct sigevent;
 
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
+time_t time(time_t *t);
+struct tm *gmtime(const time_t *timep);
+struct tm *gmtime_r(const time_t *timep, struct tm *result);
+
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid);
-
 int timer_delete(timer_t timerid);
-
 int timer_gettime(timer_t timerid, struct itimerspec *curr_value);
-
 int timer_settime(timer_t timerid, int flags,
 		const struct itimerspec *restrict new_value,
 		struct itimerspec *restrict old_value);

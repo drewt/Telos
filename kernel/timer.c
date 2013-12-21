@@ -33,11 +33,11 @@ static LIST_HEAD(timers);
 
 DEFINE_ALLOCATOR(get_timer, struct timer, &free_timers, chain)
 
-int timer_start(struct timer *timer, unsigned long ticks)
+int ktimer_start(struct timer *timer, unsigned long ticks)
 {
 	struct timer *t;
 
-	timer_ref(timer);
+	ktimer_ref(timer);
 	timer->expires = tick_count + ticks;
 	timer->flags |= TF_ARMED;
 
@@ -64,19 +64,19 @@ int timer_start(struct timer *timer, unsigned long ticks)
 	return 0;
 }
 
-struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags)
+struct timer *ktimer_create(void(*act)(void*), void *data, unsigned int flags)
 {
 	struct timer *timer;
 
 	if ((timer = get_timer()) == NULL)
 		return NULL;
 
-	timer_init(timer, act, data, flags);
+	ktimer_init(timer, act, data, flags);
 
 	return timer;
 }
 
-int __timer_destroy(struct timer *timer)
+int __ktimer_destroy(struct timer *timer)
 {
 	list_del(&timer->chain);
 	list_add(&timer->chain, &free_timers);
@@ -92,13 +92,13 @@ int __timer_destroy(struct timer *timer)
  * Stop a timer.  If the timer is not externally referenced, it is destroyed.
  * TODO: pause/resume functionality
  */
-unsigned long timer_remove(struct timer *timer)
+unsigned long ktimer_remove(struct timer *timer)
 {
 	int ticks = timer->expires - tick_count;
 
 	list_del(&timer->chain);
 	list_add(&timer->chain, &zombie_timers);
-	timer_unref(timer);
+	ktimer_unref(timer);
 
 	return ticks;
 }
@@ -106,7 +106,7 @@ unsigned long timer_remove(struct timer *timer)
 /*
  * Called whenever the hardware timer goes off.  Updates software timers.
  */
-void timers_tick(void)
+void ktimers_tick(void)
 {
 	struct timer *t, *n;
 
@@ -121,6 +121,6 @@ void timers_tick(void)
 		t->action(t->data);
 		list_del(&t->chain);
 		list_add(&t->chain, &zombie_timers);
-		timer_unref(t);
+		ktimer_unref(t);
 	}
 }

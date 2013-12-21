@@ -21,6 +21,7 @@
 #include <kernel/i386.h>
 #include <kernel/mem.h>
 #include <kernel/dispatch.h>
+#include <kernel/time.h>
 #include <kernel/drivers/console.h>
 
 #include <string.h>
@@ -69,6 +70,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	gdt_install();
 	pic_init(0x20, 0x28);	// map IRQs after exceptions/reserved vectors
 	pit_init(100);		// 10ms timer
+	clock_init();
 
 	bprintf("Initializing kernel subsystems...\n");
 	memtotal = mem_init(&info);

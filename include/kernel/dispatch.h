@@ -85,6 +85,7 @@ long sys_close(int fd);
 long sys_read(int fd, void *buf, int nbyte);
 long sys_write(int fd, void *buf, int nbyte);
 long sys_ioctl(int fd, unsigned long command, va_list vargs);
+long sys_time(time_t *t);
 long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid);
 long sys_timer_delete(timer_t timerid);

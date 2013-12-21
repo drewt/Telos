@@ -31,13 +31,13 @@ struct timer {
 	int ref;
 };
 
-struct timer *timer_create(void(*act)(void*), void *data, unsigned int flags);
-int timer_start(struct timer *timer, unsigned long ticks);
-int __timer_destroy(struct timer *timer);
-unsigned long timer_remove(struct timer *timer);
-void timers_tick(void);
+struct timer *ktimer_create(void(*act)(void*), void *data, unsigned int flags);
+int ktimer_start(struct timer *timer, unsigned long ticks);
+int __ktimer_destroy(struct timer *timer);
+unsigned long ktimer_remove(struct timer *timer);
+void ktimers_tick(void);
 
-static inline void timer_init(struct timer *dst, void(*act)(void*), void *data,
+static inline void ktimer_init(struct timer *dst, void(*act)(void*), void *data,
 		unsigned int flags)
 {
 	dst->action = act;
@@ -46,15 +46,15 @@ static inline void timer_init(struct timer *dst, void(*act)(void*), void *data,
 	dst->ref = flags & TF_REF ? 1 : 0;
 }
 
-static inline void timer_ref(struct timer *timer)
+static inline void ktimer_ref(struct timer *timer)
 {
 	timer->ref++;
 }
 
-static inline void timer_unref(struct timer *timer)
+static inline void ktimer_unref(struct timer *timer)
 {
 	if (--timer->ref == 0)
-		__timer_destroy(timer);
+		__ktimer_destroy(timer);
 }
 
 #endif

@@ -75,6 +75,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_TIMER_DELETE]	= { (isr_t) sys_timer_delete,	1 },
 	[SYS_TIMER_GETTIME]	= { (isr_t) sys_timer_gettime,	2 },
 	[SYS_TIMER_SETTIME]	= { (isr_t) sys_timer_settime,	4 },
+	[SYS_TIME]		= { (isr_t) sys_time,		1 },
 };
 
 static inline void set_action(unsigned int vector, isr_t f, int nargs)

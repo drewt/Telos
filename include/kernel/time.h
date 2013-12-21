@@ -38,6 +38,18 @@ struct itimerspec {
 	struct timespec it_value;
 };
 
+struct tm {
+	int tm_sec;
+	int tm_min;
+	int tm_hour;
+	int tm_mday;
+	int tm_mon;
+	int tm_year;
+	int tm_wday;
+	int tm_yday;
+	int tm_isdst;
+};
+
 static inline unsigned long __timespec_to_ticks(const struct timespec *t)
 {
 	return t->tv_sec * __TICKS_PER_SEC + t->tv_nsec * __NSEC_PER_TICK;
@@ -52,6 +64,15 @@ static inline void __ticks_to_timespec(struct timespec *t, unsigned long ticks)
 #ifdef __KERNEL__
 
 extern unsigned long tick_count;
+
+extern unsigned long system_clock;
+
+static inline unsigned long tm_to_unix(struct tm *t)
+{
+	return t->tm_sec + t->tm_min*60 + t->tm_hour*3600 + t->tm_yday*86400
+		+ (t->tm_year-70)*31536000 + ((t->tm_year-69)/4)*86400
+		- ((t->tm_year-1)/100)*86400 + ((t->tm_year+299)/400)*86400;
+}
 
 #endif /* __KERNEL__ */
 #endif

@@ -15,18 +15,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _USR_TEST_H_
-#define _USR_TEST_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
-void exntest(int argc, char *argv[]);
-void msgtest(int argc, char *argv[]);
-void sigtest(int argc, char *argv[]);
-void kbdtest(int argc, char *argv[]);
-void strtest(int argc, char *argv[]);
-void proctest(int argc, char *argv[]);
-void eventtest(int argc, char *argv[]);
-void memtest(int argc, char *argv[]);
-void consoletest(int argc, char *argv[]);
-void date(int argc, char *argv[]);
+void date(int argc, char *argv[])
+{
+	struct tm tm;
+	time_t t = time(NULL);
 
-#endif
+	gmtime_r(&t, &tm);
+
+	printf("%d:%d:%d %d/%d/%d\n", tm.tm_hour, tm.tm_min,
+			tm.tm_sec, tm.tm_mon+1, tm.tm_mday, tm.tm_year+1900);
+}
