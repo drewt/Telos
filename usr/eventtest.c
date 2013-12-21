@@ -22,41 +22,51 @@
 
 #include <telos/process.h>
 
+#define TIMESPEC_INIT(s, ns)	\
+	{			\
+		.tv_sec  = s,	\
+		.tv_nsec = ns	\
+	}
+
+#define TIMESPEC(name, s, ns) \
+	struct timespec name = TIMESPEC_INIT(s, ns)
+
+#define ITIMERSPEC(name, s, ns)				\
+	struct itimerspec name = {			\
+		.it_interval = {0},			\
+		.it_value = TIMESPEC_INIT(s, ns)	\
+	}
+
+#define HALFSEC_NSEC 500000000
+
+static const int one = 1;
+static const int two = 2;
+static const TIMESPEC(less_than_one, 0, HALFSEC_NSEC);
+static const TIMESPEC(less_than_two, 1, HALFSEC_NSEC);
+static const TIMESPEC(less_than_three, 2, HALFSEC_NSEC);
+
 static void sleep_proc(int argc, char *argv[])
 {
-	sleep(argc);
+	int sec = argc == 2 ? 1 : 2;
+	sleep(sec);
 	printf("%d ", argc);
 }
 
-static void nanosleep_proc(int argc, char *argvp[])
+static void nanosleep_proc(int argc, char *argv[])
 {
-	struct timespec spec = {
-		.tv_sec = argc,
-		.tv_nsec = 0
-	};
-	nanosleep(&spec, NULL);
+	const struct timespec *spec = argc == 1 ? &less_than_one : &less_than_two;
+	nanosleep(spec, NULL);
 	printf("%d ", argc);
 }
 
 static void sleep_test(void)
 {
 	printf("Testing sleep...\nVerify ascending: ");
-	syscreate(sleep_proc, 1, NULL);
-	syscreate(sleep_proc, 2, NULL);
-	syscreate(sleep_proc, 3, NULL);
-	sleep(4);
-
-	printf("\nVefify ascending: ");
-	syscreate(sleep_proc, 3, NULL);
-	syscreate(sleep_proc, 2, NULL);
-	syscreate(sleep_proc, 1, NULL);
-	sleep(4);
-
-	printf("\nVerify ascending: ");
 	syscreate(nanosleep_proc, 1, NULL);
-	syscreate(nanosleep_proc, 2, NULL);
+	syscreate(sleep_proc, 2, NULL);
+	syscreate(sleep_proc, 4, NULL);
 	syscreate(nanosleep_proc, 3, NULL);
-	sleep(4);
+	nanosleep(&less_than_three, NULL);
 	puts("");
 }
 
@@ -70,8 +80,8 @@ static void alarm_test(void)
 	int sig, rv;
 	signal(SIGALRM, alarm_handler);
 	printf("Testing alarm... alrm ?= ");
-	alarm(2);
-	if ((rv = alarm(2)) <= 0)
+	alarm(1);
+	if ((rv = alarm(1)) <= 0)
 		printf("error");
 	printf("al");
 	for (sig = sigwait(); sig != SIGALRM; sig = sigwait());
@@ -85,7 +95,7 @@ static void alarm_test(void)
 
 static void timer_action(int signo, siginfo_t *info, void *context)
 {
-	printf("TIMER!\n");
+	printf("1 ");
 }
 
 static void timer_test(void)
@@ -93,13 +103,7 @@ static void timer_test(void)
 	timer_t tid;
 	sigset_t mask;
 	struct sigaction act;
-	struct itimerspec time = {
-		.it_interval = {0},
-		.it_value = {
-			.tv_sec = 1,
-			.tv_nsec = 0,
-		},
-	};
+	ITIMERSPEC(time, 0, HALFSEC_NSEC);
 
 	sigprocmask(SIG_BLOCK, NULL, &mask);
 	act.sa_mask = mask;
@@ -114,10 +118,12 @@ static void timer_test(void)
 		printf("timer_create() failed\n");
 	}
 
+	printf("Testing timers...\nVerify ascending: ");
 	if (timer_settime(tid, 0, &time, NULL) < 0) {
 		printf("timer_settime() failed\n");
 	}
-	sleep(2);
+	sleep(1);
+	puts("2");
 }
 
 void eventtest(int argc, char *argv[])
