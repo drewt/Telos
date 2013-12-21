@@ -20,7 +20,7 @@
 
 #include <kernel/types.h>
 
-#define __TICKS_PER_SEC 10
+#define __TICKS_PER_SEC 100
 #define __NSEC_PER_TICK 10000000
 
 enum {
