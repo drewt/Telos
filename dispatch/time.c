@@ -232,7 +232,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	copy_from_current(v, new_value, sizeof(*new_value));
 
-	ktimer_start(pt->timer, v->it_value.tv_sec * __TICKS_PER_SEC);
+	ktimer_start(pt->timer, __timespec_to_ticks(&v->it_value));
 	return 0;
 }
 
