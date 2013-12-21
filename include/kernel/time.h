@@ -52,7 +52,7 @@ struct tm {
 
 static inline unsigned long __timespec_to_ticks(const struct timespec *t)
 {
-	return t->tv_sec * __TICKS_PER_SEC + t->tv_nsec * __NSEC_PER_TICK;
+	return t->tv_sec * __TICKS_PER_SEC + t->tv_nsec / __NSEC_PER_TICK;
 }
 
 static inline void __ticks_to_timespec(struct timespec *t, unsigned long ticks)
