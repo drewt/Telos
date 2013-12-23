@@ -297,7 +297,7 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
  * address space.  This function returns an address aliasing the given memory
  * region.
  */
-ulong kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
+void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 {
 	pte_t *pte, *tmp;
 	ulong tmp_addr;
@@ -313,14 +313,15 @@ ulong kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 		*tmp = *pte | PE_RW;
 		asm volatile("invlpg (%0)" : : "b" (tmp_addr + i*FRAME_SIZE));
 	}
-	return tmp_addr + (addr & 0xFFF);
+	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
 /*
  * Unmap all pages overlapping the given memory region.
  */
-void kunmap_range(ulong addr, size_t len)
+void kunmap_range(void *addrp, size_t len)
 {
+	ulong addr = (ulong) addrp;
 	unsigned nr_pages = PAGES_IN_RANGE(addr, len);
 	pte_t *pte = addr_to_pte(&_kernel_pgd, addr);
 	for (unsigned i = 0; i < nr_pages; i++, pte++) {
@@ -331,11 +332,11 @@ void kunmap_range(ulong addr, size_t len)
 
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
-	ulong addr;
+	void *addr;
 	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
 		return -1;
 
-	memcpy(dst, (void*) addr, len);
+	memcpy(dst, addr, len);
 	kunmap_range(addr, len);
 
 	return 0;
@@ -343,11 +344,11 @@ int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 
 int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
-	ulong addr;
+	void *addr;
 	if ((addr = kmap_tmp_range(p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
-	memcpy((void*) addr, src, len);
+	memcpy(addr, src, len);
 	kunmap_range(addr, len);
 
 	return 0;
@@ -356,7 +357,7 @@ int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
 int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len)
 {
-	ulong dst_addr, src_addr;
+	void *dst_addr, *src_addr;
 
 	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
@@ -366,7 +367,7 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		return -1;
 	}
 
-	memcpy((void*) dst_addr, (void*) src_addr, len);
+	memcpy(dst_addr, src_addr, len);
 	kunmap_range(dst_addr, len);
 	kunmap_range(src_addr, len);
 
@@ -376,7 +377,7 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len)
 {
-	ulong dst_addr, src_addr;
+	void *dst_addr, *src_addr;
 
 	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
 		return -1;
@@ -386,7 +387,7 @@ int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		return -1;
 	}
 
-	strncpy((void*) dst_addr, (void*) src_addr, len);
+	strncpy(dst_addr, src_addr, len);
 	kunmap_range(dst_addr, len);
 	kunmap_range(src_addr, len);
 
@@ -395,11 +396,11 @@ int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 
 int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 {
-	ulong addr;
+	void *addr;
 	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
 		return -1;
 
-	strncpy(dst, (char*) addr, len);
+	strncpy(dst, addr, len);
 	return 0;
 }
 

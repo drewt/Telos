@@ -134,7 +134,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	copy_from_current(kargv, argv, sizeof(char*) * argc);
 
 	ulong arg_addr = v_heap + 128;
-	char ** uargv = (void*) kmap_tmp_range(p->pgdir, v_heap, 128);
+	char ** uargv = kmap_tmp_range(p->pgdir, v_heap, 128);
 	for (int i = 0; i < argc; i++, arg_addr += 128) {
 		uargv[i] = (char*) arg_addr;
 		copy_string_through_user(p, current, (void*) arg_addr,
@@ -147,17 +147,17 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		return -ENOMEM;
 
 	v_frame = (void*) (v_stack + 32 * sizeof(struct ucontext));
-	p_frame = (void*) kmap_tmp_range(p->pgdir, (ulong) v_frame,
+	p_frame = kmap_tmp_range(p->pgdir, (ulong) v_frame,
 			sizeof(struct ucontext));
 	esp = v_stack + STACK_SIZE - 128;
 	put_iret_uframe(p_frame, (ulong) func, esp);
-	kunmap_range((ulong) p_frame, sizeof(struct ucontext));
+	kunmap_range(p_frame, sizeof(struct ucontext));
 
-	args = (void*) kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
+	args = kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
 	args[2] = (ulong) v_heap;
-	kunmap_range((ulong) args, sizeof(ulong) * 3);
+	kunmap_range(args, sizeof(ulong) * 3);
 
 #else
 	if ((v_stack = (ulong) kmalloc(STACK_SIZE)) == 0)

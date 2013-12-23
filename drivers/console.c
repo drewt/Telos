@@ -73,11 +73,11 @@ static int console_write(int fd, void *buf, int buf_len)
 	int i;
 	unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
 
-	char *s = (char*) kmap_tmp_range(current->pgdir, (ulong) buf, buf_len);
+	char *s = kmap_tmp_range(current->pgdir, (ulong) buf, buf_len);
 	for (i = 0; s[i] != '\0' && i < buf_len; i++) {
 		console_putc(s[i], TXT_CLR, cno);
 	}
-	kunmap_range((ulong) s, buf_len);
+	kunmap_range(s, buf_len);
 
 	return i;
 }

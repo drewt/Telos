@@ -53,7 +53,7 @@ static void sig_err(void)
 static void place_sig_args(void* dst, struct pcb *p, void *osp, int sig_no)
 {
 	struct siginfo *info = &p->siginfos[sig_no];
-	ulong *args = (ulong*) kmap_tmp_range(p->pgdir, (ulong) dst,
+	ulong *args = kmap_tmp_range(p->pgdir, (ulong) dst,
 			12 * sizeof(ulong));
 
 	args[0] = (ulong) sig_err;
@@ -73,7 +73,7 @@ static void place_sig_args(void* dst, struct pcb *p, void *osp, int sig_no)
 		args[4]  = p->rc;
 	}
 
-	kunmap_range((ulong) args, 12 * sizeof(ulong));
+	kunmap_range(args, 12 * sizeof(ulong));
 }
 
 static int send_signal_user(struct pcb *p, int sig_no)
@@ -87,7 +87,7 @@ static int send_signal_user(struct pcb *p, int sig_no)
 	ulong u_sigframe = u_oldctxt - sizeof(struct ucontext);
 	ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
 
-	sig_frame = (struct ucontext*) kmap_tmp_range(p->pgdir, u_sigframe,
+	sig_frame = kmap_tmp_range(p->pgdir, u_sigframe,
 			sizeof(struct ucontext) * 2);
 	old_ctxt = (struct ucontext*) ((ulong) sig_frame + sizeof(struct ucontext));
 
@@ -103,7 +103,7 @@ static int send_signal_user(struct pcb *p, int sig_no)
 			: (u32) (~0 << (sig_no + 1));
 	clear_bit(sig_no, &p->sig_pending);
 
-	kunmap_range((ulong) sig_frame, sizeof(struct ucontext) * 2);
+	kunmap_range(sig_frame, sizeof(struct ucontext) * 2);
 	return 0;
 }
 
@@ -154,22 +154,22 @@ long sig_restore(void *osp)
 	current->esp = osp;
 	current->ifp = (void*) ((ulong) osp + sizeof(struct ucontext));
 
-	struct ucontext *cx = (void*) kmap_tmp_range(current->pgdir, (ulong) osp,
+	struct ucontext *cx = kmap_tmp_range(current->pgdir, (ulong) osp,
 			sizeof(struct ucontext));
 
 	ulong old_esp = current->flags & PFLAG_SUPER
 			? (ulong) osp
 			: (ulong) cx->iret_esp;
 
-	ulong *rc = (void*) kmap_tmp_range(current->pgdir, old_esp,
+	ulong *rc = kmap_tmp_range(current->pgdir, old_esp,
 			sizeof(ulong));
 
 	// restore old signal mask and return value
 	current->sig_ignore = cx->reg.eax;
 	old_rc = rc[-2];
 
-	kunmap_range((ulong) cx, sizeof(struct ucontext));
-	kunmap_range((ulong) rc, sizeof(ulong));
+	kunmap_range(cx, sizeof(struct ucontext));
+	kunmap_range(rc, sizeof(ulong));
 
 	return old_rc;
 }

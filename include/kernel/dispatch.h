@@ -45,8 +45,8 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len);
 int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len);
-ulong kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
-void kunmap_range(ulong addr, size_t len);
+void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
+void kunmap_range(void *addr, size_t len);
 
 #define copy_to_current(dst, src, len) \
 	copy_to_user(current, dst, src, len)
