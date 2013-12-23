@@ -59,9 +59,7 @@ void exn_fpe(void);
 void exn_ill_instr(void);
 
 /* service routines */
-long sys_malloc(unsigned int size, void **p);
-long sys_free(void *ptr);
-long sys_palloc(void **p);
+long sys_sbrk(long inc, ulong *oldbrk);
 long sys_create(void(*func)(int,char*), int argc, char **argv);
 long sys_yield(void);
 long sys_exit(int status);

@@ -26,32 +26,9 @@ int errno;
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------
-static inline int telos_malloc(size_t size, void **p)
-{
-	return syscall2(SYS_MALLOC, (void*) size, p);
-}
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
-void *palloc(void)
-{
-	void *rv;
-	int error;
-
-	if ((error = syscall1(SYS_PALLOC, &rv)) != 0) {
-		errno = error * -1;
-		return NULL;
-	}
-	return rv;
-}
-
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 void free(void *ptr)
 {
-	syscall1(SYS_FREE, ptr);
+	/* TODO */
 }
 
 /*-----------------------------------------------------------------------------
@@ -59,10 +36,8 @@ void free(void *ptr)
 //-----------------------------------------------------------------------------
 void *malloc(size_t size)
 {
-	void *rp;
-	if (telos_malloc(size, &rp))
-		return NULL;
-	return rp;
+	/* TODO */
+	return NULL;
 }
 
 /*-----------------------------------------------------------------------------
@@ -70,11 +45,8 @@ void *malloc(size_t size)
 //-----------------------------------------------------------------------------
 void *calloc(size_t nmemb, size_t size)
 {
-	void *rp;
-	if (telos_malloc(nmemb * size, &rp))
-		return NULL;
-	memset(rp, 0, nmemb * size);
-	return rp;
+	/* TODO */
+	return NULL;
 }
 
 /*-----------------------------------------------------------------------------
@@ -82,10 +54,19 @@ void *calloc(size_t nmemb, size_t size)
 //-----------------------------------------------------------------------------
 void *realloc(void *ptr, size_t size)
 {
-	void *rp;
-	if (telos_malloc(size, &rp))
-		return NULL;
-	memcpy(rp, ptr, size);
-	free(ptr);
-	return rp;
+	/* TODO */
+	return NULL;
+}
+
+void *sbrk(long increment)
+{
+	unsigned long old;
+	long rc;
+
+	if ((rc = syscall2(SYS_SBRK, (void*) increment, &old)) < 0) {
+		errno = -rc;
+		return (void*) -1;
+	}
+
+	return (void*) old;
 }

@@ -68,9 +68,6 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_SEND]		= { (isr_t) sys_send,		5 },
 	[SYS_RECV]		= { (isr_t) sys_recv,		3 },
 	[SYS_REPLY]		= { (isr_t) sys_reply,		3 },
-	[SYS_MALLOC]		= { (isr_t) sys_malloc,		2 },
-	[SYS_FREE]		= { (isr_t) sys_free,		1 },
-	[SYS_PALLOC]		= { (isr_t) sys_palloc,		1 },
 	[SYS_TIMER_CREATE]	= { (isr_t) sys_timer_create,	3 },
 	[SYS_TIMER_DELETE]	= { (isr_t) sys_timer_delete,	1 },
 	[SYS_TIMER_GETTIME]	= { (isr_t) sys_timer_gettime,	2 },
@@ -79,6 +76,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_CLOCK_GETRES]	= { (isr_t) sys_clock_getres,	2 },
 	[SYS_CLOCK_GETTIME]	= { (isr_t) sys_clock_gettime,	2 },
 	[SYS_CLOCK_SETTIME]	= { (isr_t) sys_clock_settime,	2 },
+	[SYS_SBRK]		= { (isr_t) sys_sbrk,		2 },
 };
 
 static inline void set_action(unsigned int vector, isr_t f, int nargs)

@@ -27,47 +27,25 @@
 #include <kernel/list.h>
 #include <kernel/mem.h>
 
-#define MAX_ALLOC 0x4000
-
-long sys_malloc(unsigned int size, void **p)
+long sys_sbrk(long inc, ulong *oldbrk)
 {
-	struct mem_header *h;
+	unsigned long new = current->brk + inc;
+	unsigned long pages = (inc / FRAME_SIZE) + 1;
 
-	if (size == 0)
+	/* FIXME: check address */
+	copy_to_current(oldbrk, &current->brk, sizeof(current->brk));
+
+	if (new < current->heap_start)
 		return -EINVAL;
 
-	// TODO: limit memory use in a more `global' way
-	if (size > MAX_ALLOC)
+	if (inc <= 0 || new < current->heap_end)
+		goto skip;
+
+	if (map_pages_user(current, current->heap_end, pages, PE_U | PE_RW))
 		return -ENOMEM;
+	current->heap_end += pages * FRAME_SIZE;
 
-	if (!(*p = hmalloc(size, &h)))
-		return -ENOMEM;
-
-	/* add h to list of allocated memory for current process */
-	list_add_tail(&h->chain, &current->heap_mem);
-
-	return 0;
-}
-
-long sys_free(void *ptr)
-{
-	struct mem_header *h = mem_ptoh(ptr);
-
-	// XXX: unsafe!  Memory might be unallocated or allocated to another process
-	list_del(&h->chain);
-	hfree(h);
-	return 0;
-}
-
-long sys_palloc(void **p)
-{
-	struct pf_info *page;
-
-	if ((page = kalloc_page()) == NULL)
-		return -ENOMEM;
-
-	list_add_tail(&page->chain, &current->page_mem);
-
-	*p = (void*) page->addr;
+skip:
+	current->brk = new;
 	return 0;
 }

@@ -18,36 +18,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
-#define N 25
-#define M 100
-#define A 144
+#define N 512
+
+static void sbrk_test(void)
+{
+	char *brk = NULL;
+
+	brk = sbrk(N);
+	printf("old brk: %x\n", brk);
+
+	for (int i = 0; i < N; i++)
+		brk[i] = 0xFF;
+
+	brk = sbrk(0);
+	printf("new brk: %x\n", brk);
+}
 
 void memtest(int argc, char *argv[])
 {
-	void *mem[N];
-
-	puts("Testing palloc()...");
-	for (int i = 0; i < N; i++) {
-		if ((mem[i] = palloc()) == NULL) {
-			printf("memtest[%d]: palloc returned NULL\n", i);
-			return;
-		}
-		memset(mem[i], 0xFF, 4096);
-	}
-
-	unsigned long *bad = (void*) (0x00112000 + 0xC0000000);
-	*bad = 0xFF;
-
-	/*puts("Testing malloc()...");
-	for (int i = 0; i < N; i++) {
-		if ((mem[i] = malloc(i*M+A)) == NULL) {
-			puts("memtest: malloc returned NULL");
-			return;
-		}
-	}
-
-	puts("Testing free()...");
-	for (int i = N-1; i >= 0; i--)
-		free(mem[i]);*/
+	sbrk_test();
 }

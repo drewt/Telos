@@ -89,6 +89,9 @@ ulong virt_to_phys(pmap_t pgdir, ulong addr);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		struct list_head *page_list);
 
+#define map_pages_user(p, start, pages, attr) \
+	map_pages((p)->pgdir, start, pages, attr, &(p)->page_mem)
+
 static inline struct mem_header *mem_ptoh(void *addr)
 {
 	return (struct mem_header*) addr - 1;

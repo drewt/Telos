@@ -61,12 +61,15 @@ struct pcb {
 	unsigned int	state;		// state
 	long		rc;		// return value for system calls
 	unsigned long	flags;
-	/* stacks */
+	/* memory */
 	void		*stack_mem;	// beginning of stack memory
 	void		*int_stack;	// stack for interrupts
 	void		*esp;		// stack pointer
 	void		*ifp;		// interrupt frame pointer
 	unsigned long	*pgdir;		// page directory
+	unsigned long   heap_start;
+	unsigned long   heap_end;
+	unsigned long	brk;
 	/* time */
 	unsigned int	timestamp;	// creation time
 	struct timer	t_alarm;	// alarm timer

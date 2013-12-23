@@ -126,15 +126,16 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		return -ENOMEM;
 
 #if 1
-	ulong v_heap = 0x01000000;
-	if (map_pages(p->pgdir, v_heap, 1, PE_U | PE_RW, &p->page_mem))
+	p->heap_start = 0x01000000;
+	p->heap_end = p->brk = p->heap_start + FRAME_SIZE;
+	if (map_pages(p->pgdir, p->heap_start, 1, PE_U | PE_RW, &p->page_mem))
 		return -ENOMEM;
 
 	char *kargv[argc];
 	copy_from_current(kargv, argv, sizeof(char*) * argc);
 
-	ulong arg_addr = v_heap + 128;
-	char ** uargv = kmap_tmp_range(p->pgdir, v_heap, 128);
+	ulong arg_addr = p->heap_start + 128;
+	char ** uargv = kmap_tmp_range(p->pgdir, p->heap_start, 128);
 	for (int i = 0; i < argc; i++, arg_addr += 128) {
 		uargv[i] = (char*) arg_addr;
 		copy_string_through_user(p, current, (void*) arg_addr,
@@ -156,7 +157,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	args = kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
-	args[2] = (ulong) v_heap;
+	args[2] = (ulong) p->heap_start;
 	kunmap_range(args, sizeof(ulong) * 3);
 
 #else
