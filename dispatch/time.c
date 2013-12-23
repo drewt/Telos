@@ -34,6 +34,19 @@ struct posix_timer {
 	timer_t timerid;
 };
 
+struct clock posix_clocks[__NR_CLOCKS] = {
+	[CLOCK_REALTIME] = {
+		.get = posix_rtc_get,
+		.set = posix_rtc_set,
+		.res = { .tv_sec = 1, .tv_nsec = 0 }
+	},
+	[CLOCK_MONOTONIC] = {
+		.get = posix_monotonic_get,
+		.set = NULL,
+		.res = { .tv_sec = 0, .tv_nsec = __NSEC_PER_TICK }
+	}
+};
+
 LIST_HEAD(free_timers);
 DEFINE_HASHTABLE(posix_timers, 9);
 
@@ -101,6 +114,71 @@ long sys_time(time_t *t)
 		copy_to_current(t, &system_clock, sizeof(time_t));
 
 	return system_clock;
+}
+
+int posix_rtc_get(struct timespec *tp)
+{
+	tp->tv_sec  = system_clock;
+	tp->tv_nsec = 0;
+	return 0;
+}
+
+int posix_rtc_set(struct timespec *tp)
+{
+	system_clock = tp->tv_sec;
+	return 0;
+}
+
+int posix_monotonic_get(struct timespec *tp)
+{
+	tp->tv_sec  = tick_count / __TICKS_PER_SEC;
+	tp->tv_nsec = (tick_count % __TICKS_PER_SEC) * __NSEC_PER_TICK;
+	return 0;
+}
+
+static int clock_valid(clockid_t clock)
+{
+	return clock >= 0 && clock < __NR_CLOCKS;
+}
+
+long sys_clock_getres(clockid_t clockid, struct timespec *res)
+{
+	if (!clock_valid(clockid))
+		return -EINVAL;
+
+	/* FIXME: check address */
+	copy_to_current(res, &posix_clocks[clockid], sizeof(*res));
+	return 0;
+}
+
+long sys_clock_gettime(clockid_t clockid, struct timespec *tp)
+{
+	struct timespec spec;
+
+	if (!clock_valid(clockid))
+		return -EINVAL;
+
+	posix_clocks[clockid].get(&spec);
+
+	/* FIXME: check address */
+	copy_to_current(tp, &spec, sizeof(*tp));
+	return 0;
+}
+
+long sys_clock_settime(clockid_t clockid, struct timespec *tp)
+{
+	struct timespec spec;
+
+	if (!clock_valid(clockid))
+		return -EINVAL;
+
+	if (posix_clocks[clockid].set == NULL)
+		return -EPERM;
+
+	/* FIXME: check address */
+	copy_from_current(&spec, tp, sizeof(spec));
+	posix_clocks[clockid].set(&spec);
+	return 0;
 }
 
 static struct posix_timer *get_timer_by_id(timer_t timerid)

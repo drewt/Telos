@@ -31,6 +31,10 @@ time_t time(time_t *t);
 struct tm *gmtime(const time_t *timep);
 struct tm *gmtime_r(const time_t *timep, struct tm *result);
 
+int clock_getres(clockid_t clockid, struct timespec *res);
+int clock_gettime(clockid_t clockid, struct timespec *tp);
+int clock_settime(clockid_t clockid, struct timespec *tp);
+
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid);
 int timer_delete(timer_t timerid);

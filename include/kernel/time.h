@@ -26,6 +26,7 @@
 enum {
 	CLOCK_REALTIME,
 	CLOCK_MONOTONIC,
+	__NR_CLOCKS
 };
 
 struct timespec {
@@ -64,8 +65,19 @@ static inline void __ticks_to_timespec(struct timespec *t, unsigned long ticks)
 #ifdef __KERNEL__
 
 extern unsigned long tick_count;
-
 extern unsigned long system_clock;
+
+struct clock {
+	int (*get)(struct timespec*);
+	int (*set)(struct timespec*);
+	struct timespec res;
+};
+
+extern int posix_rtc_get(struct timespec *tp);
+extern int posix_rtc_set(struct timespec *tp);
+extern int posix_monotonic_get(struct timespec *tp);
+
+extern struct clock posix_clocks[];
 
 static inline unsigned long tm_to_unix(struct tm *t)
 {

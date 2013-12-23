@@ -23,6 +23,7 @@
 struct sigaction;
 struct sigevent;
 
+struct timespec;
 struct itimerspec;
 
 extern struct pcb *current;
@@ -86,6 +87,9 @@ long sys_read(int fd, void *buf, int nbyte);
 long sys_write(int fd, void *buf, int nbyte);
 long sys_ioctl(int fd, unsigned long command, va_list vargs);
 long sys_time(time_t *t);
+long sys_clock_getres(clockid_t clockid, struct timespec *res);
+long sys_clock_gettime(clockid_t clockid, struct timespec *tp);
+long sys_clock_settime(clockid_t clockid, struct timespec *tp);
 long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid);
 long sys_timer_delete(timer_t timerid);

@@ -126,9 +126,29 @@ static void timer_test(void)
 	puts("2");
 }
 
+static void clock_test(void)
+{
+	struct timespec t;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &t) < 0) {
+		printf("clock_gettime() failed\n");
+		return;
+	}
+
+	printf("CLOCK_MONOTONIC: %d\n", t.tv_sec);
+
+	if (clock_gettime(CLOCK_REALTIME, &t) < 0) {
+		printf("clock_gettime() failed\n");
+		return;
+	}
+
+	printf("CLOCK_REALTIME: %d\n", t.tv_sec);
+}
+
 void eventtest(int argc, char *argv[])
 {
 	sleep_test();
 	alarm_test();
 	timer_test();
+	clock_test();
 }
