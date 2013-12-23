@@ -263,26 +263,31 @@ long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 void __kill(struct pcb *p, int sig_no)
 {
 	/* record signal if process accepts it */
-	if (p->sig_accept & BIT(sig_no)) {
-		set_bit(sig_no, &p->sig_pending);
+	if (!(p->sig_accept & BIT(sig_no)))
+		return;
 
-		if (p->sigactions[sig_no].sa_flags & SA_SIGINFO) {
-			p->siginfos[sig_no].si_errno = 0;
-			p->siginfos[sig_no].si_pid   = current->pid;
-			p->siginfos[sig_no].si_addr  =
-				(void*) ((struct ucontext*) p->esp)->iret_eip;
-		}
-		/* ready process if it's blocked */
-		if (p->state == STATE_SIGWAIT) {
-			p->rc = sig_no;
-			ready(p);
-		} else if (p->state == STATE_BLOCKED) {
-			p->rc = -128;
-			ready(p);
-		} else if (p->state == STATE_SLEEPING) {
-			/* sleep timer has TF_ALWAYS */
-			p->rc = ktimer_remove(&p->t_sleep);
-		}
+	set_bit(sig_no, &p->sig_pending);
+
+	if (p->sigactions[sig_no].sa_flags & SA_SIGINFO) {
+		struct ucontext cx;
+
+		copy_from_user(p, &cx, (void*) p->esp, sizeof(cx));
+
+		p->siginfos[sig_no].si_errno = 0;
+		p->siginfos[sig_no].si_pid   = current->pid;
+		p->siginfos[sig_no].si_addr = (void*) cx.iret_eip;
+	}
+
+	/* ready process if it's blocked */
+	if (p->state == STATE_SIGWAIT) {
+		p->rc = sig_no;
+		ready(p);
+	} else if (p->state == STATE_BLOCKED) {
+		p->rc = -128;
+		ready(p);
+	} else if (p->state == STATE_SLEEPING) {
+		/* sleep timer has TF_ALWAYS */
+		p->rc = ktimer_remove(&p->t_sleep);
 	}
 }
 
