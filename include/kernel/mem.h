@@ -78,6 +78,7 @@ unsigned long mem_init(struct multiboot_info **info);
 void *hmalloc(unsigned int size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
 struct pf_info *kalloc_page(void);
+struct pf_info *kzalloc_page(void);
 void kfree_page(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 pmap_t pgdir_create(struct list_head *page_list);

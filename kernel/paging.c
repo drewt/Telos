@@ -177,9 +177,8 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 
 	pte = pgdir + ADDR_TO_PDI(start);
 	if (!(*pte & PE_P)) {
-		if ((frame = kalloc_page()) == NULL)
+		if ((frame = kzalloc_page()) == NULL)
 			return -ENOMEM;
-		memset((void*) frame->addr, 0, FRAME_SIZE);
 		*pte = frame->addr | attr | PE_P;
 		list_add_tail(&frame->chain, page_list);
 	}
