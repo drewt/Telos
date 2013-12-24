@@ -84,10 +84,12 @@ long sys_close(int fd)
 //-----------------------------------------------------------------------------
 long sys_read(int fd, void *buf, int nbyte)
 {
+	struct device_operations *dev_op;
+
 	if (!FD_VALID(fd))
 		return -EBADF;
 
-	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	dev_op = devtab[current->fds[fd]].dv_op;
 	return dev_op->dvread ? dev_op->dvread(fd, buf, nbyte) : ENXIO;
 }
 
@@ -96,10 +98,12 @@ long sys_read(int fd, void *buf, int nbyte)
 //-----------------------------------------------------------------------------
 long sys_write(int fd, void *buf, int nbyte)
 {
+	struct device_operations *dev_op;
+
 	if (!FD_VALID(fd))
 		return -EBADF;
 
-	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	dev_op = devtab[current->fds[fd]].dv_op;
 	return dev_op->dvwrite ? dev_op->dvwrite(fd, buf, nbyte) : ENXIO;
 }
 
@@ -108,9 +112,11 @@ long sys_write(int fd, void *buf, int nbyte)
 //-----------------------------------------------------------------------------
 long sys_ioctl(int fd, ulong cmd, va_list vargs)
 {
+	struct device_operations *dev_op;
+
 	if (!FD_VALID(fd))
 		return -EBADF;
 
-	struct device_operations *dev_op = devtab[current->fds[fd]].dv_op;
+	dev_op = devtab[current->fds[fd]].dv_op;
 	return dev_op->dvioctl ? dev_op->dvioctl(fd, cmd, vargs) : ENXIO;
 }

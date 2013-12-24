@@ -82,9 +82,9 @@ static inline void exn_kill(struct ucontext *cx, int sig)
 
 void exn_page_fault(void)
 {
+	ulong error, eip, addr;
 	kprintf("page_fault! %d\n", current->pid);
 	for(;;);
-	ulong error, eip, addr;
 
 	error = ((struct gp_regs*)current->esp)->stack[0];
 	eip   = ((struct gp_regs*)current->esp)->stack[1];

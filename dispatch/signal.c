@@ -149,20 +149,21 @@ int send_signal(struct pcb *p, int sig_no)
 long sig_restore(void *osp)
 {
 	// TODO: verify that osp is in valid range and properly aligned
-	//struct ctxt *cx = osp;
 	long old_rc;
+	ulong old_esp;
+	ulong *rc;
+	struct ucontext *cx;
+
 	current->esp = osp;
 	current->ifp = (void*) ((ulong) osp + sizeof(struct ucontext));
 
-	struct ucontext *cx = kmap_tmp_range(current->pgdir, (ulong) osp,
-			sizeof(struct ucontext));
+	cx = kmap_tmp_range(current->pgdir, (ulong) osp, sizeof(struct ucontext));
 
-	ulong old_esp = current->flags & PFLAG_SUPER
+	old_esp = current->flags & PFLAG_SUPER
 			? (ulong) osp
 			: (ulong) cx->iret_esp;
 
-	ulong *rc = kmap_tmp_range(current->pgdir, old_esp,
-			sizeof(ulong));
+	rc = kmap_tmp_range(current->pgdir, old_esp, sizeof(ulong));
 
 	// restore old signal mask and return value
 	current->sig_ignore = cx->reg.eax;

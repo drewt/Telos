@@ -246,8 +246,10 @@ int kvprintf(unsigned char clr, const char *fmt, va_list ap) {
 int kprintf_clr(unsigned char clr, const char *fmt, ...)
 {
 	va_list ap;
+	int ret;
+
 	va_start(ap, fmt);
-	int ret = kvprintf(clr, fmt, ap);
+	ret = kvprintf(clr, fmt, ap);
 	va_end(ap);
 	return ret;
 }
@@ -258,8 +260,10 @@ int kprintf_clr(unsigned char clr, const char *fmt, ...)
 int kprintf(const char *fmt, ...)
 {
 	va_list ap;
+	int ret;
+
 	va_start(ap, fmt);
-	int ret = kvprintf(TXT_CLR, fmt, ap);
+	ret = kvprintf(TXT_CLR, fmt, ap);
 	va_end(ap);
 	return ret;
 }
