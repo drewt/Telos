@@ -32,6 +32,8 @@
 #define PAGE_TABLE(name) \
 	pte_t name[1024] __attribute__((aligned(0x1000)))
 
+#define TMP_PGTAB_BASE 0xB0400000
+
 /* page table for temporary mappings */
 static PAGE_TABLE(tmp_pgtab);
 
@@ -158,26 +160,23 @@ int paging_init(ulong start, ulong end)
 	page_attr_off(&_kernel_pgd, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
 
 	/* set up page table for temporary mappings */
-	((pmap_t)&_kernel_pgd)[ADDR_TO_PDI(0xB0400000)] =
-	KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
+	((pmap_t)&_kernel_pgd)[ADDR_TO_PDI(TMP_PGTAB_BASE)] =
+		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
 
 	return 0;
 }
 
 /*
- * Get a free PTE from the temporary page table.  This function returns the
- * address associated with the PTE, and stores a pointer to the PTE in 'dst'.
+ * Get the index of the first free entry from a paging structure.
  */
-static inline ulong get_tmp_pte(pte_t **dst)
+static int get_first_free(pmap_t tab)
 {
-	pte_t *pte = tmp_pgtab;
-	for (int i = 0; i < 1024; i++, pte++) {
-		if (!(*pte & PE_P)) {
-			*dst = pte;
-			return 0xB0400000 + i*FRAME_SIZE;
+	for (int i = 0; i < 1024; i++) {
+		if (!(tab[i] & PE_P)) {
+			return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 
 /*
@@ -186,14 +185,15 @@ static inline ulong get_tmp_pte(pte_t **dst)
  */
 void *kmap_tmp_page(ulong addr)
 {
-	pte_t *tmp;
+	int i;
 	ulong tmp_addr;
 
-	if ((tmp_addr = get_tmp_pte(&tmp)) == 0)
+	if ((i = get_first_free(tmp_pgtab)) == -1)
 		return NULL;
 
-	*tmp = addr | PE_P | PE_RW;
+	tmp_pgtab[i] = addr | PE_P | PE_RW;
 
+	tmp_addr = TMP_PGTAB_BASE + i*FRAME_SIZE;
 	asm volatile("invlpg (%0)" : : "b" (tmp_addr));
 	return (void*) (tmp_addr + (addr & 0xFFF));
 }
