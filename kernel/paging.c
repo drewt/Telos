@@ -233,27 +233,27 @@ static inline ulong get_tmp_pte(pte_t **dst)
  * Map a page from the temporary page table to a given physical address.  This
  * function returns an address aliasing the given physical address.
  */
-ulong kmap_tmp_page(ulong addr)
+void *kmap_tmp_page(ulong addr)
 {
 	pte_t *tmp;
 	ulong tmp_addr;
 
 	if ((tmp_addr = get_tmp_pte(&tmp)) == 0)
-		return 0;
+		return NULL;
 
 	*tmp = addr | PE_P | PE_RW;
 
 	asm volatile("invlpg (%0)" : : "b" (tmp_addr));
-	return tmp_addr + (addr & 0xFFF);
+	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
 /*
  * Unmap the page associated with a given virtual address from the kernel's
  * address space.
  */
-void kunmap_page(ulong addr)
+void kunmap_page(void *addr)
 {
-	pte_t *pte = addr_to_pte(&_kernel_pgd, addr);
+	pte_t *pte = addr_to_pte(&_kernel_pgd, (ulong) addr);
 	*pte = 0;
 	asm volatile("invlpg (%0)" : : "b" (addr));
 }
@@ -410,14 +410,14 @@ int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 pmap_t pgdir_create(struct list_head *page_list)
 {
 	struct pf_info *page;
-	ulong vaddr;
+	void *vaddr;
 	unsigned pdi;
 
 	struct pf_info *kzalloc_page(void);
 	if ((page = kzalloc_page()) == NULL)
 		return NULL;
 
-	if ((vaddr = kmap_tmp_page(page->addr)) == 0) {
+	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
 		kfree_page(page);
 		return NULL;
 	}
@@ -449,17 +449,17 @@ struct pf_info *kalloc_page(void)
 struct pf_info *kzalloc_page(void)
 {
 	struct pf_info *page;
-	ulong vaddr;
+	void *vaddr;
 
 	if ((page = kalloc_page()) == NULL)
 		return NULL;
 
-	if ((vaddr = kmap_tmp_page(page->addr)) == 0) {
+	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
 		kfree_page(page);
 		return NULL;
 	}
 
-	memset((void*) vaddr, 0, FRAME_SIZE);
+	memset(vaddr, 0, FRAME_SIZE);
 	kunmap_page(vaddr);
 	return page;
 }
