@@ -44,7 +44,7 @@
 #define PE_RW 0x2
 #define PE_U  0x4
 
-extern unsigned long _kernel_pgd;
+extern pte_t _kernel_pgd;
 extern unsigned long _kernel_high_pgt;
 
 /* linker variables */

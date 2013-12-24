@@ -34,6 +34,8 @@
 
 #define TMP_PGTAB_BASE 0xB0400000
 
+#define kernel_pgdir (&_kernel_pgd)
+
 /* page table for temporary mappings */
 static PAGE_TABLE(tmp_pgtab);
 
@@ -156,11 +158,11 @@ int paging_init(ulong start, ulong end)
 	fp_end = end;
 
 	/* disable R/W flag for read-only sections */
-	page_attr_off(&_kernel_pgd, (ulong) &_urostart, (ulong) &_uroend, PE_RW);
-	page_attr_off(&_kernel_pgd, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
+	page_attr_off(kernel_pgdir, (ulong) &_urostart, (ulong) &_uroend, PE_RW);
+	page_attr_off(kernel_pgdir, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
 
 	/* set up page table for temporary mappings */
-	((pmap_t)&_kernel_pgd)[ADDR_TO_PDI(TMP_PGTAB_BASE)] =
+	kernel_pgdir[ADDR_TO_PDI(TMP_PGTAB_BASE)] =
 		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
 
 	return 0;
@@ -204,7 +206,7 @@ void *kmap_tmp_page(ulong addr)
  */
 void kunmap_page(void *addr)
 {
-	pte_t *pte = addr_to_pte(&_kernel_pgd, (ulong) addr);
+	pte_t *pte = addr_to_pte(kernel_pgdir, (ulong) addr);
 	*pte = 0;
 	asm volatile("invlpg (%0)" : : "b" (addr));
 }
@@ -273,7 +275,7 @@ void kunmap_range(void *addrp, size_t len)
 {
 	ulong addr = (ulong) addrp;
 	unsigned nr_pages = PAGES_IN_RANGE(addr, len);
-	pte_t *pte = addr_to_pte(&_kernel_pgd, addr);
+	pte_t *pte = addr_to_pte(kernel_pgdir, addr);
 	for (unsigned i = 0; i < nr_pages; i++, pte++) {
 		*pte = 0;
 		asm volatile("invlpg (%0)" : : "b" (addr + i*FRAME_SIZE));
@@ -424,7 +426,7 @@ int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 pmap_t pgdir_create(struct list_head *page_list)
 {
 	struct pf_info *page;
-	void *vaddr;
+	pmap_t vaddr;
 	unsigned pdi;
 
 	struct pf_info *kzalloc_page(void);
@@ -437,7 +439,7 @@ pmap_t pgdir_create(struct list_head *page_list)
 	}
 
 	pdi = ADDR_TO_PDI((ulong) &KERNEL_PAGE_OFFSET);
-	((pmap_t) vaddr)[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
+	vaddr[pdi] = kernel_pgdir[pdi];
 
 	list_add(&page->chain, page_list);
 	kunmap_page(vaddr);
