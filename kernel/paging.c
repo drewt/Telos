@@ -165,55 +165,6 @@ int paging_init(ulong start, ulong end)
 }
 
 /*
- * Map 'pages' pages starting at address 'start' into the address space given
- * by 'pgdir'.  Allocated pf_info structures will be put in the list
- * 'page_list'.
- */
-int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
-		struct list_head *page_list)
-{
-	pte_t *pte;
-	struct pf_info *frame;
-
-	pte = pgdir + ADDR_TO_PDI(start);
-	if (!(*pte & PE_P)) {
-		if ((frame = kzalloc_page()) == NULL)
-			return -ENOMEM;
-		*pte = frame->addr | attr | PE_P;
-		list_add_tail(&frame->chain, page_list);
-	}
-
-	pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI(start);
-	for (int i = 0; i < pages; i++, pte++) {
-		if ((frame = kalloc_page()) == NULL)
-			return -ENOMEM;
-		*pte = frame->addr | attr | PE_P;
-		list_add_tail(&frame->chain, page_list);
-	}
-
-	return 0;
-}
-
-/*
- * Get the physical address mapped to a given virtual address in a given
- * address space.
- */
-ulong virt_to_phys(pmap_t pgdir, ulong addr)
-{
-	pte_t *pte;
-
-	pte = pgdir + ADDR_TO_PDI(addr);
-	if ((*pte & PE_P) == 0)
-		return 0;
-
-	pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI(addr);
-	if ((*pte & PE_P) == 0)
-		return 0;
-
-	return (*pte & ~0xFFF) | (addr & 0xFFF);
-}
-
-/*
  * Get a free PTE from the temporary page table.  This function returns the
  * address associated with the PTE, and stores a pointer to the PTE in 'dst'.
  */
@@ -327,6 +278,69 @@ void kunmap_range(void *addrp, size_t len)
 		*pte = 0;
 		asm volatile("invlpg (%0)" : : "b" (addr + i*FRAME_SIZE));
 	}
+}
+
+/*
+ * Map 'pages' pages starting at address 'start' into the address space given
+ * by 'pgdir'.  Allocated pf_info structures will be put in the list
+ * 'page_list'.
+ */
+int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
+		struct list_head *page_list)
+{
+	pte_t *pte;
+	pmap_t k_pgdir, k_pgtab;
+	struct pf_info *frame;
+
+	if ((k_pgdir = kmap_tmp_page((ulong) pgdir)) == NULL)
+		return -ENOMEM;
+
+	pte = k_pgdir + ADDR_TO_PDI(start);
+	if (!(*pte & PE_P)) {
+		if ((frame = kzalloc_page()) == NULL)
+			goto nomem0;
+		*pte = frame->addr | attr | PE_P;
+		list_add_tail(&frame->chain, page_list);
+	}
+
+	if ((k_pgtab = kmap_tmp_page((ulong) (*pte & ~0xFFF))) == NULL)
+		goto nomem0;
+
+	pte = k_pgtab + ADDR_TO_PTI(start);
+	for (int i = 0; i < pages; i++, pte++) {
+		if ((frame = kalloc_page()) == NULL)
+			goto nomem1;
+		*pte = frame->addr | attr | PE_P;
+		list_add_tail(&frame->chain, page_list);
+	}
+
+	kunmap_page(k_pgtab);
+	kunmap_page(k_pgdir);
+	return 0;
+nomem1:
+	kunmap_page(k_pgtab);
+nomem0:
+	kunmap_page(k_pgdir);
+	return -ENOMEM;
+}
+
+/*
+ * Get the physical address mapped to a given virtual address in a given
+ * address space.
+ */
+ulong virt_to_phys(pmap_t pgdir, ulong addr)
+{
+	pte_t *pte;
+
+	pte = pgdir + ADDR_TO_PDI(addr);
+	if ((*pte & PE_P) == 0)
+		return 0;
+
+	pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI(addr);
+	if ((*pte & PE_P) == 0)
+		return 0;
+
+	return (*pte & ~0xFFF) | (addr & 0xFFF);
 }
 
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
