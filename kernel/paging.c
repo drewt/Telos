@@ -440,6 +440,7 @@ pmap_t pgdir_create(struct list_head *page_list)
 	((pmap_t) vaddr)[pdi] = ((pmap_t) &_kernel_pgd)[pdi];
 
 	list_add(&page->chain, page_list);
+	kunmap_page(vaddr);
 	return (pmap_t) page->addr;
 }
 
