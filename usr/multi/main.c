@@ -15,10 +15,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_PROCESS_H_
-#define _TELOS_PROCESS_H_
+#include <stdio.h>
+#include "multi.h"
 
-int syscreate(int(*func)(int,char**), int argc, char *argv[]);
-void sysyield(void);
+int main(int argc, char *argv[])
+{
+	printf("one: %d\n", one());
+	printf("two: %d\n", two());
 
-#endif
+	return 0;
+}

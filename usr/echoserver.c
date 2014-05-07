@@ -15,56 +15,36 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
 #include <telos/msg.h>
 #include <telos/process.h>
-#include <unistd.h>
 
 #define BUF_LEN 100
 
-static pid_t server_pid = -1;
-
-void printserver(int argc, char *argv[])
+static void die(const char *reason)
 {
-	int rv;
-	pid_t pid;
-	char buf[BUF_LEN];
-
-	server_pid = getpid();
-
-	for (;;) {
-		pid = 0;
-		if ((rv = recv(&pid, buf, BUF_LEN)) == -1) {
-			puts("printserver: recv error");
-			return;
-		}
-		if (write(STDOUT_FILENO, buf, rv) == -1) {
-			puts("printserver: write error");
-			return;
-		}
-		if (reply(pid, NULL, 0) == -1) {
-			puts("printserver: reply error");
-			return;
-		}
-	}
+	printf("echoserver: %s\n", reason);
+	exit(-1);
 }
 
-void printclient(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-	char reply_blk;
+	printf("%d\n", getpid());
 
-	if (argc < 1) {
-		puts("usage: printclient [string]");
-		return;
+	for (;;) {
+		int rv;
+		pid_t pid = 0;
+		char buf[BUF_LEN];
+
+		if ((rv = recv(&pid, buf, BUF_LEN)) == -1)
+			die("recv error");
+		if (write(STDOUT_FILENO, buf, rv) == -1)
+			die("write error");
+		if (reply(pid, NULL, 0) == -1)
+			die("reply error");
 	}
-	for (int i = 0; argv[i] != NULL; i++) {
-		if (send(server_pid, argv[i], strlen(argv[i])+1, &reply_blk, 1) == -1)
-			puts("printclient: send error");
-		else
-			printf(" ");
-	}
-	puts("");
 }

@@ -134,7 +134,7 @@ static void strtok_test(void)
 		puts("OK");
 }
 
-void strtest(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	strcmp_test();
 	strcat_test();
@@ -142,4 +142,5 @@ void strtest(int argc, char *argv[])
 	strchr_test();
 	strrchr_test();
 	strtok_test();
+	return 0;
 }

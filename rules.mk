@@ -55,6 +55,11 @@ quiet_cmd_ld    = LD      $@
 quiet_cmd_sld   = LD      $@
       cmd_sld   = $(LD) -T $(1) $(LDFLAGS) -o $@
 
+# LD for user programs
+quiet_cmd_uld = ULD     $@
+      cmd_uld = $(LD) -r $^ -o $@ && \
+		$(OBJCOPY) --redefine-sym main=$(1) $@
+
 # generate dependencies file
 quiet_cmd_dep   = DEP     $@
       cmd_dep   = echo "$@ `$(CC) $(ALLCFLAGS) -MM -I $(incdir) $(CPPFLAGS) $<`" > $@

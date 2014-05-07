@@ -56,12 +56,13 @@ static void sigusr1_handler(int signo)
 		puts("c");
 }
 
-static void sig_proc()
+static int sig_proc()
 {
 	sleep(1);
 	kill(sigtest_pid, SIGUSR1);
 	sleep(1);
 	kill(sigtest_pid, SIGUSR2);
+	return 0;
 }
 
 static void kill_test(void)
@@ -134,7 +135,7 @@ static void sigaction_test(void)
 		puts("FAIL: rejected valid signo");
 }
 
-void sigtest(void *arg)
+int main(void)
 {
 	sigtest_pid = getpid();
 
@@ -142,4 +143,6 @@ void sigtest(void *arg)
 	sigprocmask_test();
 	priority_test();
 	sigaction_test();
+
+	return 0;
 }

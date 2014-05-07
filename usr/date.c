@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <time.h>
 
-void date(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	struct tm tm;
 	time_t t = time(NULL);
@@ -28,4 +28,5 @@ void date(int argc, char *argv[])
 
 	printf("%d:%d:%d %d/%d/%d\n", tm.tm_hour, tm.tm_min,
 			tm.tm_sec, tm.tm_mon+1, tm.tm_mday, tm.tm_year+1900);
+	return 0;
 }

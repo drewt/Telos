@@ -23,7 +23,7 @@
 #define M 100
 #define A 144
 
-void memtest(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	void *mem[N];
 
@@ -31,7 +31,7 @@ void memtest(int argc, char *argv[])
 	for (int i = 0; i < N; i++) {
 		if ((mem[i] = palloc()) == NULL) {
 			printf("memtest[%d]: palloc returned NULL\n", i);
-			return;
+			return -1;
 		}
 		memset(mem[i], 0xFF, 4096);
 	}
@@ -50,4 +50,5 @@ void memtest(int argc, char *argv[])
 	puts("Testing free()...");
 	for (int i = N-1; i >= 0; i--)
 		free(mem[i]);*/
+	return 0;
 }

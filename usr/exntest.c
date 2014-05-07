@@ -24,20 +24,22 @@
 
 int _dbz_ = 0;
 
-void dbz_proc()
+int dbz_proc()
 {
 	printf("Dividing by zero... ");
 	_dbz_ = 1 / _dbz_;
 	printf("error\n");
+	return 0;
 }
 
 void sigchld_handler(int sig) {}
 
-void exntest(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	signal(SIGCHLD, sigchld_handler);
 
 	syscreate(dbz_proc, 0, 0);
 	for (int sig = 0; sig != SIGCHLD; sig = sigwait());
 	printf("done.\n");
+	return 0;
 }

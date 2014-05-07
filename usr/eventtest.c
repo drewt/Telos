@@ -22,13 +22,14 @@
 
 #include <telos/process.h>
 
-static void sleep_proc(int argc, char *argv[])
+static int sleep_proc(int argc, char *argv[])
 {
 	sleep(argc);
 	printf("%d ", argc);
+	return 0;
 }
 
-static void nanosleep_proc(int argc, char *argvp[])
+static int nanosleep_proc(int argc, char *argvp[])
 {
 	struct timespec spec = {
 		.tv_sec = argc,
@@ -36,6 +37,7 @@ static void nanosleep_proc(int argc, char *argvp[])
 	};
 	nanosleep(&spec, NULL);
 	printf("%d ", argc);
+	return 0;
 }
 
 static void sleep_test(void)
@@ -120,9 +122,10 @@ static void timer_test(void)
 	sleep(2);
 }
 
-void eventtest(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	sleep_test();
 	alarm_test();
 	timer_test();
+	return 0;
 }

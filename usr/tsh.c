@@ -35,14 +35,15 @@
 
 #define PROMPT "TELOS> "
 
-typedef void(*funcptr)(int, char**);
+typedef int(*funcptr)(int, char**);
 
-void tsh();
+int main(int argc, char *argv[]);
 
-static void help(int argc, char *argv[]);
-extern void echo(int argc, char *argv[]);
-extern void printserver(int argc, char *argv[]);
-extern void printclient(int argc, char *argv[]);
+static int help(int argc, char *argv[]);
+extern int echo(int argc, char *argv[]);
+extern int echoserver(int argc, char *argv[]);
+extern int echoclient(int argc, char *argv[]);
+extern int multi(int argc, char *argv[]);
 
 struct program {
 	funcptr f;
@@ -64,18 +65,20 @@ static struct program progtab[] = {
 	{ consoletest,	"consoletest"	},
 	{ echo,		"echo"		},
 	{ date,		"date"		},
-	{ printserver,	"printserver"	},
-	{ printclient,	"printclient"	},
-	{ tsh,		"tsh"		}
+	{ echoserver,   "echoserver"    },
+	{ echoclient,   "echoclient"    },
+	{ multi,        "multi"         },
+	{ main,		"tsh"		}
 };
 
 static void sigchld_handler(int signo) {}
 
-static void help(int argc, char *argv[])
+static int help(int argc, char *argv[])
 {
 	puts("Valid commands are:");
 	for (size_t i = 0; i < N_CMDS; i++)
 		printf("\t%s\n", progtab[i].name);
+	return 0;
 }
 
 static funcptr lookup(char *in)
@@ -163,7 +166,7 @@ static int parse_input(char *in, char **name, char *(*args)[])
 	return bg;
 }
 
-void tsh()
+int main(int _argc, char *_argv[])
 {
 	funcptr p;
 	char *name;
@@ -178,7 +181,7 @@ void tsh()
 	while (1) {
 		printf(PROMPT);
 		if (read_line(in, IN_LEN) == EOF)
-			return;
+			return 0;
 		if (*in == '\0')
 			continue;
 
@@ -189,7 +192,7 @@ void tsh()
 		}
 
 		if (p == SHELL_EXIT)
-			return;
+			return 0;
 		if (p == SHELL_CLEAR) {
 			ioctl(STDOUT_FILENO, CONSOLE_IOCTL_CLEAR);
 			continue;

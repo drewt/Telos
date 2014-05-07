@@ -23,7 +23,7 @@
 
 #include <telos/process.h>
 
-static void read_proc()
+static int read_proc()
 {
 	int fd;
 	char in[5];
@@ -31,20 +31,21 @@ static void read_proc()
 	puts("Reading: ");
 	if ((fd = open("/dev/kbd", 0)) == -1) {
 		puts("Error opening keyboard");
-		return;
+		return -1;
 	}
 
 	if (read(fd, in, 4) == -1) {
 		puts("Error reading from keyboard");
-		return;
+		return -1;
 	}
 	in[4] = '\0';
 	puts(in);
+	return 0;
 }
 
 static void sigchld_handler(int signo) {}
 
-void kbdtest(void *arg)
+int main(void)
 {
 	int sig;
 
@@ -58,4 +59,5 @@ void kbdtest(void *arg)
 
 	printf("Enter any key to exit: ");
 	getchar(); puts("");
+	return 0;
 }

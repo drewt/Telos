@@ -21,11 +21,12 @@
 
 #include <telos/process.h>
 
-void tsh(int argc, char **argv);
+int tsh(int argc, char **argv);
 
-void idle_proc()
+int idle_proc()
 {
 	asm volatile("halt: hlt\njmp halt");
+	return 0;
 }
 
 static void sigchld_handler(int signo) {}

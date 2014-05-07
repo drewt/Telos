@@ -18,15 +18,15 @@
 #ifndef _USR_TEST_H_
 #define _USR_TEST_H_
 
-void exntest(int argc, char *argv[]);
-void msgtest(int argc, char *argv[]);
-void sigtest(int argc, char *argv[]);
-void kbdtest(int argc, char *argv[]);
-void strtest(int argc, char *argv[]);
-void proctest(int argc, char *argv[]);
-void eventtest(int argc, char *argv[]);
-void memtest(int argc, char *argv[]);
-void consoletest(int argc, char *argv[]);
-void date(int argc, char *argv[]);
+int exntest(int argc, char *argv[]);
+int msgtest(int argc, char *argv[]);
+int sigtest(int argc, char *argv[]);
+int kbdtest(int argc, char *argv[]);
+int strtest(int argc, char *argv[]);
+int proctest(int argc, char *argv[]);
+int eventtest(int argc, char *argv[]);
+int memtest(int argc, char *argv[]);
+int consoletest(int argc, char *argv[]);
+int date(int argc, char *argv[]);
 
 #endif

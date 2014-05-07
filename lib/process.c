@@ -23,7 +23,7 @@ typedef int pid_t;
 /*-----------------------------------------------------------------------------
  * Create a process */
 //-----------------------------------------------------------------------------
-pid_t syscreate(void(*func)(int,char**), int argc, char *argv[])
+pid_t syscreate(int(*func)(int,char**), int argc, char *argv[])
 {
 	return syscall3(SYS_CREATE, func, (void*) argc, argv);
 }

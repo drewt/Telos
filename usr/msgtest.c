@@ -15,6 +15,7 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,36 +25,36 @@
 
 pid_t main_pid;
 
-void recv_proc(int argc, char *argv[])
+void die(const char *msg)
+{
+	printf("error: %s\n", msg);
+	exit(-1);
+}
+
+int recv_proc(int argc, char *argv[])
 {
 	char msg[40];
 
-	if (recv(&main_pid, msg, 40) == -1) {
-		puts("recv error: returned -1");
-		return;
-	}
-	if (strcmp(msg, argv[0])) {
-		puts("recv error: msg != arg");
-		return;
-	}
+	if (recv(&main_pid, msg, 40) == -1)
+		die("recv returned -1");
+	if (strcmp(msg, argv[0]))
+		die("recv: msg != arg");
+	return 0;
 }
 
-void send_proc()
+int send_proc()
 {
 	char msg[40] = "msg";
 	char reply[40];
 
-	if (send(main_pid, msg, 4, reply, 40) == -1) {
-		puts("send error: returned -1");
-		return;
-	}
-	if (strcmp(msg, reply)) {
-		puts("reply error: msg != reply");
-		return;
-	}
+	if (send(main_pid, msg, 4, reply, 40) == -1)
+		die("send returned -1");
+	if (strcmp(msg, reply))
+		die("reply: msg != reply");
+	return 0;
 }
 
-void msgtest(void *arg)
+int main(void)
 {
 	pid_t pids[10];
 	char buf[40];
@@ -73,22 +74,17 @@ void msgtest(void *arg)
 		pids[i] = syscreate(send_proc, 0, NULL);
 	sleep(1);
 	for (int i = 0; i < 10; i++) {
-		if (recv(&pids[i], buf, 40) == -1) {
-			puts("recv error: returned -1");
-			return;
-		}
-		if (strcmp(buf, msg)) {
-			puts("recv error: buf != msg");
-			return;
-		}
+		if (recv(&pids[i], buf, 40) == -1)
+			die("recv returned -1");
+		if (strcmp(buf, msg))
+			die("recv: buf != msg");
 		buf[0] = '\0';
 	}
 
 	puts("Testing block-on-reply...");
 	for (int i = 0; i < 10; i++) {
-		if (reply(pids[i], msg, 4) == -1) {
-			puts("reply error: returned -1");
-			return;
-		}
+		if (reply(pids[i], msg, 4) == -1)
+			die("reply returned -1");
 	}
+	return 0;
 }

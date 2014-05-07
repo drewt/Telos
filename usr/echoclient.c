@@ -15,10 +15,32 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_PROCESS_H_
-#define _TELOS_PROCESS_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
 
-int syscreate(int(*func)(int,char**), int argc, char *argv[]);
-void sysyield(void);
+#include <telos/msg.h>
+#include <telos/process.h>
 
-#endif
+int main(int argc, char *argv[])
+{
+	char reply_blk;
+	pid_t server_pid;
+
+	if (argc < 2) {
+		puts("usage: echoclient <server-pid> <string>");
+		return -1;
+	}
+
+	server_pid = atoi(argv[0]);
+
+	for (int i = 1; argv[i] != NULL; i++) {
+		if (send(server_pid, argv[i], strlen(argv[i])+1, &reply_blk, 1) == -1)
+			puts("echoclient: send error");
+		else
+			putchar(' ');
+	}
+	putchar(' ');
+	return 0;
+}
