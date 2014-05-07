@@ -18,6 +18,16 @@
 #include <stddef.h>
 #include <string.h>
 
+int atoi(const char *nptr)
+{
+	int n;
+	for (n = 0; *nptr != '\0'; nptr++) {
+		n *= 10;
+		n += *nptr - '0';
+	}
+	return n;
+}
+
 /*-----------------------------------------------------------------------------
  * Copies len bytes from src to dst */
 //-----------------------------------------------------------------------------
