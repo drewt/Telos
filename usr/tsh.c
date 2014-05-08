@@ -139,7 +139,7 @@ static char *consume_argument(char *s)
 	return s;
 }
 
-static int parse_input(char *in, char **name, char *(*args)[])
+static int parse_input(char *in, char *(*args)[])
 {
 	int i;
 	int bg = 0;
@@ -147,14 +147,14 @@ static int parse_input(char *in, char **name, char *(*args)[])
 
 	/* get program name */
 	skip_ws(in);
-	*name = in;
+	(*args)[0] = in;
 	skip_nonws(in);
 
 	if (*in != '\0')
 		*in++ = '\0';
 
 	/* get arguments */
-	for (i = 0, tmp = consume_argument(in); tmp != NULL;
+	for (i = 1, tmp = consume_argument(in); tmp != NULL;
 			tmp = consume_argument(NULL), i++) {
 		if (*tmp == '&' && *(tmp+1) == '\0')
 			bg = 1;
@@ -169,7 +169,6 @@ static int parse_input(char *in, char **name, char *(*args)[])
 int main(int _argc, char *_argv[])
 {
 	funcptr p;
-	char *name;
 	char in[IN_LEN];
 	char *argv[MAX_ARGS];
 	int argc;
@@ -185,9 +184,9 @@ int main(int _argc, char *_argv[])
 		if (*in == '\0')
 			continue;
 
-		bg = parse_input(in, &name, &argv);
-		if (!(p = lookup(name))) {
-			printf("tsh: '%s' not found\n", in);
+		bg = parse_input(in, &argv);
+		if (!(p = lookup(argv[0]))) {
+			printf("tsh: '%s' not found\n", argv[0]);
 			continue;
 		}
 

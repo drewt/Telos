@@ -28,14 +28,14 @@ int main(int argc, char *argv[])
 	char reply_blk;
 	pid_t server_pid;
 
-	if (argc < 2) {
+	if (argc < 3) {
 		puts("usage: echoclient <server-pid> <string>");
 		return -1;
 	}
 
-	server_pid = atoi(argv[0]);
+	server_pid = atoi(argv[1]);
 
-	for (int i = 1; argv[i] != NULL; i++) {
+	for (int i = 2; argv[i] != NULL; i++) {
 		if (send(server_pid, argv[i], strlen(argv[i])+1, &reply_blk, 1) == -1)
 			puts("echoclient: send error");
 		else
