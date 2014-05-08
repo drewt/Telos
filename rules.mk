@@ -58,6 +58,7 @@ quiet_cmd_sld   = LD      $@
 # LD for user programs
 quiet_cmd_uld = ULD     $@
       cmd_uld = $(LD) -r $^ -o $@ && \
+		$(OBJCOPY) -G main $@ && \
 		$(OBJCOPY) --redefine-sym main=$(1) $@
 
 # generate dependencies file
