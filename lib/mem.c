@@ -197,6 +197,34 @@ void *realloc(void *ptr, size_t size)
 	return newptr;
 }
 
+int posix_memalign(void **memptr, size_t alignment, size_t size)
+{
+	void *mem;
+
+	if (alignment % 2 != 0 || alignment % sizeof(void*) != 0)
+		return EINVAL;
+
+	/* FIXME: this strategy is wasteful if alignment is large */
+	if ((mem = malloc(size + alignment)) == NULL)
+		return ENOMEM;
+
+	*memptr = (void*) round_up((unsigned long)mem, alignment);
+	return 0;
+}
+
+void *aligned_alloc(size_t alignment, size_t size)
+{
+	void *mem;
+
+	/* weird restriction from C11 */
+	if (size % alignment != 0)
+		return NULL;
+
+	if (posix_memalign(&mem, alignment, size))
+		return NULL;
+	return mem;
+}
+
 void *sbrk(long increment)
 {
 	unsigned long old;

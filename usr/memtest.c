@@ -97,10 +97,45 @@ static void realloc_test(void)
 	puts("OK");
 }
 
+static inline int aligned(void *ptr, size_t alignment)
+{
+	return !((unsigned long)ptr & (alignment - 1));
+}
+
+static int aligned_alloc_test_alloc(size_t alignment, size_t size)
+{
+	unsigned char *ptr = aligned_alloc(alignment, size);
+	if (ptr == NULL)
+		return -1;
+	if (!aligned(ptr, alignment))
+		return -2;
+	return 0;
+}
+
+static void aligned_alloc_test(void)
+{
+	printf("testing aligned_alloc()... ");
+
+	#define run_test(alignment, size) \
+		if (aligned_alloc_test_alloc(alignment, size)) { \
+			printf("error: aligned_alloc(%lu, %lu) failed\n", \
+					alignment, size); \
+			return; \
+		}
+
+	run_test(16, 16);
+	run_test(16, 32);
+	run_test(32, 32);
+	run_test(32, 64);
+	#undef run_test
+	puts("OK");
+}
+
 void memtest(int argc, char *argv[])
 {
 	malloc_init();
 	sbrk_test();
 	malloc_test();
 	realloc_test();
+	aligned_alloc_test();
 }
