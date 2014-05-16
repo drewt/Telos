@@ -2,7 +2,8 @@ UCFLAGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	  -Wno-attributes -fno-builtin -ffreestanding -std=gnu99 -I $(incdir)
 
 objects = consoletest.o echo.o eventtest.o kbdtest.o memtest.o msgtest.o \
-	  printserver.o proctest.o sigtest.o strtest.o exntest.o tsh.o date.o
+	  printserver.o proctest.o sigtest.o strtest.o exntest.o tsh.o date.o \
+	  jmptest.o
 targets = usr.a
 clean = $(objects) $(targets)
 

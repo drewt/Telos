@@ -15,19 +15,30 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _USR_TEST_H_
-#define _USR_TEST_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <setjmp.h>
 
-void exntest(int argc, char *argv[]);
-void msgtest(int argc, char *argv[]);
-void sigtest(int argc, char *argv[]);
-void kbdtest(int argc, char *argv[]);
-void strtest(int argc, char *argv[]);
-void proctest(int argc, char *argv[]);
-void eventtest(int argc, char *argv[]);
-void memtest(int argc, char *argv[]);
-void consoletest(int argc, char *argv[]);
-void jmptest(int argc, char *argv[]);
-void date(int argc, char *argv[]);
+jmp_buf env;
 
-#endif
+void f1(void)
+{
+	longjmp(env, 1);
+	puts("ERROR: returning from f1");
+}
+
+void f0(void)
+{
+	f1();
+	puts("ERROR: returning from f0");
+}
+
+void jmptest(int argc, char *argv[])
+{
+	printf("testing longjmp()... ");
+
+	if (setjmp(env) == 0)
+		f0();
+	else
+		puts("done");
+}
