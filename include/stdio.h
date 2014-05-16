@@ -26,6 +26,8 @@
 
 typedef struct {
 	int fd;
+	unsigned char buf;
+	size_t buffered;
 } FILE;
 
 extern FILE *stdin;
@@ -46,6 +48,8 @@ int putchar(int c);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
+int getc(FILE *stream);
+int ungetc(int c, FILE *stream);
 int getchar(void);
 char *gets(char *s, int size);
 
