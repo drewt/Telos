@@ -23,6 +23,7 @@
 struct sigaction;
 struct sigevent;
 
+struct timespec;
 struct itimerspec;
 
 extern struct pcb *current;
@@ -44,8 +45,8 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len);
 int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		const void *src, size_t len);
-ulong kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
-void kunmap_range(ulong addr, size_t len);
+void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
+void kunmap_range(void *addr, size_t len);
 
 #define copy_to_current(dst, src, len) \
 	copy_to_user(current, dst, src, len)
@@ -58,9 +59,7 @@ void exn_fpe(void);
 void exn_ill_instr(void);
 
 /* service routines */
-long sys_malloc(unsigned int size, void **p);
-long sys_free(void *ptr);
-long sys_palloc(void **p);
+long sys_sbrk(long inc, ulong *oldbrk);
 long sys_create(void(*func)(int,char*), int argc, char **argv);
 long sys_yield(void);
 long sys_exit(int status);
@@ -86,6 +85,9 @@ long sys_read(int fd, void *buf, int nbyte);
 long sys_write(int fd, void *buf, int nbyte);
 long sys_ioctl(int fd, unsigned long command, va_list vargs);
 long sys_time(time_t *t);
+long sys_clock_getres(clockid_t clockid, struct timespec *res);
+long sys_clock_gettime(clockid_t clockid, struct timespec *tp);
+long sys_clock_settime(clockid_t clockid, struct timespec *tp);
 long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		timer_t *timerid);
 long sys_timer_delete(timer_t timerid);

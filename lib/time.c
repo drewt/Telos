@@ -54,6 +54,21 @@ time_t time(time_t *t)
 	return syscall1(SYS_TIME, t);
 }
 
+int clock_getres(clockid_t clockid, struct timespec *res)
+{
+	return syscall2(SYS_CLOCK_GETRES, (void*) clockid, res);
+}
+
+int clock_gettime(clockid_t clockid, struct timespec *tp)
+{
+	return syscall2(SYS_CLOCK_GETTIME, (void*) clockid, tp);
+}
+
+int clock_settime(clockid_t clockid, struct timespec *tp)
+{
+	return syscall2(SYS_CLOCK_SETTIME, (void*) clockid, tp);
+}
+
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid)
 {

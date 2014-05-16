@@ -23,6 +23,9 @@
 #include <kernel/list.h>
 #include <kernel/signal.h>
 
+#define STACK_PAGES 8
+#define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)
+
 extern void exit(int status);
 
 static inline struct pcb *get_free_pcb(void)
@@ -33,7 +36,7 @@ static inline struct pcb *get_free_pcb(void)
 	return (i == PT_SIZE) ? NULL : &proctab[i];
 }
 
-static void pcb_init(struct pcb *p)
+static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 {
 	/* init signal data */
 	p->sig_pending = 0;
@@ -59,6 +62,11 @@ static void pcb_init(struct pcb *p)
 	INIT_LIST_HEAD(&p->heap_mem);
 	INIT_LIST_HEAD(&p->page_mem);
 	INIT_LIST_HEAD(&p->posix_timers);
+
+	p->timestamp = tick_count;
+	p->pid += PT_SIZE;
+	p->parent_pid = parent;
+	p->flags = flags;
 }
 
 long sys_create(void(*func)(int,char*), int argc, char **argv)
@@ -77,13 +85,9 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 	if ((p = get_free_pcb()) == NULL)
 		return -EAGAIN;
 
-	p->timestamp = tick_count;
-	p->pid += PT_SIZE;
-	p->parent_pid = 0;
-	p->flags = flags | PFLAG_SUPER;
-	p->pgdir = (pmap_t) KERNEL_TO_PHYS(&_kernel_pgd);
+	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	pcb_init(p);
+	p->pgdir = (pmap_t) KERNEL_TO_PHYS(&_kernel_pgd);
 
 	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
 		return -ENOMEM;
@@ -103,82 +107,78 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 	return p->pid;
 }
 
-int create_user_process(void(*func)(int,char*), int argc, char **argv,
-		ulong flags)
+/* TODO: something better than this crap */
+static void copy_args(struct pcb *p, int argc, char **argv)
 {
-	struct pcb	*p;
-	ulong		v_stack, esp;
-	ulong		*args;
-	void		*v_frame;
-
-	if ((p = get_free_pcb()) == NULL)
-		return -EAGAIN;
-
-	p->timestamp = tick_count;
-	p->pid += PT_SIZE;
-	p->parent_pid = current->pid;
-	p->flags = flags;
-
-	pcb_init(p);
-
-	p->pgdir = pgdir_create(&p->page_mem);
-	if (p->pgdir == NULL)
-		return -ENOMEM;
-
-#if 1
-	ulong v_heap = 0x01000000;
-	if (map_pages(p->pgdir, v_heap, 1, PE_U | PE_RW, &p->page_mem))
-		return -ENOMEM;
-
 	char *kargv[argc];
+	char **uargv;
+	ulong arg_addr;
+
 	copy_from_current(kargv, argv, sizeof(char*) * argc);
 
-	ulong arg_addr = v_heap + 128;
-	char ** uargv = (void*) kmap_tmp_range(p->pgdir, v_heap, 128);
+	arg_addr = p->heap_start + 128;
+	uargv = kmap_tmp_range(p->pgdir, p->heap_start, 128);
 	for (int i = 0; i < argc; i++, arg_addr += 128) {
 		uargv[i] = (char*) arg_addr;
 		copy_string_through_user(p, current, (void*) arg_addr,
 				kargv[i], 128);
 	}
+}
 
-	void *p_frame;
-	v_stack = 0x00C00000;
-	if (map_pages(p->pgdir, v_stack, 8, PE_U | PE_RW, &p->page_mem))
+int create_user_process(void(*func)(int,char*), int argc, char **argv,
+		ulong flags)
+{
+	struct pcb	*p;
+	struct pf_info	*it;
+	ulong		v_stack, esp;
+	ulong		*args;
+	void		*v_frame;
+	void		*p_frame;
+
+	if ((p = get_free_pcb()) == NULL)
+		return -EAGAIN;
+
+	pcb_init(p, current->pid, flags);
+
+	p->pgdir = pgdir_create(&p->page_mem);
+	if (p->pgdir == NULL)
 		return -ENOMEM;
 
+	p->heap_start = 0x01000000;
+	p->heap_end = p->brk = p->heap_start + FRAME_SIZE;
+	if (map_pages_user(p, p->heap_start, 1, PE_U | PE_RW))
+		goto abort;
+
+	copy_args(p, argc, argv);
+
+	v_stack = 0x00C00000;
+	if (map_pages_user(p, v_stack, STACK_PAGES, PE_U | PE_RW))
+		goto abort;
+
+	/* set up iret frame */
 	v_frame = (void*) (v_stack + 32 * sizeof(struct ucontext));
-	p_frame = (void*) kmap_tmp_range(p->pgdir, (ulong) v_frame,
+	p_frame = kmap_tmp_range(p->pgdir, (ulong) v_frame,
 			sizeof(struct ucontext));
 	esp = v_stack + STACK_SIZE - 128;
 	put_iret_uframe(p_frame, (ulong) func, esp);
-	kunmap_range((ulong) p_frame, sizeof(struct ucontext));
+	kunmap_range(p_frame, sizeof(struct ucontext));
 
-	args = (void*) kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
+	/* set up stack for main() */
+	args = kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
-	args[2] = (ulong) v_heap;
-	kunmap_range((ulong) args, sizeof(ulong) * 3);
-
-#else
-	if ((v_stack = (ulong) kmalloc(STACK_SIZE)) == 0)
-		return -ENOMEM;
-	list_insert_tail(&p->heap_mem, (list_entry_t)mem_ptoh((void*)v_stack));
-
-	v_frame = (void*) ((ulong) v_stack + 32*U_CONTEXT_SIZE);
-	esp = v_stack + STACK_SIZE - 128;
-	put_iret_frame(v_frame, (ulong) func, esp);
-
-	args = (ulong*) esp;
-	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = (ulong) argv;
-#endif
+	args[2] = (ulong) p->heap_start;
+	kunmap_range(args, sizeof(ulong) * 3);
 
 	p->esp = v_frame;
 	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
 
 	ready(p);
 	return p->pid;
+abort:
+	dequeue_iterate (it, struct pf_info, chain, &p->page_mem)
+		kfree_page(it);
+	return -ENOMEM;
 }
 
 /*-----------------------------------------------------------------------------
@@ -204,7 +204,7 @@ long sys_exit(int status)
 	pit = &proctab[PT_INDEX(current->parent_pid)];
 	__kill(pit, SIGCHLD);
 
-	// free memory allocated to process
+	/* free memory allocated to process */
 	dequeue_iterate (mit, struct pf_info, chain, &current->page_mem)
 		kfree_page(mit);
 	dequeue_iterate (hit, struct mem_header, chain, &current->heap_mem)

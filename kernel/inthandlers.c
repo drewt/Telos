@@ -82,9 +82,9 @@ static inline void exn_kill(struct ucontext *cx, int sig)
 
 void exn_page_fault(void)
 {
+	ulong error, eip, addr;
 	kprintf("page_fault! %d\n", current->pid);
 	for(;;);
-	ulong error, eip, addr;
 
 	error = ((struct gp_regs*)current->esp)->stack[0];
 	eip   = ((struct gp_regs*)current->esp)->stack[1];
@@ -133,17 +133,22 @@ void exn_err(unsigned int num, struct gp_regs reg)
 	print_cpu_context(current->esp);
 }
 
-#define MAKE_HANDLER(name,x)		\
-static void name(void) {		\
-	asm volatile(			\
+asm("\n"
+"_hlt:"
+	"hlt		\n"
+	"jmp _hlt	\n"
+);
+
+#define MAKE_HANDLER(name, x)		\
+void name(void);			\
+asm("\n"				\
+#name ":"				\
 	"pusha			\n"	\
 	"pushl $"x"		\n"	\
 	"call  exn_err		\n"	\
-	"_hlt"x": "			\
-		"hlt		\n"	\
-		"jmp _hlt"x"	\n"	\
-	);				\
-}
+	"jmp _hlt		\n"	\
+);
+
 
 MAKE_HANDLER(int0, "0")
 MAKE_HANDLER(int1, "1")

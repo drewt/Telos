@@ -18,37 +18,125 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
-#define N 25
-#define M 100
-#define A 144
+#define N 512
 
-int main(int argc, char *argv[])
+extern void print_free_list(void);
+
+static void sbrk_test(void)
 {
-	void *mem[N];
+	unsigned char *brk = sbrk(N);
 
-	puts("Testing palloc()...");
-	for (int i = 0; i < N; i++) {
-		if ((mem[i] = palloc()) == NULL) {
-			printf("memtest[%d]: palloc returned NULL\n", i);
-			return -1;
-		}
-		memset(mem[i], 0xFF, 4096);
+	for (int i = 0; i < N; i++)
+		brk[i] = 0xFF;
+}
+
+static void malloc_test(void)
+{
+	unsigned char *t[N];
+	unsigned char *m0 = malloc(N);
+	unsigned char *m1 = malloc(N);
+	unsigned char *brk = sbrk(0);
+
+	printf("testing malloc()... ");
+
+	if (m0 >= brk || m1 >= brk) {
+		printf("error: allocated memory above brk\n");
+		return;
 	}
 
-	unsigned long *bad = (void*) (0x00112000 + 0xC0000000);
-	*bad = 0xFF;
+	memset(m1, 0, N);
+	memset(m0, 1, N);
 
-	/*puts("Testing malloc()...");
 	for (int i = 0; i < N; i++) {
-		if ((mem[i] = malloc(i*M+A)) == NULL) {
-			puts("memtest: malloc returned NULL");
+		if (m1[i] != 0) {
+			printf("error: separately allocated blocks overlap\n");
 			return;
 		}
 	}
 
-	puts("Testing free()...");
-	for (int i = N-1; i >= 0; i--)
-		free(mem[i]);*/
+	free(m1);
+	free(m0);
+
+	for (int i = 0; i < N; i++)
+		t[i] = malloc(N+i);
+	for (int i = 0; i < N; i++)
+		memset(t[i], 0xAD, N+i);
+	for (int i = 0; i < N; i++)
+		free(t[i]);
+
+	puts("OK");
+}
+
+static void realloc_test(void)
+{
+	unsigned char *ptr;
+
+	printf("testing realloc()... ");
+
+	if ((ptr = realloc(NULL, N)) == NULL) {
+		printf("error: realloc() failed\n");
+		return;
+	}
+
+	memset(ptr, 0xAD, N);
+
+	if ((ptr = realloc(ptr, N*2)) == NULL) {
+		printf("error: realloc() failed\n");
+		return;
+	}
+
+	for (int i = 0; i < N; i++) {
+		if (ptr[i] != 0xAD) {
+			printf("error: realloc clobbered memory\n");
+			return;
+		}
+	}
+
+	puts("OK");
+}
+
+static inline int aligned(void *ptr, size_t alignment)
+{
+	return !((unsigned long)ptr & (alignment - 1));
+}
+
+static int aligned_alloc_test_alloc(size_t alignment, size_t size)
+{
+	unsigned char *ptr = aligned_alloc(alignment, size);
+	if (ptr == NULL)
+		return -1;
+	if (!aligned(ptr, alignment))
+		return -2;
+	return 0;
+}
+
+static void aligned_alloc_test(void)
+{
+	printf("testing aligned_alloc()... ");
+
+	#define run_test(alignment, size) \
+		if (aligned_alloc_test_alloc(alignment, size)) { \
+			printf("error: aligned_alloc(%lu, %lu) failed\n", \
+					alignment, size); \
+			return; \
+		}
+
+	run_test(16, 16);
+	run_test(16, 32);
+	run_test(32, 32);
+	run_test(32, 64);
+	#undef run_test
+	puts("OK");
+}
+
+int main(int argc, char *argv[])
+{
+	malloc_init();
+	sbrk_test();
+	malloc_test();
+	realloc_test();
+	aligned_alloc_test();
 	return 0;
 }

@@ -20,11 +20,7 @@
 
 #include <kernel/list.h>
 
-#define FRAME_POOL_ADDR 0x400000
-#define FRAME_POOL_SIZE 0x400000
-#define FRAME_POOL_END  (FRAME_POOL_ADDR+FRAME_POOL_SIZE)
 #define FRAME_SIZE 4096
-#define NR_FRAMES (FRAME_POOL_SIZE / FRAME_SIZE)
 
 #define KERNEL_TO_PHYS(addr) \
 	((ulong) (addr) - (ulong) &KERNEL_PAGE_OFFSET)
@@ -48,7 +44,7 @@
 #define PE_RW 0x2
 #define PE_U  0x4
 
-extern unsigned long _kernel_pgd;
+extern pte_t _kernel_pgd;
 extern unsigned long _kernel_high_pgt;
 
 /* linker variables */
@@ -82,12 +78,16 @@ unsigned long mem_init(struct multiboot_info **info);
 void *hmalloc(unsigned int size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
 struct pf_info *kalloc_page(void);
+struct pf_info *kzalloc_page(void);
 void kfree_page(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 pmap_t pgdir_create(struct list_head *page_list);
 ulong virt_to_phys(pmap_t pgdir, ulong addr);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		struct list_head *page_list);
+
+#define map_pages_user(p, start, pages, attr) \
+	map_pages((p)->pgdir, start, pages, attr, &(p)->page_mem)
 
 static inline struct mem_header *mem_ptoh(void *addr)
 {

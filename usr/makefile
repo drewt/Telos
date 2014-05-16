@@ -4,7 +4,7 @@ UCFLAGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 submakes = multi
 objects = consoletest.o echo.o echoclient.o echoserver.o eventtest.o \
 	  kbdtest.o memtest.o msgtest.o proctest.o sigtest.o strtest.o \
-	  exntest.o tsh.o date.o \
+	  exntest.o jmptest.o tsh.o date.o \
 	  $(foreach var,$(submakes),$(var)/telos_obj.o )
 targets = usr.a
 clean = $(objects) $(targets)

@@ -19,22 +19,41 @@
 #include <stdio.h>
 #include <unistd.h>
 
-FILE *stdin  = &((FILE) { .fd = 0 });
-FILE *stdout = &((FILE) { .fd = 1 });
-FILE *stderr = &((FILE) { .fd = 2 });
+FILE *stdin  = &((FILE) { .fd = 0, .buffered = 0 });
+FILE *stdout = &((FILE) { .fd = 1, .buffered = 0 });
+FILE *stderr = &((FILE) { .fd = 2, .buffered = 0 });
+
+int getc(FILE *stream)
+{
+	unsigned char c;
+
+	if (stream->buffered) {
+		stream->buffered = 0;
+		return stream->buf;
+	}
+
+	if (!read(stream->fd, &c, 1))
+		return EOF;
+	return (int) c;
+}
+
+int ungetc(int c, FILE *stream)
+{
+	stream->buf = (unsigned char) c;
+	stream->buffered = 1;
+	return c;
+}
 
 int getchar(void)
 {
-	unsigned char c;
-	if (!read(STDIN_FILENO, &c, 1))
-		return EOF;
-	return (int) c;
+	return getc(stdin);
 }
 
 char *gets(char *s, int size)
 {
 	int rv;
 
+	/* TODO: read from buffer */
 	rv = read(STDIN_FILENO, s, size-1);
 	if (rv <= 0)
 		return NULL;

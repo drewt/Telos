@@ -15,30 +15,30 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _KERNEL_COMMON_H_
-#define _KERNEL_COMMON_H_
+#include <stdlib.h>
+#include <stdio.h>
+#include <setjmp.h>
 
-#define __KERNEL__
+jmp_buf env;
 
-#include <kernel/types.h>
-#include <kernel/compiler.h>
-#include <errnodefs.h>
+void f1(void)
+{
+	longjmp(env, 1);
+	puts("ERROR: returning from f1");
+}
 
-#define SYSERR (-1)
+void f0(void)
+{
+	f1();
+	puts("ERROR: returning from f0");
+}
 
-#define wprintf(fmt, ...) kprintf_clr(0xC, "WARNING: "fmt"\n", __VA_ARGS__)
-#define wprints(str) kprintf_clr(0xC, "WARNING: "str"\n")
+void main(int argc, char *argv[])
+{
+	printf("testing longjmp()... ");
 
-/* linux */
-#define WARN_ON_ONCE(x) x
-
-#define ULLONG_MAX (~0ULL)
-#define INT_MAX ((int)(~0U>>1))
-#define USHRT_MAX ((u16)(~0U))
-#define SHRT_MAX ((s16)(USHRT_MAX>>1))
-
-extern int kprintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
-extern int kprintf_clr(unsigned char clr, const char *fmt, ...);
-extern void clear_console(void);
-
-#endif
+	if (setjmp(env) == 0)
+		f0();
+	else
+		puts("done");
+}

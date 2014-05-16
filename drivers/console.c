@@ -73,11 +73,11 @@ static int console_write(int fd, void *buf, int buf_len)
 	int i;
 	unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
 
-	char *s = (char*) kmap_tmp_range(current->pgdir, (ulong) buf, buf_len);
+	char *s = kmap_tmp_range(current->pgdir, (ulong) buf, buf_len);
 	for (i = 0; s[i] != '\0' && i < buf_len; i++) {
 		console_putc(s[i], TXT_CLR, cno);
 	}
-	kunmap_range((ulong) s, buf_len);
+	kunmap_range(s, buf_len);
 
 	return i;
 }
@@ -246,8 +246,10 @@ int kvprintf(unsigned char clr, const char *fmt, va_list ap) {
 int kprintf_clr(unsigned char clr, const char *fmt, ...)
 {
 	va_list ap;
+	int ret;
+
 	va_start(ap, fmt);
-	int ret = kvprintf(clr, fmt, ap);
+	ret = kvprintf(clr, fmt, ap);
 	va_end(ap);
 	return ret;
 }
@@ -258,8 +260,10 @@ int kprintf_clr(unsigned char clr, const char *fmt, ...)
 int kprintf(const char *fmt, ...)
 {
 	va_list ap;
+	int ret;
+
 	va_start(ap, fmt);
-	int ret = kvprintf(TXT_CLR, fmt, ap);
+	ret = kvprintf(TXT_CLR, fmt, ap);
 	va_end(ap);
 	return ret;
 }
