@@ -24,62 +24,11 @@
 
 #define WRITE_SIZE 200
 
-static int fmt_print(int fd, const char *fmt, va_list *ap, int *count)
+int vfprintf(FILE *stream, const char *fmt, va_list ap)
 {
-	char c;
-	char *s;
-	char buf[33];
-	int rv = 0, tmp;
-
-	for (int i = 0; fmt[i] != '\0'; i++) {
-		switch (fmt[i]) {
-		case '%':
-			write(fd, "%", 1);
-			(*count)++;
-			return 1;
-		case 'c':
-			c = va_arg(*ap, int);
-			write(fd, &c, 1);
-			(*count)++;
-			return 1;
-		case 'd':
-		case 'i':
-			itoa(va_arg(*ap, int), buf, 10);
-			rv = write(fd, buf, 33);
-			(*count)++;
-			return rv;
-		case 'x':
-			itoa_16(va_arg(*ap, int), buf);
-			rv = write(fd, buf, 33);
-			(*count)++;
-			return rv;
-		case 's':
-			s = va_arg(*ap, char*);
-			while ((tmp = write(fd, s, WRITE_SIZE)) != 0) {
-				s += tmp;
-				rv += tmp;
-			}
-			(*count)++;
-			return rv;
-		case '.':
-		case '*':
-			(*count)++;
-			break; // TODO
-		default:
-			return rv;
-		}
-	}
-	return rv;
-}
-
-int printf(const char *fmt, ...)
-{
-	int rv;
-	va_list ap;
-	va_start(ap, fmt);
-	rv = vfprintf(stdout, fmt, ap);
-	va_end(ap);
-	return rv;
+	char buf[1024];
+	int ret = vsnprintf(buf, 1024, fmt, ap);
+	return write(stream->fd, buf, ret);
 }
 
 int vprintf(const char *fmt, va_list ap)
@@ -87,33 +36,24 @@ int vprintf(const char *fmt, va_list ap)
 	return vfprintf(stdout, fmt, ap);
 }
 
+#define va_printf(stream, fmt) \
+	do { \
+		int ret; \
+		va_list ap; \
+		va_start(ap, fmt); \
+		ret = vfprintf(stream, fmt, ap); \
+		va_end(ap); \
+		return ret; \
+	} while (0)
+
 int fprintf(FILE *stream, const char *fmt, ...)
 {
-	int rv;
-	va_list ap;
-	va_start(ap, fmt);
-	rv = vfprintf(stream, fmt, ap);
-	va_end(ap);
-	return rv;
+	va_printf(stream, fmt);
 }
 
-int vfprintf(FILE *stream, const char *fmt, va_list ap)
+int printf(const char *fmt, ...)
 {
-	int rv = 0, tmp;
-	const char *pos = fmt;
-
-	for (int i = 0; fmt[i] != '\0'; i++) {
-		if (fmt[i] == '%') {
-			rv += write(stream->fd, pos, &fmt[i] - pos);
-			rv += fmt_print(stream->fd, &fmt[i+1], &ap, &i);
-			pos = &fmt[i+1];
-		}
-	}
-	while ((tmp = write(stream->fd, pos, WRITE_SIZE)) != 0) {
-		rv += tmp;
-		pos += tmp;
-	}
-	return rv;
+	va_printf(stdout, fmt);
 }
 
 int puts(const char *s)
