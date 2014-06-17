@@ -16,23 +16,10 @@
  */
 
 #include <kernel/device.h>
-#include <kernel/drivers/kbd.h>
 #include <kernel/drivers/console.h>
 #include <kernel/drivers/serial.h>
 
 struct device devtab[DT_SIZE] = {
-	[DEV_KBD] = {
-		.dvnum   = DEV_KBD,
-		.dvname  = "Keyboard (no echo)",
-		.dvioblk = NULL,
-		.dv_op = &kbd_operations
-	},
-	[DEV_KBD_ECHO] = {
-		.dvnum   = DEV_KBD_ECHO,
-		.dvname  = "Keyboard (echo)",
-		.dvioblk = NULL,
-		.dv_op = &kbd_operations
-	},
 	[DEV_CONSOLE_0] = {
 		.dvnum   = DEV_CONSOLE_0,
 		.dvname  = "Console 0",
@@ -55,5 +42,5 @@ struct device devtab[DT_SIZE] = {
 
 void dev_init(void)
 {
-	devtab[DEV_KBD].dv_op->dvinit();
+	devtab[DEV_CONSOLE_0].dv_op->dvinit();
 }

@@ -49,7 +49,7 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	}
 
 	/* init file data */
-	p->fds[0] = DEV_KBD_ECHO;
+	p->fds[0] = DEV_CONSOLE_0;
 	p->fds[1] = DEV_CONSOLE_0;
 	p->fds[2] = DEV_CONSOLE_1;
 	for (int i = 3; i < FDT_SIZE; i++)

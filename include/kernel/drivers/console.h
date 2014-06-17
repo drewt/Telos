@@ -24,7 +24,7 @@
 
 extern struct device_operations console_operations;
 
-int console_init(void);
+int console_early_init(void);
 int console_switch(unsigned int to);
 
 #endif // __CONSOLE_H_

@@ -23,12 +23,11 @@
 #define FD_VALID(fd) (fd >= 0 && fd < FDT_SIZE && current->fds[fd] != FD_NONE)
 
 // TODO: replace with real dev filesystem
-static const char *devmap[4] = {
-	[DEV_KBD]	= "/dev/kbd",
-	[DEV_KBD_ECHO]	= "/dev/kbd_echo",
+static const char *devmap[] = {
 	[DEV_CONSOLE_0]	= "/dev/cons0",
 	[DEV_CONSOLE_1]	= "/dev/cons1"
 };
+#define NR_DEVICES (sizeof(devmap) / sizeof(*devmap))
 
 /*-----------------------------------------------------------------------------
  * */
@@ -36,19 +35,19 @@ static const char *devmap[4] = {
 long sys_open(const char *pathname, int flags, ...)
 {
 	dev_t fd;
-	int devno;
+	unsigned int devno;
 
 	char *path = kmap_tmp_range(current->pgdir,
 			(ulong) pathname, 1024);
 
 	/* look up device corresponding to pathname */
-	for (devno = 0; devno < 4; devno++)
+	for (devno = 0; devno < NR_DEVICES; devno++)
 		if (!strcmp(path, devmap[devno]))
 			break;
 
 	kunmap_range(path, 1024);
 
-	if (devno == 4)
+	if (devno == NR_DEVICES)
 		return -ENOENT;
 
 	for (fd = 0; fd < FDT_SIZE && current->fds[fd] != FD_NONE; fd++);

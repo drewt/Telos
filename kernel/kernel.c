@@ -53,7 +53,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	unsigned long memtotal;
 
 	/* initialize console so we can print boot status */
-	console_init();
+	console_early_init();
 	clear_console();
 
 	/* check multiboot magic number */

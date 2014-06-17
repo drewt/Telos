@@ -100,8 +100,6 @@ static ssize_t read_line(char *buf, size_t len)
 	while ((c = getchar()) != '\n' && pos < len) {
 		if (c == EOF)
 			return EOF;
-		if (c == '\b' && pos > 0)
-			pos--;
 		else
 			buf[pos++] = c;
 	}

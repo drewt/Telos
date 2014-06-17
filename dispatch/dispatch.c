@@ -91,7 +91,7 @@ static inline void set_action(unsigned int vector, isr_t f, int nargs)
 void dispatch_init(void)
 {
 	/* initialize actions that can't be initialized statically */
-	set_action(INTR_KBD, (isr_t) devtab[DEV_KBD].dv_op->dviint, 0);
+	set_action(INTR_KBD, (isr_t) devtab[DEV_CONSOLE_0].dv_op->dviint, 0);
 }
 
 /*-----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-objects = console.o keyboard.o serial.o
+objects = console.o serial.o
 clean = $(objects)
 
 all: $(objects)
