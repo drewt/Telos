@@ -33,57 +33,97 @@
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
-#define KERNEL_END \
-	(PAGE_ALIGN((ulong)&_kend))
-
 /* free list for kernel heap */
 static LIST_HEAD(free_list);
 
-/* Multiboot info structure */
-static struct multiboot_info mb_info;
-
-/* ELF section headers */
-static struct elf32_shdr elf_shtab[32];
-static char elf_strtab[512];
-
-/*-----------------------------------------------------------------------------
- * Initializes the memory system */
-//-----------------------------------------------------------------------------
-unsigned long mem_init(struct multiboot_info **info)
+static inline ulong MAX(ulong a, ulong b)
 {
-	struct elf32_shdr *str_hdr;
-	struct mem_header *heap;
+	return a > b ? a : b;
+}
 
-	memcpy(&mb_info, *info, sizeof(struct multiboot_info));
-	*info = &mb_info;
+/*
+ * XXX: assumes bootloader puts modules, etc. in sane places (i.e. reasonably
+ *      close to the kernel).  If it puts them somewhere dumb, like the end of
+ *      memory, this will fail catastrophically.
+ */
+static ulong get_heap_start(struct multiboot_info *info)
+{
+	ulong max = PAGE_ALIGN((ulong)&_kend);
 
-	/* copy ELF section headers & string table into kernel memory */
-	memcpy(elf_shtab, (char*) mb_info.elf_sec.addr,
-			mb_info.elf_sec.num * mb_info.elf_sec.size);
-	str_hdr = &elf_shtab[mb_info.elf_sec.shndx];
-	memcpy(elf_strtab, (char*) str_hdr->sh_addr, str_hdr->sh_size);
+	if (MULTIBOOT_MODS_VALID(info)) {
+		struct multiboot_mod_list *mods = (void*) info->mods_addr;
+		max = MAX(max, info->mods_addr);
 
-	if (!MULTIBOOT_MEM_VALID(&mb_info)) {
-		wprints("failed to detect memory limits; assuming 8MB total");
-		mb_info.mem_upper = 0x800000;
+		for (unsigned i = 0; i < info->mods_count; i++) {
+			max = MAX(max, mods[i].end);
+		}
 	}
 
-	heap = (void*) KERNEL_END;
-	heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - KERNEL_END;
+	if (MULTIBOOT_ELFSEC_VALID(info)) {
+		struct elf_section_header_table *tab = (void*) &info->elf_sec;
+		max = MAX(max, tab->addr + tab->num * tab->size);
+	}
+
+	if (MULTIBOOT_MMAP_VALID(info))
+		max = MAX(max, info->mmap_addr + info->mmap_length);
+
+	return PAGE_ALIGN(max);
+}
+
+/*
+ * Translates physical addresses in the multiboot_info structure to kernel
+ * (virtual) addresses.
+ */
+static void fix_multiboot_info(struct multiboot_info *info)
+{
+	if (MULTIBOOT_MODS_VALID(info)) {
+		struct multiboot_mod_list *mods;
+		info->mods_addr = PHYS_TO_KERNEL(info->mods_addr);
+		mods = (void*) info->mods_addr;
+
+		for (unsigned i = 0; i < info->mods_count; i++) {
+			mods[i].start = PHYS_TO_KERNEL(mods[i].start);
+			mods[i].end = PHYS_TO_KERNEL(mods[i].end);
+		}
+	}
+
+	if (MULTIBOOT_ELFSEC_VALID(info))
+		info->elf_sec.addr = PHYS_TO_KERNEL(info->elf_sec.addr);
+
+	if (MULTIBOOT_MMAP_VALID(info))
+		info->mmap_addr = PHYS_TO_KERNEL(info->mmap_addr);
+}
+
+unsigned long mem_init(struct multiboot_info **info)
+{
+	struct mem_header *heap;
+	ulong heap_start;
+
+	*info = (void*) PHYS_TO_KERNEL(*info);
+
+	fix_multiboot_info(*info);
+	if (!MULTIBOOT_MEM_VALID(*info)) {
+		wprints("failed to detect memory limits; assuming 8MB total");
+		(*info)->mem_upper = 0x800000;
+	}
+
+	heap_start = get_heap_start(*info);
+	heap = (void*) heap_start;
+	heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - heap_start;
 	heap->magic = MAGIC_FREE;
 	list_add(&heap->chain, &free_list);
 
-	paging_init(0x00400000, PAGE_BASE(MULTIBOOT_MEM_MAX(&mb_info)));
+	paging_init(0x00400000, PAGE_BASE(MULTIBOOT_MEM_MAX(*info)));
 
-	return MULTIBOOT_MEM_MAX(&mb_info) - KERNEL_TO_PHYS(KERNEL_END);
+	return MULTIBOOT_MEM_MAX(*info) - KERNEL_TO_PHYS(heap_start);
 }
 
-/*-----------------------------------------------------------------------------
+/*
  * Allocates size bytes of memory, returning a pointer to the start of the
  * allocated block.  If hdr is not NULL and the call succeeds in allocating
  * size bytes of memory, *hdr will point to the struct mem_header corresponding
- * to the allocated block when this function returns */
-//-----------------------------------------------------------------------------
+ * to the allocated block when this function returns.
+ */
 void *hmalloc(unsigned int size, struct mem_header **hdr)
 {
 	struct mem_header *p, *r;
@@ -126,10 +166,9 @@ void *hmalloc(unsigned int size, struct mem_header **hdr)
 	return p->data;
 }
 
-/*-----------------------------------------------------------------------------
- * Returns a segment of previously allocated memory to the free list, given the
- * header for the segment */
-//-----------------------------------------------------------------------------
+/* Returns a segment of previously allocated memory to the free list, given the
+ * header for the segment.
+ */
 void hfree(struct mem_header *hdr)
 {
 	/* check that the supplied address is sane */

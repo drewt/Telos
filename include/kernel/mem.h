@@ -25,6 +25,9 @@
 #define KERNEL_TO_PHYS(addr) \
 	((ulong) (addr) - (ulong) &KERNEL_PAGE_OFFSET)
 
+#define PHYS_TO_KERNEL(addr) \
+	((ulong) (addr) + (ulong) &KERNEL_PAGE_OFFSET)
+
 /*
  * unsigned long PAGE_ALIGN (unsigned long a)
  *	Takes an address and rounds it up to the nearest page boundary.

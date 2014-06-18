@@ -82,6 +82,13 @@ struct multiboot_mmap {
 	unsigned long type;
 } __attribute__((packed));
 
+struct multiboot_mod_list {
+	unsigned long start;
+	unsigned long end;
+	unsigned long cmdline;
+	unsigned long pad;
+};
+
 /*
  * Returns the next entry in a memory map
  */
