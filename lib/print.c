@@ -71,3 +71,10 @@ int putchar(int c)
 		return EOF;
 	return c;
 }
+
+int putc(int c, FILE *stream)
+{
+	if (write(stream->fd, &c, 1) == -1)
+		return EOF;
+	return c;
+}

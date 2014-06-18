@@ -44,6 +44,7 @@ int fprintf(FILE *stream, const char *fmt, ...);
 int vfprintf(FILE *stream, const char *fmt, va_list ap);
 int puts(const char *s);
 int putchar(int c);
+int putc(int c, FILE *stream);
 
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
