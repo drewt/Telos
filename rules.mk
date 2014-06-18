@@ -35,6 +35,9 @@ distclean: clean
 %.o: %.S
 	$(call cmd,ccas)
 
+%.o: %.s
+	$(call cmd,as)
+
 .%.d: %.c
 	$(call cmd,dep)
 
