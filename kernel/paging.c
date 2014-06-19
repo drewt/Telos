@@ -50,28 +50,6 @@ static ulong fp_start;
 static ulong fp_end;
 
 /*
- * Get the pf_info structure associated with a given address.
- */
-static inline struct pf_info *phys_to_info(ulong addr)
-{
-	if (addr < fp_start || addr >= fp_end)
-		return NULL;
-	return frame_table[ (addr - fp_start) / FRAME_SIZE ];
-}
-
-/*
- * Get the pf_info structure associated with a virtual address in a given
- * address space.
- */
-static inline struct pf_info *virt_to_info(pmap_t pgdir, ulong addr)
-{
-	ulong phys;
-	if ((phys = virt_to_phys(pgdir, addr)) == 0)
-		return NULL;
-	return phys_to_info(phys);
-}
-
-/*
  * Get the page table entry associated with a given address in a given
  * address space.  Assumes a page table exists mapping the region containing
  * the given address.
@@ -324,25 +302,6 @@ nomem1:
 nomem0:
 	kunmap_page(k_pgdir);
 	return -ENOMEM;
-}
-
-/*
- * Get the physical address mapped to a given virtual address in a given
- * address space.
- */
-ulong virt_to_phys(pmap_t pgdir, ulong addr)
-{
-	pte_t *pte;
-
-	pte = pgdir + ADDR_TO_PDI(addr);
-	if ((*pte & PE_P) == 0)
-		return 0;
-
-	pte = (pte_t*) (*pte & ~0xFFF) + ADDR_TO_PTI(addr);
-	if ((*pte & PE_P) == 0)
-		return 0;
-
-	return (*pte & ~0xFFF) | (addr & 0xFFF);
 }
 
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)

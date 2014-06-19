@@ -85,7 +85,6 @@ struct pf_info *kzalloc_page(void);
 void kfree_page(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 pmap_t pgdir_create(struct list_head *page_list);
-ulong virt_to_phys(pmap_t pgdir, ulong addr);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		struct list_head *page_list);
 

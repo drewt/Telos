@@ -38,7 +38,6 @@ void new_process(void);
 
 void __kill(struct pcb *p, int sig_no);
 
-ulong virt_to_phys(pmap_t pgdir, ulong addr);
 int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len);
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len);
 int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
