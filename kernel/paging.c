@@ -23,12 +23,6 @@
 
 #include <string.h>
 
-#define ADDR_TO_PDI(addr) (((addr) & 0xFFC00000) >> 22)
-#define ADDR_TO_PTI(addr) (((addr) & 0x003FF000) >> 12)
-
-#define PAGES_IN_RANGE(addr,len) \
-	((((addr & 0xFFF) + len) / FRAME_SIZE) + 1)
-
 #define PAGE_TABLE(name) \
 	pte_t name[1024] __attribute__((aligned(0x1000)))
 
@@ -49,6 +43,21 @@ static unsigned int ft_i = 0;
 static ulong fp_start;
 static ulong fp_end;
 
+static inline unsigned addr_to_pdi(ulong addr)
+{
+	return (addr & 0xFFC00000) >> 22;
+}
+
+static inline unsigned addr_to_pti(ulong addr)
+{
+	return (addr & 0x003FF000) >> 12;
+}
+
+static inline unsigned pages_in_range(ulong addr, ulong len)
+{
+	return (((addr & 0xFFF) + len) / FRAME_SIZE) + 1;
+}
+
 /*
  * Get the page table entry associated with a given address in a given
  * address space.  Assumes a page table exists mapping the region containing
@@ -56,9 +65,9 @@ static ulong fp_end;
  */
 static inline pte_t *addr_to_pte(pmap_t pgdir, ulong addr)
 {
-	pte_t pde = pgdir[ADDR_TO_PDI(addr)];
+	pte_t pde = pgdir[addr_to_pdi(addr)];
 	pte_t *pgtab = (pte_t*) (pde & ~0xFFF);
-	return pgtab + ADDR_TO_PTI(addr);
+	return pgtab + addr_to_pti(addr);
 }
 
 /*
@@ -67,7 +76,7 @@ static inline pte_t *addr_to_pte(pmap_t pgdir, ulong addr)
  */
 static inline ulong *addr_to_pde(pmap_t pgdir, ulong frame)
 {
-	return pgdir + ADDR_TO_PDI(frame);
+	return pgdir + addr_to_pdi(frame);
 }
 
 /*
@@ -140,7 +149,7 @@ int paging_init(ulong start, ulong end)
 	page_attr_off(kernel_pgdir, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
 
 	/* set up page table for temporary mappings */
-	kernel_pgdir[ADDR_TO_PDI(TMP_PGTAB_BASE)] =
+	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
 		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
 
 	return 0;
@@ -233,7 +242,7 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 	ulong tmp_addr;
 	unsigned nr_pages;
 
-	nr_pages = PAGES_IN_RANGE(addr, len);
+	nr_pages = pages_in_range(addr, len);
 
 	if ((tmp_addr = get_tmp_ptes(&tmp, nr_pages)) == 0)
 		return 0;
@@ -252,7 +261,7 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 void kunmap_range(void *addrp, size_t len)
 {
 	ulong addr = (ulong) addrp;
-	unsigned nr_pages = PAGES_IN_RANGE(addr, len);
+	unsigned nr_pages = pages_in_range(addr, len);
 	pte_t *pte = addr_to_pte(kernel_pgdir, addr);
 	for (unsigned i = 0; i < nr_pages; i++, pte++) {
 		*pte = 0;
@@ -275,7 +284,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 	if ((k_pgdir = kmap_tmp_page((ulong) pgdir)) == NULL)
 		return -ENOMEM;
 
-	pte = k_pgdir + ADDR_TO_PDI(start);
+	pte = k_pgdir + addr_to_pdi(start);
 	if (!(*pte & PE_P)) {
 		if ((frame = kzalloc_page()) == NULL)
 			goto nomem0;
@@ -286,7 +295,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 	if ((k_pgtab = kmap_tmp_page((ulong) (*pte & ~0xFFF))) == NULL)
 		goto nomem0;
 
-	pte = k_pgtab + ADDR_TO_PTI(start);
+	pte = k_pgtab + addr_to_pti(start);
 	for (int i = 0; i < pages; i++, pte++) {
 		if ((frame = kalloc_page()) == NULL)
 			goto nomem1;
@@ -397,7 +406,7 @@ pmap_t pgdir_create(struct list_head *page_list)
 		return NULL;
 	}
 
-	pdi = ADDR_TO_PDI((ulong) &KERNEL_PAGE_OFFSET);
+	pdi = addr_to_pdi((ulong) &KERNEL_PAGE_OFFSET);
 	vaddr[pdi] = kernel_pgdir[pdi];
 
 	list_add(&page->chain, page_list);
