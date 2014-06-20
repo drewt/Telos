@@ -18,6 +18,7 @@
 #ifndef _KERNEL_MEM_H_
 #define _KERNEL_MEM_H_
 
+#include <kernel/process.h>
 #include <kernel/list.h>
 
 #define FRAME_SIZE 4096
@@ -84,7 +85,7 @@ struct pf_info *kalloc_page(void);
 struct pf_info *kzalloc_page(void);
 void kfree_page(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
-pmap_t pgdir_create(struct list_head *page_list);
+int address_space_init(struct pcb *p);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		struct list_head *page_list);
 

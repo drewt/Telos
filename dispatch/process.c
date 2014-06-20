@@ -16,6 +16,7 @@
  */
 
 #include <kernel/i386.h>
+#include <kernel/elf.h>
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
 #include <kernel/mem.h>
@@ -128,6 +129,7 @@ static void copy_args(struct pcb *p, int argc, char **argv)
 int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		ulong flags)
 {
+	int rc;
 	struct pcb	*p;
 	struct pf_info	*it;
 	ulong		v_stack, esp;
@@ -140,18 +142,17 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 
 	pcb_init(p, current->pid, flags);
 
-	p->pgdir = pgdir_create(&p->page_mem);
-	if (p->pgdir == NULL)
-		return -ENOMEM;
+	if ((rc = address_space_init(p)) < 0)
+		return rc;
 
-	p->heap_start = 0x01000000;
+	p->heap_start = 0x00100000;
 	p->heap_end = p->brk = p->heap_start + FRAME_SIZE;
 	if (map_pages_user(p, p->heap_start, 1, PE_U | PE_RW))
 		goto abort;
 
 	copy_args(p, argc, argv);
 
-	v_stack = 0x00C00000;
+	v_stack = 0x0F000000;
 	if (map_pages_user(p, v_stack, STACK_PAGES, PE_U | PE_RW))
 		goto abort;
 

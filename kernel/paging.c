@@ -28,6 +28,8 @@
 
 #define TMP_PGTAB_BASE 0xB0400000
 
+#define NR_RESERVED_PAGES 4
+
 #define kernel_pgdir (&_kernel_pgd)
 
 /* page table for temporary mappings */
@@ -152,20 +154,8 @@ int paging_init(ulong start, ulong end)
 	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
 		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
 
+	//kernel_pgdir[0] = 0;
 	return 0;
-}
-
-/*
- * Get the index of the first free entry from a paging structure.
- */
-static int get_first_free(pmap_t tab)
-{
-	for (int i = 0; i < 1024; i++) {
-		if (!(tab[i] & PE_P)) {
-			return i;
-		}
-	}
-	return -1;
 }
 
 /*
@@ -177,7 +167,11 @@ void *kmap_tmp_page(ulong addr)
 	int i;
 	ulong tmp_addr;
 
-	if ((i = get_first_free(tmp_pgtab)) == -1)
+	for (i = NR_RESERVED_PAGES; i < 1024; i++) {
+		if (!(tmp_pgtab[i] & PE_P))
+			break;
+	}
+	if (i == 1024)
 		return NULL;
 
 	tmp_pgtab[i] = addr | PE_P | PE_RW;
@@ -187,14 +181,26 @@ void *kmap_tmp_page(ulong addr)
 	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
+static void *kmap_tmp_page_n(ulong addr, unsigned n)
+{
+	ulong tmp_addr = TMP_PGTAB_BASE + n * FRAME_SIZE;
+	tmp_pgtab[n] = addr | PE_P | PE_RW;
+	asm volatile("invlpg (%0)" : : "b" (tmp_addr));
+	return (void*) tmp_addr;
+}
+
 /*
  * Unmap the page associated with a given virtual address from the kernel's
  * address space.
  */
 void kunmap_page(void *addr)
 {
-	pte_t *pte = addr_to_pte(kernel_pgdir, (ulong) addr);
-	*pte = 0;
+	pmap_t pgtab;
+
+	pgtab = (pmap_t) (kernel_pgdir[addr_to_pdi((ulong)addr)] & ~0xFFF);
+	pgtab = kmap_tmp_page_n((ulong)pgtab, 0);
+
+	pgtab[addr_to_pti((ulong)addr)] = 0;
 	asm volatile("invlpg (%0)" : : "b" (addr));
 }
 
@@ -211,9 +217,8 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
 	ulong first_addr;
 	unsigned count = 0;
 
-	pte = tmp_pgtab;
-
-	for (int i = 0; i < 1024; i++, pte++) {
+	pte = &tmp_pgtab[NR_RESERVED_PAGES];
+	for (unsigned i = NR_RESERVED_PAGES; i < 1024; i++, pte++) {
 		if (!(*pte & PE_P)) {
 			if (first == NULL) {
 				first = pte;
@@ -221,7 +226,7 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
 			}
 			if (++count >= nr_pages) {
 				*dst = first;
-				return 0xB0400000 + first_addr;
+				return TMP_PGTAB_BASE + first_addr;
 			}
 		} else {
 			first = NULL;
@@ -238,20 +243,27 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
  */
 void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 {
+	pmap_t pgtab;
 	pte_t *pte, *tmp;
 	ulong tmp_addr;
 	unsigned nr_pages;
 
-	nr_pages = pages_in_range(addr, len);
+	/* map page tables */
+	pgdir = kmap_tmp_page_n((ulong)pgdir, 0);
+	pgtab = (pmap_t) (pgdir[addr_to_pdi(addr)] & ~0xFFF);
+	pgtab = kmap_tmp_page_n((ulong)pgtab, 1);
+	pte = (pte_t*) &pgtab[addr_to_pti(addr)];
 
+	nr_pages = pages_in_range(addr, len);
 	if ((tmp_addr = get_tmp_ptes(&tmp, nr_pages)) == 0)
 		return 0;
 
-	pte = addr_to_pte(pgdir, addr);
+	/* map memory area */
 	for (unsigned i = 0; i < nr_pages; i++, pte++, tmp++) {
 		*tmp = *pte | PE_RW;
 		asm volatile("invlpg (%0)" : : "b" (tmp_addr + i*FRAME_SIZE));
 	}
+
 	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
@@ -260,57 +272,51 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
  */
 void kunmap_range(void *addrp, size_t len)
 {
+	pte_t *pte;
+	pmap_t pgtab;
 	ulong addr = (ulong) addrp;
 	unsigned nr_pages = pages_in_range(addr, len);
-	pte_t *pte = addr_to_pte(kernel_pgdir, addr);
+
+	pgtab = (pmap_t) (kernel_pgdir[addr_to_pdi(addr)] & ~0xFFF);
+	pgtab = kmap_tmp_page_n((ulong)pgtab, 0);
+	pte = &pgtab[addr_to_pti(addr)];
+
 	for (unsigned i = 0; i < nr_pages; i++, pte++) {
 		*pte = 0;
 		asm volatile("invlpg (%0)" : : "b" (addr + i*FRAME_SIZE));
 	}
 }
 
-/*
- * Map 'pages' pages starting at address 'start' into the address space given
- * by 'pgdir'.  Allocated pf_info structures will be put in the list
- * 'page_list'.
- */
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 		struct list_head *page_list)
 {
 	pte_t *pte;
-	pmap_t k_pgdir, k_pgtab;
+	pmap_t pgtab;
 	struct pf_info *frame;
 
-	if ((k_pgdir = kmap_tmp_page((ulong) pgdir)) == NULL)
-		return -ENOMEM;
+	pgdir = kmap_tmp_page_n((ulong)pgdir, 2);
 
-	pte = k_pgdir + addr_to_pdi(start);
+	pte = pgdir + addr_to_pdi(start);
 	if (!(*pte & PE_P)) {
 		if ((frame = kzalloc_page()) == NULL)
-			goto nomem0;
+			return -ENOMEM;
+
 		*pte = frame->addr | attr | PE_P;
 		list_add_tail(&frame->chain, page_list);
 	}
 
-	if ((k_pgtab = kmap_tmp_page((ulong) (*pte & ~0xFFF))) == NULL)
-		goto nomem0;
+	pgtab = kmap_tmp_page_n((ulong)(*pte & ~0xFFF), 3);
 
-	pte = k_pgtab + addr_to_pti(start);
+	pte = pgtab + addr_to_pti(start);
 	for (int i = 0; i < pages; i++, pte++) {
 		if ((frame = kalloc_page()) == NULL)
-			goto nomem1;
+			return -ENOMEM;
+
 		*pte = frame->addr | attr | PE_P;
 		list_add_tail(&frame->chain, page_list);
 	}
 
-	kunmap_page(k_pgtab);
-	kunmap_page(k_pgdir);
 	return 0;
-nomem1:
-	kunmap_page(k_pgtab);
-nomem0:
-	kunmap_page(k_pgdir);
-	return -ENOMEM;
 }
 
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
@@ -391,7 +397,7 @@ int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
  * Allocate and initialize a page directory.  The returned directory will map
  * the kernel, but nothing more.
  */
-pmap_t pgdir_create(struct list_head *page_list)
+int address_space_init(struct pcb *p)
 {
 	struct pf_info *page;
 	pmap_t vaddr;
@@ -399,19 +405,25 @@ pmap_t pgdir_create(struct list_head *page_list)
 
 	struct pf_info *kzalloc_page(void);
 	if ((page = kzalloc_page()) == NULL)
-		return NULL;
+		return -ENOMEM;
 
 	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
 		kfree_page(page);
-		return NULL;
+		return -ENOMEM;
 	}
 
 	pdi = addr_to_pdi((ulong) &KERNEL_PAGE_OFFSET);
 	vaddr[pdi] = kernel_pgdir[pdi];
 
-	list_add(&page->chain, page_list);
+	pdi = addr_to_pdi(TMP_PGTAB_BASE);
+	vaddr[pdi] = kernel_pgdir[pdi];
+
+	list_add(&page->chain, &p->page_mem);
 	kunmap_page(vaddr);
-	return (pmap_t) page->addr;
+
+	p->pgdir = (void*) page->addr;
+
+	return 0;
 }
 
 /*
