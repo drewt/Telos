@@ -81,9 +81,9 @@ struct multiboot_info;
 unsigned long mem_init(struct multiboot_info **info);
 void *hmalloc(unsigned int size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
-struct pf_info *kalloc_page(void);
-struct pf_info *kzalloc_page(void);
-void kfree_page(struct pf_info *page);
+struct pf_info *kalloc_frame(void);
+struct pf_info *kzalloc_frame(void);
+void kfree_frame(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 int address_space_init(struct pcb *p);
 int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,

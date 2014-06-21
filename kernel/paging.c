@@ -299,7 +299,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 
 	pte = pgdir + addr_to_pdi(start);
 	if (!(*pte & PE_P)) {
-		if ((frame = kzalloc_page()) == NULL)
+		if ((frame = kzalloc_frame()) == NULL)
 			return -ENOMEM;
 
 		*pte = frame->addr | attr | PE_P;
@@ -310,7 +310,7 @@ int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
 
 	pte = pgtab + addr_to_pti(start);
 	for (int i = 0; i < pages; i++, pte++) {
-		if ((frame = kalloc_page()) == NULL)
+		if ((frame = kalloc_frame()) == NULL)
 			return -ENOMEM;
 
 		*pte = frame->addr | attr | PE_P;
@@ -404,12 +404,12 @@ int address_space_init(struct pcb *p)
 	pmap_t vaddr;
 	unsigned pdi;
 
-	struct pf_info *kzalloc_page(void);
-	if ((page = kzalloc_page()) == NULL)
+	struct pf_info *kzalloc_frame(void);
+	if ((page = kzalloc_frame()) == NULL)
 		return -ENOMEM;
 
 	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
-		kfree_page(page);
+		kfree_frame(page);
 		return -ENOMEM;
 	}
 
@@ -430,7 +430,7 @@ int address_space_init(struct pcb *p)
 /*
  * Allocate a page from the frame pool.
  */
-struct pf_info *kalloc_page(void)
+struct pf_info *kalloc_frame(void)
 {
 	struct pf_info *page;
 
@@ -444,16 +444,16 @@ struct pf_info *kalloc_page(void)
 /*
  * Allocate a page from the frame pool and fill it with zeros.
  */
-struct pf_info *kzalloc_page(void)
+struct pf_info *kzalloc_frame(void)
 {
 	struct pf_info *page;
 	void *vaddr;
 
-	if ((page = kalloc_page()) == NULL)
+	if ((page = kalloc_frame()) == NULL)
 		return NULL;
 
 	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
-		kfree_page(page);
+		kfree_frame(page);
 		return NULL;
 	}
 
@@ -466,7 +466,7 @@ struct pf_info *kzalloc_page(void)
 /*
  * Return a page to the frame pool.
  */
-void kfree_page(struct pf_info *page)
+void kfree_frame(struct pf_info *page)
 {
 	list_push(&page->chain, &frame_pool);
 }

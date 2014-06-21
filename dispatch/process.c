@@ -179,7 +179,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	return p->pid;
 abort:
 	dequeue_iterate (it, struct pf_info, chain, &p->page_mem)
-		kfree_page(it);
+		kfree_frame(it);
 	return -ENOMEM;
 }
 
@@ -208,7 +208,7 @@ long sys_exit(int status)
 
 	/* free memory allocated to process */
 	dequeue_iterate (mit, struct pf_info, chain, &current->page_mem)
-		kfree_page(mit);
+		kfree_frame(mit);
 	dequeue_iterate (hit, struct mem_header, chain, &current->heap_mem)
 		kfree(hit->data);
 
