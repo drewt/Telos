@@ -37,15 +37,10 @@ long sys_open(const char *pathname, int flags, ...)
 	dev_t fd;
 	unsigned int devno;
 
-	char *path = kmap_tmp_range(current->pgdir,
-			(ulong) pathname, 1024);
-
 	/* look up device corresponding to pathname */
 	for (devno = 0; devno < NR_DEVICES; devno++)
-		if (!strcmp(path, devmap[devno]))
+		if (!strcmp(pathname, devmap[devno]))
 			break;
-
-	kunmap_range(path, 1024);
 
 	if (devno == NR_DEVICES)
 		return -ENOENT;

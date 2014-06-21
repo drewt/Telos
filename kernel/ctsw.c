@@ -97,8 +97,6 @@ unsigned int context_switch(struct pcb *p)
 	SET_SEGS("%[KDS]", "%%cx")
 	"movl  %%esp,   %%ecx		\n" // switch stacks
 	"movl  %[KSP],  %%esp		\n"
-	"movl  %[KPD],  %%ebx		\n"
-	"movl  %%ebx,   %%cr3		\n"
 	"movl  %%eax,   EAX(%%esp)	\n" // save interrupt ID in %eax
 	"movl  %%edx,   ECX(%%esp)	\n" // save old %eax value in %ecx
 	"movl  %%ecx,   EDX(%%esp)	\n" // save user %esp in %edx
@@ -111,8 +109,7 @@ unsigned int context_switch(struct pcb *p)
 	: [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
 	  [RET] "a" (p->rc), [PSP] "c" (p->esp),
 	/* "bottom half" values must be either immediate or in memory */
-	  [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA),
-	  [KPD] "i" ((ulong) &_kernel_pgd - 0xC0000000)
+	  [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA)
 	:);
 	p->esp = psp;
 	p->rc  = rc;

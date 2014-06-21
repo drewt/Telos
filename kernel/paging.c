@@ -154,7 +154,8 @@ int paging_init(ulong start, ulong end)
 	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
 		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
 
-	//kernel_pgdir[0] = 0;
+	for (int i = 0; i < 16; i++)
+		kernel_pgdir[i] = 0;
 	return 0;
 }
 
@@ -256,7 +257,7 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 
 	nr_pages = pages_in_range(addr, len);
 	if ((tmp_addr = get_tmp_ptes(&tmp, nr_pages)) == 0)
-		return 0;
+		return NULL;
 
 	/* map memory area */
 	for (unsigned i = 0; i < nr_pages; i++, pte++, tmp++) {

@@ -124,6 +124,7 @@ static void copy_args(struct pcb *p, int argc, char **argv)
 		copy_string_through_user(p, current, (void*) arg_addr,
 				kargv[i], 128);
 	}
+	kunmap_range(uargv, 128);
 }
 
 int create_user_process(void(*func)(int,char*), int argc, char **argv,

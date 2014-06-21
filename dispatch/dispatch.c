@@ -101,7 +101,7 @@ void dispatch_init(void)
 void dispatch(void)
 {
 	unsigned req;
-	struct sys_args args;
+	struct sys_args *args;
 	struct pcb *p;
 
 	current = next();
@@ -116,35 +116,32 @@ void dispatch(void)
 			sysactions[req].func();
 		} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
 
-			if (sysactions[req].nargs > 0)
-				copy_from_user(current, &args, current->esp,
-						sizeof args);
-
+			args = current->esp;
 			p = current;
 			switch (sysactions[req].nargs) {
 			case 0:
 				p->rc = sysactions[req].func();
 				break;
 			case 1:
-				p->rc = sysactions[req].func(args.arg0);
+				p->rc = sysactions[req].func(args->arg0);
 				break;
 			case 2:
-				p->rc = sysactions[req].func(args.arg0,
-						args.arg1);
+				p->rc = sysactions[req].func(args->arg0,
+						args->arg1);
 				break;
 			case 3:
-				p->rc = sysactions[req].func(args.arg0,
-						args.arg1, args.arg2);
+				p->rc = sysactions[req].func(args->arg0,
+						args->arg1, args->arg2);
 				break;
 			case 4:
-				p->rc = sysactions[req].func(args.arg0,
-						args.arg1, args.arg2,
-						args.arg3);
+				p->rc = sysactions[req].func(args->arg0,
+						args->arg1, args->arg2,
+						args->arg3);
 				break;
 			case 5:
-				p->rc = sysactions[req].func(args.arg0,
-						args.arg1, args.arg2,
-						args.arg3, args.arg4);
+				p->rc = sysactions[req].func(args->arg0,
+						args->arg1, args->arg2,
+						args->arg3, args->arg4);
 				break;
 			}
 		} else {
