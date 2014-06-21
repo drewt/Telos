@@ -71,6 +71,14 @@ static ulong get_heap_start(struct multiboot_info *info)
 }
 
 /*
+ * Returns a 4MB aligned address, at least 1MB after start.
+ */
+static ulong get_heap_end(ulong start)
+{
+	return (start + 0x00500000) & 0xFFC00000;
+}
+
+/*
  * Translates physical addresses in the multiboot_info structure to kernel
  * (virtual) addresses.
  */
@@ -109,7 +117,7 @@ unsigned long mem_init(struct multiboot_info **info)
 
 	heap_start = get_heap_start(*info);
 	heap = (void*) heap_start;
-	heap->size = ((ulong)&KERNEL_PAGE_OFFSET + 0x00400000) - heap_start;
+	heap->size = get_heap_end(heap_start) - heap_start;
 	heap->magic = MAGIC_FREE;
 	list_add(&heap->chain, &free_list);
 
