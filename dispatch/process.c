@@ -88,7 +88,7 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	p->pgdir = (pmap_t) KERNEL_TO_PHYS(&_kernel_pgd);
+	p->pgdir = (pmap_t) kernel_to_phys(&_kernel_pgd);
 
 	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
 		return -ENOMEM;

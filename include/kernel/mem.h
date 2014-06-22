@@ -23,26 +23,11 @@
 
 #define FRAME_SIZE 4096
 
-#define KERNEL_TO_PHYS(addr) \
+#define kernel_to_phys(addr) \
 	((ulong) (addr) - (ulong) &KERNEL_PAGE_OFFSET)
 
-#define PHYS_TO_KERNEL(addr) \
+#define phys_to_kernel(addr) \
 	((ulong) (addr) + (ulong) &KERNEL_PAGE_OFFSET)
-
-/*
- * unsigned long PAGE_ALIGN (unsigned long a)
- *	Takes an address and rounds it up to the nearest page boundary.
- */
-#define PAGE_ALIGN(a) \
-	((a) & 0xFFF ? ((a) + 0x1000) & ~0xFFF : (a))
-
-/*
- * unsigned long PAGE_BASE (unsigned long a)
- *	Takes an address and returns the base address of the page frame it
- *	belongs to.
- */
-#define PAGE_BASE(a) \
-	((a) & ~0xFFF)
 
 #define PE_P  0x1
 #define PE_RW 0x2
@@ -52,15 +37,27 @@ extern pte_t _kernel_pgd;
 extern unsigned long _kernel_high_pgt;
 
 /* linker variables */
-extern unsigned long KERNEL_PAGE_OFFSET;
-extern unsigned long _kstart;		// start of the kernel
-extern unsigned long _kend;		// end of the kernel
-extern unsigned long _ustart;		// start of user-space
-extern unsigned long _uend;		// end of user-space
-extern unsigned long _urostart;		// start of user-space read-only memory
-extern unsigned long _uroend;		// end of user-space read-only memory
-extern unsigned long _krostart;		// start of kernel read-only memory
-extern unsigned long _kroend;		// end of kernel read-only memory
+extern ulong KERNEL_PAGE_OFFSET;
+extern ulong _kstart;   // start of the kernel
+extern ulong _kend;     // end of the kernel
+extern ulong _ustart;   // start of user-space
+extern ulong _uend;     // end of user-space
+extern ulong _urostart; // start of user-space read-only memory
+extern ulong _uroend;   // end of user-space read-only memory
+extern ulong _krostart; // start of kernel read-only memory
+extern ulong _kroend;   // end of kernel read-only memory
+
+#define kstart   ((ulong)&_kstart)
+#define kend     ((ulong)&_kend)
+#define ustart   ((ulong)&_ustart)
+#define uend     ((ulong)&_uend)
+#define urostart ((ulong)&_urostart)
+#define uroend   ((ulong)&_uroend)
+#define krostart ((ulong)&_krostart)
+#define kroend   ((ulong)&_kroend)
+
+extern ulong kheap_start;
+extern ulong kheap_end;
 
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
@@ -106,6 +103,20 @@ static inline void kfree(void *addr)
 {
 	hfree(mem_ptoh(addr));
 }
+
+static inline ulong align_up(ulong addr, unsigned align)
+{
+	unsigned mask = align - 1;
+	return (addr & mask) ? (addr + align) & ~mask : addr;
+}
+
+static inline ulong align_down(ulong addr, unsigned align)
+{
+	return addr & ~(align - 1);
+}
+
+#define page_align(n) align_up(n, FRAME_SIZE)
+#define page_base(n)  align_down(n, FRAME_SIZE)
 
 /*
  * Defines page-at-a-time allocation functions for the given type.

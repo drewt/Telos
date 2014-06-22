@@ -90,7 +90,7 @@ void page_attr_off(pmap_t pgdir, ulong start, ulong end, ulong flags)
 	int nr_frames;
 
 	pte = addr_to_pte(pgdir, start);
-	nr_frames = (PAGE_ALIGN(end) - start) / FRAME_SIZE;
+	nr_frames = (page_align(end) - start) / FRAME_SIZE;
 	for (int i = 0; i < nr_frames; i++, pte++)
 		*pte &= ~flags;
 }
@@ -104,7 +104,7 @@ void page_attr_on(pmap_t pgdir, ulong start, ulong end, ulong flags)
 	int nr_frames;
 
 	pte = addr_to_pte(pgdir, start);
-	nr_frames = (PAGE_ALIGN(end) - start) / FRAME_SIZE;
+	nr_frames = (page_align(end) - start) / FRAME_SIZE;
 	for (int i = 0; i < nr_frames; i++, pte++)
 		*pte |= flags;
 }
@@ -147,12 +147,12 @@ int paging_init(ulong start, ulong end)
 	fp_end = end;
 
 	/* disable R/W flag for read-only sections */
-	page_attr_off(kernel_pgdir, (ulong) &_urostart, (ulong) &_uroend, PE_RW);
-	page_attr_off(kernel_pgdir, (ulong) &_krostart, (ulong) &_kroend, PE_RW);
+	page_attr_off(kernel_pgdir, urostart, uroend, PE_RW);
+	page_attr_off(kernel_pgdir, krostart, kroend, PE_RW);
 
 	/* set up page table for temporary mappings */
 	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
-		KERNEL_TO_PHYS(tmp_pgtab) | PE_P | PE_RW;
+		kernel_to_phys(tmp_pgtab) | PE_P | PE_RW;
 
 	for (int i = 0; i < 16; i++)
 		kernel_pgdir[i] = 0;

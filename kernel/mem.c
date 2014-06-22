@@ -22,19 +22,15 @@
 
 #include <string.h> /* memcpy */
 
-/*
- * unsigned long PARAGRAPH_ALIGN(unsigned long a)
- *      Takes an address and rounds it up to the nearest paragraph boundary.
- */
-#define PARAGRAPH_ALIGN(a) \
-	((a) & 0xF ? ((a) + 0x10) & ~0xF : (a))
-
 /* magic numbers for kernel heap headers */
 #define MAGIC_OK   0x600DC0DE
 #define MAGIC_FREE 0xF2EEB10C
 
 /* free list for kernel heap */
 static LIST_HEAD(free_list);
+
+ulong kheap_start;
+ulong kheap_end;
 
 static inline ulong MAX(ulong a, ulong b)
 {
@@ -48,7 +44,7 @@ static inline ulong MAX(ulong a, ulong b)
  */
 static ulong get_heap_start(struct multiboot_info *info)
 {
-	ulong max = PAGE_ALIGN((ulong)&_kend);
+	ulong max = page_align(kend);
 
 	if (MULTIBOOT_MODS_VALID(info)) {
 		struct multiboot_mod_list *mods = (void*) info->mods_addr;
@@ -67,7 +63,7 @@ static ulong get_heap_start(struct multiboot_info *info)
 	if (MULTIBOOT_MMAP_VALID(info))
 		max = MAX(max, info->mmap_addr + info->mmap_length);
 
-	return PAGE_ALIGN(max);
+	return page_align(max);
 }
 
 /*
@@ -86,28 +82,27 @@ static void fix_multiboot_info(struct multiboot_info *info)
 {
 	if (MULTIBOOT_MODS_VALID(info)) {
 		struct multiboot_mod_list *mods;
-		info->mods_addr = PHYS_TO_KERNEL(info->mods_addr);
+		info->mods_addr = phys_to_kernel(info->mods_addr);
 		mods = (void*) info->mods_addr;
 
 		for (unsigned i = 0; i < info->mods_count; i++) {
-			mods[i].start = PHYS_TO_KERNEL(mods[i].start);
-			mods[i].end = PHYS_TO_KERNEL(mods[i].end);
+			mods[i].start = phys_to_kernel(mods[i].start);
+			mods[i].end = phys_to_kernel(mods[i].end);
 		}
 	}
 
 	if (MULTIBOOT_ELFSEC_VALID(info))
-		info->elf_sec.addr = PHYS_TO_KERNEL(info->elf_sec.addr);
+		info->elf_sec.addr = phys_to_kernel(info->elf_sec.addr);
 
 	if (MULTIBOOT_MMAP_VALID(info))
-		info->mmap_addr = PHYS_TO_KERNEL(info->mmap_addr);
+		info->mmap_addr = phys_to_kernel(info->mmap_addr);
 }
 
 unsigned long mem_init(struct multiboot_info **info)
 {
 	struct mem_header *heap;
-	ulong heap_start;
 
-	*info = (void*) PHYS_TO_KERNEL(*info);
+	*info = (void*) phys_to_kernel(*info);
 
 	fix_multiboot_info(*info);
 	if (!MULTIBOOT_MEM_VALID(*info)) {
@@ -115,15 +110,17 @@ unsigned long mem_init(struct multiboot_info **info)
 		(*info)->mem_upper = 0x800000;
 	}
 
-	heap_start = get_heap_start(*info);
-	heap = (void*) heap_start;
-	heap->size = get_heap_end(heap_start) - heap_start;
+	kheap_start = get_heap_start(*info);
+	kheap_end = get_heap_end(kheap_start);
+
+	heap = (void*) kheap_start;
+	heap->size = get_heap_end(kheap_start) - kheap_start;
 	heap->magic = MAGIC_FREE;
 	list_add(&heap->chain, &free_list);
 
-	paging_init(0x00400000, PAGE_BASE(MULTIBOOT_MEM_MAX(*info)));
+	paging_init(kernel_to_phys(kheap_end), page_base(MULTIBOOT_MEM_MAX(*info)));
 
-	return MULTIBOOT_MEM_MAX(*info) - KERNEL_TO_PHYS(heap_start);
+	return MULTIBOOT_MEM_MAX(*info) - kernel_to_phys(kheap_start);
 }
 
 /*
@@ -137,7 +134,7 @@ void *hmalloc(unsigned int size, struct mem_header **hdr)
 	struct mem_header *p, *r;
 	struct list_head *it;
 
-	size = PARAGRAPH_ALIGN(size);
+	size = align_up(size, 16);
 
 	/* find a large enough segment of free memory */
 	list_for_each(it, &free_list) {
