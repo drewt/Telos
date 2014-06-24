@@ -80,6 +80,8 @@ void *hmalloc(unsigned int size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
 struct pf_info *kalloc_frame(void);
 struct pf_info *kzalloc_frame(void);
+void *kalloc_pages(uint n);
+void kfree_pages(void *addr, uint n);
 void kfree_frame(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 int address_space_init(struct pcb *p);

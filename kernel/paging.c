@@ -45,6 +45,8 @@ static unsigned int ft_i = 0;
 static ulong fp_start;
 static ulong fp_end;
 
+static uint first_free;
+
 static inline unsigned addr_to_pdi(ulong addr)
 {
 	return (addr & 0xFFC00000) >> 22;
@@ -146,6 +148,8 @@ int paging_init(ulong start, ulong end)
 	fp_start = start;
 	fp_end = end;
 
+	first_free = kheap_end / FRAME_SIZE;
+
 	/* disable R/W flag for read-only sections */
 	page_attr_off(kernel_pgdir, urostart, uroend, PE_RW);
 	page_attr_off(kernel_pgdir, krostart, kroend, PE_RW);
@@ -156,6 +160,7 @@ int paging_init(ulong start, ulong end)
 
 	for (int i = 0; i < 16; i++)
 		kernel_pgdir[i] = 0;
+
 	return 0;
 }
 
@@ -469,4 +474,119 @@ struct pf_info *kzalloc_frame(void)
 void kfree_frame(struct pf_info *page)
 {
 	list_push(&page->chain, &frame_pool);
+}
+
+static pmap_t kmap_page_table(ulong addr)
+{
+	pte_t *pde = addr_to_pde(kernel_pgdir, addr);
+
+	/* allocate page table if one does not already exist */
+	if (!(*pde & PE_P)) {
+		struct pf_info *frame = kzalloc_frame();
+		*pde = frame->addr | PE_P | PE_RW;
+		/* update process page direcories */
+		for (uint i = 0; i < PT_SIZE; i++) {
+			struct pcb *p = &proctab[i];
+			if (p->state != STATE_STOPPED) {
+				pte_t *upde = addr_to_pde(p->pgdir, addr);
+				*upde = frame->addr | PE_P | PE_RW;
+			}
+		}
+	}
+
+	return kmap_tmp_page(*pde & ~0xFFF);
+}
+
+#define kunmap_page_table(pgtab) kunmap_page(pgtab)
+
+void *kalloc_pages(uint n)
+{
+	uint count = 0;
+	uint start = 0;
+	uint i = first_free;
+	pmap_t pgtab = kmap_page_table(i * FRAME_SIZE);
+
+	/* find n consecutive, free pages */
+	for (uint i = first_free; /*TODO*/; i++) {
+		if (pgtab[i % 1024] & PE_P) {
+			count = 0;
+			start = 0;
+		} else {
+			if (start == 0)
+				start = i;
+			if (++count == n)
+				break;
+		}
+
+		/* next page table */
+		if ((i+1) % 1024 == 0) {
+			kunmap_page_table(pgtab);
+			kmap_page_table((i+1) * FRAME_SIZE);
+		}
+	}
+	kunmap_page_table(pgtab);
+	// TODO: if (i == LIMIT) fail()
+
+	pgtab = kmap_page_table(start * FRAME_SIZE);
+
+	/* allocate and map frames */
+	for (uint i = start; i < start + n; i++) {
+		struct pf_info *frame = kalloc_frame();
+		pgtab[i % 1024] = frame->addr | PE_P | PE_RW;
+
+		/* next page table */
+		if ((i+1) % 1024 == 0) {
+			kunmap_page_table(pgtab);
+			kmap_page_table((i+1) * FRAME_SIZE);
+		}
+	}
+	kunmap_page_table(pgtab);
+
+	/* update first_free */
+	if (start == first_free) {
+		pgtab = kmap_page_table((start+n) * FRAME_SIZE);
+		for (uint i = start + n; ; i++) {
+			if (!(pgtab[i % 1024] & PE_P)) {
+				first_free = i;
+				break;
+			}
+
+			/* next page table */
+			if ((i+1) % 1024 == 0) {
+				kunmap_page_table(pgtab);
+				kmap_page_table((i+1) * FRAME_SIZE);
+			}
+		}
+		kunmap_page_table(pgtab);
+		// TODO: check limit
+	}
+	return (void*) (start * FRAME_SIZE);
+}
+
+static struct pf_info *phys_to_info(ulong addr)
+{
+	return frame_table[ (addr - fp_start) / FRAME_SIZE ];
+}
+
+void kfree_pages(void *addr, uint n)
+{
+	uint start = (ulong)addr / FRAME_SIZE;
+	pmap_t pgtab = kmap_page_table((ulong)addr);
+
+	for (uint i = start; i < start + n; i++) {
+		struct pf_info *frame = phys_to_info(pgtab[i % 1024] & ~0xFFF);
+		pgtab[i % 1024] = 0;
+		kfree_frame(frame);
+
+		/* next page table */
+		if ((i+1) % 1024 == 0) {
+			kunmap_page_table(pgtab);
+			kmap_page_table((i+1) * FRAME_SIZE);
+		}
+	}
+	kunmap_page_table(pgtab);
+	// TODO: check limit
+
+	if (start < first_free)
+		first_free = start;
 }
