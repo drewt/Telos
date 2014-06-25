@@ -88,11 +88,12 @@ static inline void set_action(unsigned int vector, isr_t f, int nargs)
  * Initializes the dispatcher.  Must be called *after* the device table is
  * initialized, if any device ISRs are assigned dynamically */
 //-----------------------------------------------------------------------------
-void dispatch_init(void)
+static void dispatch_init(void)
 {
 	/* initialize actions that can't be initialized statically */
 	set_action(INTR_KBD, (isr_t) devtab[DEV_CONSOLE_0].dv_op->dviint, 0);
 }
+EXPORT_KINIT(dispatch, SUB_DISPATCH, dispatch_init);
 
 /*-----------------------------------------------------------------------------
  * The dispatcher.  Passes control to the appropriate routines to handle 

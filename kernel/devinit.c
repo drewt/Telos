@@ -40,7 +40,8 @@ struct device devtab[DT_SIZE] = {
 	}
 };
 
-void dev_init(void)
+static void driver_init(void)
 {
 	devtab[DEV_CONSOLE_0].dv_op->dvinit();
 }
+EXPORT_KINIT(driver, SUB_DRIVER, driver_init);

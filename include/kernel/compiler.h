@@ -24,6 +24,8 @@
 
 #define __always_inline __attribute__((always_inline))
 
+#define __used __attribute__((used))
+
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 

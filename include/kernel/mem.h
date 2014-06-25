@@ -56,6 +56,16 @@ extern ulong _kroend;   // end of kernel read-only memory
 #define krostart ((ulong)&_krostart)
 #define kroend   ((ulong)&_kroend)
 
+/* export sets */
+extern ulong _kinit_set;
+extern ulong _kinit_set_end;
+
+#define __set_length(start, end) \
+	(((ulong)end - (ulong)start) / sizeof(ulong))
+
+#define kinit_set ((struct kinit_struct**) &_kinit_set)
+#define kinit_set_length __set_length(&_kinit_set, &_kinit_set_end)
+
 extern ulong kheap_start;
 extern ulong kheap_end;
 
@@ -75,7 +85,6 @@ struct pf_info {
 
 struct multiboot_info;
 
-unsigned long mem_init(struct multiboot_info **info);
 void *hmalloc(unsigned int size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
 struct pf_info *kalloc_frame(void);

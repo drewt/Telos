@@ -32,6 +32,8 @@ pid_t root_pid;
 // TODO: find a more appropriate place for this
 struct pcb proctab[PT_SIZE];
 
+struct multiboot_info *mb_info;
+
 static void proctab_init (void)
 {
 	for (int i = 0; i < PT_SIZE; i++) {
@@ -40,8 +42,24 @@ static void proctab_init (void)
 	}
 	proctab[0].pid = 0; // 0 is a reserved pid
 }
+EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
 
-extern int console_init(void);
+static void init_subsystems(void)
+{
+	/* (bubble) sort kinit_set */
+	for (unsigned i = 1; i < kinit_set_length; i++) {
+		if (kinit_set[i]->subsystem < kinit_set[i-1]->subsystem) {
+			struct kinit_struct *tmp = kinit_set[i];
+			kinit_set[i] = kinit_set[i-1];
+			kinit_set[i-1] = tmp;
+			i = 0;
+		}
+	}
+
+	for (unsigned i = 0; i < kinit_set_length; i++) {
+		kinit_set[i]->func();
+	}
+}
 
 /*-----------------------------------------------------------------------------
  * Kernel entry point, where it all begins... */
@@ -50,7 +68,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 {
 	#define bprintf(fmt, ...) kprintf_clr(0xA, fmt, ## __VA_ARGS__)
 
-	unsigned long memtotal;
+	mb_info = info;
 
 	/* initialize console so we can print boot status */
 	console_early_init();
@@ -73,19 +91,14 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	clock_init();
 
 	bprintf("Initializing kernel subsystems...\n");
-	memtotal = mem_init(&info);
-	proctab_init();
-	dev_init();
-	dispatch_init();
+	init_subsystems();
 
 	bprintf("\n----------- MEMORY -----------\n");
-	bprintf("Kernel:    %x - %x\n", &_kstart, &_kend);
-	bprintf("Userspace: %x - %x\n", &_ustart, &_uend);
-	bprintf("Total:     %d bytes\n", MULTIBOOT_MEM_MAX(info));
-	bprintf("Available: %d bytes\n\n", memtotal);
+	bprintf("Kernel:    %p - %p\n", &_kstart, &_kend);
+	bprintf("Userspace: %p - %p\n", &_ustart, &_uend);
+	bprintf("Total:     %d bytes\n", MULTIBOOT_MEM_MAX(mb_info));
 
 	bprintf("Starting Telos...\n\n");
-
 	idle_pid = create_kernel_process(idle_proc, 0, NULL, 0);
 	root_pid = create_kernel_process(root_proc, 0, NULL, 0);
 	dispatch();

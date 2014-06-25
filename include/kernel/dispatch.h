@@ -31,7 +31,6 @@ extern struct pcb *current;
 extern int idle_pid;
 extern int root_pid;
 
-void dispatch_init(void);
 void dispatch(void);
 void ready(struct pcb *p);
 void new_process(void);

@@ -117,6 +117,8 @@ multiboot_mmap_end(struct multiboot_info *info, struct multiboot_mmap *mmap)
 	return (unsigned long) mmap >= info->mmap_addr + info->mmap_length;
 }
 
+extern struct multiboot_info *mb_info;
+
 /*
  * multiboot_mmap_iterate(info, mmap)
  *

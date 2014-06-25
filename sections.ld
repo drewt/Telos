@@ -42,6 +42,9 @@ SECTIONS
 	.data ALIGN (0x1000) : AT(ADDR(.data) - KERNEL_PAGE_OFFSET)
 	{
 		_krw_start = .;
+		_kinit_set = .;
+		*(.set.kinit)
+		_kinit_set_end = .;
 		*(.data)
 	}
 

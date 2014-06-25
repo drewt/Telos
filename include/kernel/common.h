@@ -41,4 +41,31 @@ extern int kprintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
 extern int kprintf_clr(unsigned char clr, const char *fmt, ...);
 extern void clear_console(void);
 
+/* initialization order */
+enum {
+	SUB_MEMORY,
+	SUB_PROCESS,
+	SUB_DRIVER,
+	SUB_DISPATCH,
+};
+
+struct kinit_struct {
+	ulong subsystem;
+	void(*func)(void);
+};
+
+/* export declarations */
+
+#define EXPORT(set, sym) \
+	asm(".section .set." #set ",\"aw\""); \
+	asm(".long " #sym); \
+	asm(".previous")
+
+#define EXPORT_KINIT(uniq, subsys, fun) \
+	static struct kinit_struct uniq ## _kinit __used = { \
+		.subsystem = subsys, \
+		.func = fun, \
+	}; \
+	EXPORT(kinit, uniq ## _kinit);
+
 #endif

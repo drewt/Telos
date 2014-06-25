@@ -98,19 +98,19 @@ static void fix_multiboot_info(struct multiboot_info *info)
 		info->mmap_addr = phys_to_kernel(info->mmap_addr);
 }
 
-unsigned long mem_init(struct multiboot_info **info)
+static void mem_init(void)
 {
 	struct mem_header *heap;
 
-	*info = (void*) phys_to_kernel(*info);
+	mb_info = (void*) phys_to_kernel(mb_info);
 
-	fix_multiboot_info(*info);
-	if (!MULTIBOOT_MEM_VALID(*info)) {
+	fix_multiboot_info(mb_info);
+	if (!MULTIBOOT_MEM_VALID(mb_info)) {
 		wprints("failed to detect memory limits; assuming 8MB total");
-		(*info)->mem_upper = 0x800000;
+		mb_info->mem_upper = 0x800000;
 	}
 
-	kheap_start = get_heap_start(*info);
+	kheap_start = get_heap_start(mb_info);
 	kheap_end = get_heap_end(kheap_start);
 
 	heap = (void*) kheap_start;
@@ -118,10 +118,9 @@ unsigned long mem_init(struct multiboot_info **info)
 	heap->magic = MAGIC_FREE;
 	list_add(&heap->chain, &free_list);
 
-	paging_init(kernel_to_phys(kheap_end), page_base(MULTIBOOT_MEM_MAX(*info)));
-
-	return MULTIBOOT_MEM_MAX(*info) - kernel_to_phys(kheap_start);
+	paging_init(kernel_to_phys(kheap_end), page_base(MULTIBOOT_MEM_MAX(mb_info)));
 }
+EXPORT_KINIT(memory, SUB_MEMORY, mem_init);
 
 /*
  * Allocates size bytes of memory, returning a pointer to the start of the
