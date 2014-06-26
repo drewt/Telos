@@ -25,7 +25,7 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
-#include <kernel/mem.h>
+#include <kernel/mm/paging.h>
 
 long sys_sbrk(long inc, ulong *oldbrk)
 {

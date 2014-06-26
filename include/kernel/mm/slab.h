@@ -30,13 +30,6 @@ struct slab_cache {
 	size_t obj_size;
 };
 
-struct slab {
-	struct list_head chain;
-	unsigned in_use;
-	void *mem;
-	ulong bitmap[];
-};
-
 struct slab_cache *slab_cache_create(size_t size);
 void *slab_alloc(struct slab_cache *cache);
 void slab_free(struct slab_cache *cache, void *mem);

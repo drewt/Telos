@@ -19,6 +19,8 @@
 #include <kernel/mem.h>
 #include <kernel/time.h>
 #include <kernel/timer.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
 
 /*
  * Kernel timers are implemented as a delta list of callbacks.

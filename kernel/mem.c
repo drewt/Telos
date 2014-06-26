@@ -18,7 +18,9 @@
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
 #include <kernel/list.h>
-#include <kernel/mem.h>
+#include <kernel/mmap.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
 
 #include <string.h> /* memcpy */
 

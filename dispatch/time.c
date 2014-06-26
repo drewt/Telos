@@ -21,8 +21,10 @@
 #include <kernel/time.h>
 #include <kernel/timer.h>
 #include <kernel/signal.h>
-
 #include <kernel/hashtable.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
+#include <kernel/mm/slab.h>
 
 struct posix_timer {
 	struct list_head chain;

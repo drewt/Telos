@@ -19,10 +19,12 @@
 #include <kernel/elf.h>
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
-#include <kernel/mem.h>
+#include <kernel/mmap.h>
 #include <kernel/device.h>
 #include <kernel/list.h>
 #include <kernel/signal.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
 
 #define STACK_PAGES 8
 #define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)

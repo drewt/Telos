@@ -1,0 +1,67 @@
+/*  Copyright 2013 Drew Thoreson
+ *
+ *  This file is part of Telos.
+ *  
+ *  Telos is free software: you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, version 2 of the License.
+ *
+ *  Telos is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ *  details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _KERNEL_MM_PAGING_H_
+#define _KERNEL_MM_PAGING_H_
+
+#include <kernel/process.h>
+
+#define FRAME_SIZE 4096
+
+#define kernel_to_phys(addr) \
+	((ulong) (addr) - (ulong) &KERNEL_PAGE_OFFSET)
+
+#define phys_to_kernel(addr) \
+	((ulong) (addr) + (ulong) &KERNEL_PAGE_OFFSET)
+
+#define PE_P  0x1
+#define PE_RW 0x2
+#define PE_U  0x4
+
+/* page frame info */
+struct pf_info {
+	struct list_head chain;
+	unsigned long addr;
+};
+
+struct pf_info *kalloc_frame(void);
+struct pf_info *kzalloc_frame(void);
+void *kalloc_pages(uint n);
+void kfree_pages(void *addr, uint n);
+void kfree_frame(struct pf_info *page);
+int paging_init(unsigned long start, unsigned long end);
+int address_space_init(struct pcb *p);
+int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
+		struct list_head *page_list);
+#define map_pages_user(p, start, pages, attr) \
+	map_pages((p)->pgdir, start, pages, attr, &(p)->page_mem)
+
+static inline ulong align_up(ulong addr, unsigned align)
+{
+	unsigned mask = align - 1;
+	return (addr & mask) ? (addr + align) & ~mask : addr;
+}
+
+static inline ulong align_down(ulong addr, unsigned align)
+{
+	return addr & ~(align - 1);
+}
+
+#define page_align(n) align_up(n, FRAME_SIZE)
+#define page_base(n)  align_down(n, FRAME_SIZE)
+
+#endif

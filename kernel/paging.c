@@ -18,8 +18,10 @@
 #include <kernel/i386.h>
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
-#include <kernel/mem.h>
+#include <kernel/mmap.h>
 #include <kernel/process.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
 
 #include <string.h>
 
@@ -488,8 +490,10 @@ static pmap_t kmap_page_table(ulong addr)
 		for (uint i = 0; i < PT_SIZE; i++) {
 			struct pcb *p = &proctab[i];
 			if (p->state != STATE_STOPPED) {
-				pte_t *upde = addr_to_pde(p->pgdir, addr);
+				pmap_t pgdir = kmap_tmp_page((ulong)p->pgdir);
+				pte_t *upde = addr_to_pde(pgdir, addr);
 				*upde = frame->addr | PE_P | PE_RW;
+				kunmap_page(pgdir);
 			}
 		}
 	}

@@ -16,14 +16,23 @@
  */
 
 #include <kernel/bitmap.h>
-#include <kernel/mem.h>
-#include <kernel/slab.h>
+#include <kernel/list.h>
+#include <kernel/mm/kmalloc.h>
+#include <kernel/mm/paging.h>
+#include <kernel/mm/slab.h>
 
 #define bitmap_length(cache) (cache->pages_per_slab * 4)
 #define bitmap_size(cache) (bitmap_length(cache) * sizeof(ulong))
 #define slab_size(cache) (cache->pages_per_slab * FRAME_SIZE)
 #define slab_desc_size(cache) (sizeof(struct slab) + bitmap_size(cache))
 #define slab_mem_size(cache) (slab_size(cache) - slab_desc_size(cache))
+
+struct slab {
+	struct list_head chain;
+	unsigned in_use;
+	void *mem;
+	ulong bitmap[];
+};
 
 struct slab_cache *slab_cache_create(size_t size)
 {

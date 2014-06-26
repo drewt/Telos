@@ -19,7 +19,7 @@
 #include <kernel/multiboot.h>
 #include <kernel/elf.h>
 #include <kernel/i386.h>
-#include <kernel/mem.h>
+#include <kernel/mmap.h>
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
 #include <kernel/drivers/console.h>
