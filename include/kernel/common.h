@@ -47,6 +47,8 @@ enum {
 	SUB_PROCESS,
 	SUB_DRIVER,
 	SUB_DISPATCH,
+
+	SUB_LAST
 };
 
 struct kinit_struct {

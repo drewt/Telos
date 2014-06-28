@@ -420,8 +420,11 @@ int address_space_init(struct pcb *p)
 		return -ENOMEM;
 	}
 
-	pdi = addr_to_pdi((ulong) &KERNEL_PAGE_OFFSET);
-	vaddr[pdi] = kernel_pgdir[pdi];
+	/* map kernel memory */
+	for (pdi = addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET);
+			kernel_pgdir[pdi] & PE_P;
+			pdi++)
+		vaddr[pdi] = kernel_pgdir[pdi];
 
 	pdi = addr_to_pdi(TMP_PGTAB_BASE);
 	vaddr[pdi] = kernel_pgdir[pdi];
@@ -503,6 +506,12 @@ static pmap_t kmap_page_table(ulong addr)
 
 #define kunmap_page_table(pgtab) kunmap_page(pgtab)
 
+static void inval_pages(ulong addr, uint n)
+{
+	for (uint i = 0; i < n; i++)
+		asm volatile("invlpg (%0)" : : "b" (addr + n * FRAME_SIZE));
+}
+
 void *kalloc_pages(uint n)
 {
 	uint count = 0;
@@ -564,6 +573,7 @@ void *kalloc_pages(uint n)
 		kunmap_page_table(pgtab);
 		// TODO: check limit
 	}
+	inval_pages(start * FRAME_SIZE, n);
 	return (void*) (start * FRAME_SIZE);
 }
 
@@ -593,4 +603,6 @@ void kfree_pages(void *addr, uint n)
 
 	if (start < first_free)
 		first_free = start;
+
+	inval_pages((ulong)addr, n);
 }

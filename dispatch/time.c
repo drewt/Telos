@@ -17,21 +17,20 @@
 
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
-#include <kernel/mem.h>
 #include <kernel/time.h>
 #include <kernel/timer.h>
 #include <kernel/signal.h>
-#include <kernel/hashtable.h>
-#include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
+
+#include <kernel/hashtable.h>
 
 struct posix_timer {
 	struct list_head chain;
 	struct hlist_node t_hash;
 	struct sigevent sev;
 	struct itimerspec spec;
-	struct timer *timer;
+	struct timer timer;
 	pid_t pid;
 	timer_t timerid;
 };
@@ -49,13 +48,21 @@ struct clock posix_clocks[__NR_CLOCKS] = {
 	}
 };
 
-LIST_HEAD(free_timers);
 DEFINE_HASHTABLE(posix_timers, 9);
 
 unsigned long tick_count = 0; /* global tick count */
 unsigned long system_clock;   /* seconds since the Epoch */
 
-DEFINE_ALLOCATOR(get_posix_timer, struct posix_timer, &free_timers, chain)
+static struct slab_cache *posix_timers_cachep;
+
+static void posixtime_init(void)
+{
+	posix_timers_cachep = slab_cache_create(sizeof(struct posix_timer));
+}
+EXPORT_KINIT(posix_timer, SUB_LAST, posixtime_init);
+
+#define get_posix_timer() slab_alloc(posix_timers_cachep)
+#define free_posix_timer(p) slab_free(posix_timers_cachep, p)
 
 /*
  * Wakes a sleeping process.
@@ -81,7 +88,8 @@ static void alrm_action(void *data)
  */
 long sys_sleep(unsigned long ticks)
 {
-	ktimer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_REF);
+	current->state = STATE_SLEEPING;
+	ktimer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_STATIC);
 	ktimer_start(&current->t_sleep, ticks);
 	new_process();
 	return 0;
@@ -104,7 +112,7 @@ long sys_alarm(unsigned long ticks)
 	if (ticks == 0)
 		return rc;
 
-	ktimer_init(&current->t_alarm, alrm_action, current, TF_REF);
+	ktimer_init(&current->t_alarm, alrm_action, current, TF_STATIC);
 	ktimer_start(&current->t_alarm, ticks);
 	return rc;
 }
@@ -254,11 +262,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		}
 	}
 
-	pt->timer = ktimer_create(posix_timer_action, pt, TF_REF);
-	if (pt->timer == NULL) {
-		error = -ENOMEM;
-		goto err0;
-	}
+	ktimer_init(&pt->timer, posix_timer_action, pt, TF_STATIC);
 
 	list_add_tail(&pt->chain, &current->posix_timers);
 	hash_add(posix_timers, &pt->t_hash, pt->timerid);
@@ -266,7 +270,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 	copy_to_current(timerid, &pt->timerid, sizeof(*timerid));
 	return 0;
 err0:
-	list_add(&pt->chain, &free_timers);
+	free_posix_timer(pt);
 	return error;
 }
 
@@ -278,7 +282,7 @@ long sys_timer_delete(timer_t timerid)
 		return -EINVAL;
 
 	list_del(&pt->chain);
-	list_add(&pt->chain, &free_timers);
+	free_posix_timer(pt);
 	hash_del(&pt->t_hash);
 
 	return 0;
@@ -292,7 +296,7 @@ long sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 	if (pt == NULL)
 		return -EINVAL;
 
-	ticks = pt->timer->expires - tick_count;
+	ticks = pt->timer.expires - tick_count;
 	pt->spec.it_value.tv_sec = (ticks % 100) ? ticks/100 + 1 : ticks/100;
 	pt->spec.it_value.tv_nsec = 0;
 
@@ -312,7 +316,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	copy_from_current(v, new_value, sizeof(*new_value));
 
-	ktimer_start(pt->timer, __timespec_to_ticks(&v->it_value));
+	ktimer_start(&pt->timer, __timespec_to_ticks(&v->it_value));
 	return 0;
 }
 

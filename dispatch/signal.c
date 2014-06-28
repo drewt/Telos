@@ -288,7 +288,7 @@ void __kill(struct pcb *p, int sig_no)
 		ready(p);
 	} else if (p->state == STATE_SLEEPING) {
 		/* sleep timer has TF_ALWAYS */
-		p->rc = ktimer_remove(&p->t_sleep);
+		p->rc = ktimer_destroy(&p->t_sleep);
 	}
 }
 

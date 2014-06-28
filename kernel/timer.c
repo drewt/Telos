@@ -16,30 +16,32 @@
  */
 
 #include <kernel/list.h>
-#include <kernel/mem.h>
 #include <kernel/time.h>
 #include <kernel/timer.h>
-#include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
+#include <kernel/mm/slab.h>
 
 /*
  * Kernel timers are implemented as a delta list of callbacks.
  */
 
-/*
- * A "zombie" timer is expired/destroyed but still referenced.
- */
-static LIST_HEAD(zombie_timers);
-static LIST_HEAD(free_timers);
 static LIST_HEAD(timers);
 
-DEFINE_ALLOCATOR(get_timer, struct timer, &free_timers, chain)
+static struct slab_cache *ktimers_cachep;
+
+static void ktimer_sysinit(void)
+{
+	ktimers_cachep = slab_cache_create(sizeof(struct timer));
+}
+EXPORT_KINIT(kernel_timer, SUB_LAST, ktimer_sysinit);
+
+#define get_timer() slab_alloc(ktimers_cachep)
+#define free_timer(p) slab_free(ktimers_cachep, p)
 
 int ktimer_start(struct timer *timer, unsigned long ticks)
 {
 	struct timer *t;
 
-	ktimer_ref(timer);
 	timer->expires = tick_count + ticks;
 	timer->flags |= TF_ARMED;
 
@@ -78,16 +80,16 @@ struct timer *ktimer_create(void(*act)(void*), void *data, unsigned int flags)
 	return timer;
 }
 
-int __ktimer_destroy(struct timer *timer)
+unsigned long ktimer_destroy(struct timer *timer)
 {
 	list_del(&timer->chain);
-	list_add(&timer->chain, &free_timers);
+	if (!(timer->flags & TF_STATIC))
+		free_timer(&timer);
 
 	if (timer->flags & TF_ALWAYS && timer->expires > tick_count)
 		timer->action(timer->data);
 
-	timer->expires = 0;
-	return 0;
+	return (timer->expires <= tick_count) ? 0 : timer->expires - tick_count;
 }
 
 /*
@@ -96,13 +98,8 @@ int __ktimer_destroy(struct timer *timer)
  */
 unsigned long ktimer_remove(struct timer *timer)
 {
-	int ticks = timer->expires - tick_count;
-
 	list_del(&timer->chain);
-	list_add(&timer->chain, &zombie_timers);
-	ktimer_unref(timer);
-
-	return ticks;
+	return timer->expires - tick_count;
 }
 
 /*
@@ -121,8 +118,6 @@ void ktimers_tick(void)
 
 		t->flags &= ~TF_ARMED;
 		t->action(t->data);
-		list_del(&t->chain);
-		list_add(&t->chain, &zombie_timers);
-		ktimer_unref(t);
+		ktimer_destroy(t);
 	}
 }
