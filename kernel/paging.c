@@ -28,14 +28,15 @@
 #define PAGE_TABLE(name) \
 	pte_t name[1024] __attribute__((aligned(0x1000)))
 
-#define TMP_PGTAB_BASE 0xB0400000
+#define TMP_PGTAB_BASE 0xFFC00000
 
 #define NR_RESERVED_PAGES 4
 
 #define kernel_pgdir (&_kernel_pgd)
 
 /* page table for temporary mappings */
-static PAGE_TABLE(tmp_pgtab);
+static PAGE_TABLE(_tmp_pgtab);
+#define tmp_pgtab ((pmap_t) 0xFFFFE000)
 
 /* free list for page heap */
 static LIST_HEAD(frame_pool);
@@ -52,7 +53,7 @@ static uint first_free;
 #define flush_page(addr) \
 	asm volatile("invlpg (%0)" : : "b" (addr));
 
-static void flush_pages(ulong addr, uint n)
+static inline void flush_pages(ulong addr, uint n)
 {
 	for (uint i = 0; i < n; i++)
 		flush_page(addr + n*FRAME_SIZE);
@@ -125,7 +126,7 @@ void page_attr_on(pmap_t pgdir, ulong start, ulong end, ulong flags)
 /*
  * Allocate memory for pf_info structures.
  */
-int grow_frame_pool(void)
+static int grow_frame_pool(void)
 {
 	struct pf_info *info;
 	int next;
@@ -167,7 +168,11 @@ int paging_init(ulong start, ulong end)
 
 	/* set up page table for temporary mappings */
 	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
-		kernel_to_phys(tmp_pgtab) | PE_P | PE_RW;
+		kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
+	/* map _tmp_pgtab at 0xFFFFE000 */
+	_tmp_pgtab[1022] = kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
+	/* map kernel_pgdir at 0xFFFFF000 */
+	_tmp_pgtab[1023] = kernel_to_phys(kernel_pgdir) | PE_P | PE_RW;
 
 	for (int i = 0; i < 16; i++)
 		kernel_pgdir[i] = 0;
@@ -184,11 +189,11 @@ void *kmap_tmp_page(ulong addr)
 	int i;
 	ulong tmp_addr;
 
-	for (i = NR_RESERVED_PAGES; i < 1024; i++) {
+	for (i = NR_RESERVED_PAGES; i < 1022; i++) {
 		if (!(tmp_pgtab[i] & PE_P))
 			break;
 	}
-	if (i == 1024)
+	if (i == 1022)
 		return NULL;
 
 	tmp_pgtab[i] = addr | PE_P | PE_RW;
@@ -235,7 +240,7 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
 	unsigned count = 0;
 
 	pte = &tmp_pgtab[NR_RESERVED_PAGES];
-	for (unsigned i = NR_RESERVED_PAGES; i < 1024; i++, pte++) {
+	for (unsigned i = NR_RESERVED_PAGES; i < 1022; i++, pte++) {
 		if (!(*pte & PE_P)) {
 			if (first == NULL) {
 				first = pte;
@@ -426,18 +431,15 @@ int address_space_init(struct pcb *p)
 		goto nomem3;
 
 	/* map page directory to last page */
-	pgdir[1023] = f_pgtab->addr | PE_P | PE_RW;
-	pgtab[1023] = f_pgdir->addr | PE_P | PE_RW;
+	pgdir[1023] = f_pgtab->addr | PE_P | PE_RW; /* pgtab mapping 0xFFC00000+ */
+	pgtab[1023] = f_pgdir->addr | PE_P | PE_RW; /* pgdir at 0xFFFFF000 */
+	pgtab[1022] = f_pgtab->addr | PE_P | PE_RW; /* tmp_pgtab at 0xFFFFE000 */
 
 	/* map kernel memory */
 	for (pdi = addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET);
 			kernel_pgdir[pdi] & PE_P;
 			pdi++)
 		pgdir[pdi] = kernel_pgdir[pdi];
-
-	/* map tmp page table */
-	pdi = addr_to_pdi(TMP_PGTAB_BASE);
-	pgdir[pdi] = kernel_pgdir[pdi];
 
 	list_add(&f_pgdir->chain, &p->page_mem);
 	list_add(&f_pgtab->chain, &p->page_mem);
