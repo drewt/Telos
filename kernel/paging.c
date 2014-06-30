@@ -40,14 +40,8 @@ static PAGE_TABLE(_tmp_pgtab);
 
 /* free list for page heap */
 static LIST_HEAD(frame_pool);
-
-/* page frame metadata */
-static struct pf_info **frame_table;
-static unsigned int ft_i = 0;
-
+static struct pf_info *frame_table;
 static ulong fp_start;
-static ulong fp_end;
-
 static uint first_free;
 
 #define flush_page(addr) \
@@ -123,42 +117,28 @@ void page_attr_on(pmap_t pgdir, ulong start, ulong end, ulong flags)
 		*pte |= flags;
 }
 
-/*
- * Allocate memory for pf_info structures.
- */
-static int grow_frame_pool(void)
+static int frame_pool_init(ulong start, ulong end)
 {
-	struct pf_info *info;
-	int next;
-
-	if ((info = kmalloc(FRAME_SIZE)) == NULL)
+	unsigned nr_frames = (end - start) / FRAME_SIZE;
+	frame_table = kmalloc(nr_frames * sizeof(struct pf_info));
+	if (frame_table == NULL)
 		return -1;
 
-	next = FRAME_SIZE / sizeof(struct pf_info);
+	fp_start = start;
 
-	for (int i = 0; i < next; i++, info++) {
-		info->addr = fp_start + (ft_i + i)*FRAME_SIZE;
-		list_add_tail(&info->chain, &frame_pool);
-		frame_table[ft_i + i] = info;
+	for (unsigned i = 0; i < nr_frames; i++) {
+		frame_table[i].addr = start + i*FRAME_SIZE;
+		list_add_tail(&frame_table[i].chain, &frame_pool);
 	}
-
-	ft_i += next;
-
 	return 0;
-}		
+}
 
 /*
  * Initialize the frame pool.
  */
 int paging_init(ulong start, ulong end)
 {
-	unsigned nr_frames = (end - start) / FRAME_SIZE;
-	frame_table = kmalloc(nr_frames * sizeof(struct pf_info*));
-	if (frame_table == NULL)
-		return -1;
-
-	fp_start = start;
-	fp_end = end;
+	frame_pool_init(start, end);
 
 	first_free = kheap_end / FRAME_SIZE;
 
@@ -462,8 +442,8 @@ struct pf_info *kalloc_frame(void)
 {
 	struct pf_info *page;
 
-	if (list_empty(&frame_pool) && grow_frame_pool() == -1)
-		return NULL;
+	if (list_empty(&frame_pool))
+		return NULL; /* TODO: try to free some memory */
 
 	page = list_pop(&frame_pool, struct pf_info, chain);
 	return page;
@@ -581,7 +561,7 @@ void *kalloc_pages(uint n)
 
 static struct pf_info *phys_to_info(ulong addr)
 {
-	return frame_table[ (addr - fp_start) / FRAME_SIZE ];
+	return &frame_table[(addr - fp_start) / FRAME_SIZE];
 }
 
 void kfree_pages(void *addr, uint n)
