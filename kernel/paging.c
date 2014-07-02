@@ -38,6 +38,8 @@
 static PAGE_TABLE(_tmp_pgtab);
 #define tmp_pgtab ((pmap_t) 0xFFFFE000)
 
+#define current_pgdir ((pmap_t) 0xFFFFF000)
+
 /* free list for page heap */
 static LIST_HEAD(frame_pool);
 static struct pf_info *frame_table;
@@ -63,9 +65,9 @@ static inline unsigned addr_to_pti(ulong addr)
 	return (addr & 0x003FF000) >> 12;
 }
 
-static inline unsigned pages_in_range(ulong addr, ulong len)
+static struct pf_info *phys_to_info(ulong addr)
 {
-	return (((addr & 0xFFF) + len) / FRAME_SIZE) + 1;
+	return &frame_table[(addr - fp_start) / FRAME_SIZE];
 }
 
 /*
@@ -128,6 +130,7 @@ static int frame_pool_init(ulong start, ulong end)
 
 	for (unsigned i = 0; i < nr_frames; i++) {
 		frame_table[i].addr = start + i*FRAME_SIZE;
+		frame_table[i].ref = 0;
 		list_add_tail(&frame_table[i].chain, &frame_pool);
 	}
 	return 0;
@@ -289,42 +292,10 @@ void kunmap_range(void *addrp, size_t len)
 	}
 }
 
-int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
-		struct list_head *page_list)
-{
-	pte_t *pte;
-	pmap_t pgtab;
-	struct pf_info *frame;
-
-	pgdir = kmap_tmp_page_n((ulong)pgdir, 2);
-
-	pte = pgdir + addr_to_pdi(start);
-	if (!(*pte & PE_P)) {
-		if ((frame = kzalloc_frame()) == NULL)
-			return -ENOMEM;
-
-		*pte = frame->addr | attr | PE_P;
-		list_add_tail(&frame->chain, page_list);
-	}
-
-	pgtab = kmap_tmp_page_n((ulong)(*pte & ~0xFFF), 3);
-
-	pte = pgtab + addr_to_pti(start);
-	for (int i = 0; i < pages; i++, pte++) {
-		if ((frame = kalloc_frame()) == NULL)
-			return -ENOMEM;
-
-		*pte = frame->addr | attr | PE_P;
-		list_add_tail(&frame->chain, page_list);
-	}
-
-	return 0;
-}
-
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
 	void *addr;
-	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
+	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) src, len)) == 0)
 		return -1;
 
 	memcpy(dst, addr, len);
@@ -336,7 +307,7 @@ int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
 	void *addr;
-	if ((addr = kmap_tmp_range(p->pgdir, (ulong) dst, len)) == 0)
+	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
 	memcpy(addr, src, len);
@@ -350,10 +321,10 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 {
 	void *dst_addr, *src_addr;
 
-	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
+	if ((dst_addr = kmap_tmp_range(dst_p->mm.pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
-	if ((src_addr = kmap_tmp_range(src_p->pgdir, (ulong) src, len)) == 0) {
+	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
 		kunmap_range(dst_addr, len);
 		return -1;
 	}
@@ -370,10 +341,10 @@ int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 {
 	void *dst_addr, *src_addr;
 
-	if ((dst_addr = kmap_tmp_range(dst_p->pgdir, (ulong) dst, len)) == 0)
+	if ((dst_addr = kmap_tmp_range(dst_p->mm.pgdir, (ulong) dst, len)) == 0)
 		return -1;
 
-	if ((src_addr = kmap_tmp_range(src_p->pgdir, (ulong) src, len)) == 0) {
+	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
 		kunmap_range(dst_addr, len);
 		return -1;
 	}
@@ -388,7 +359,7 @@ int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 {
 	void *addr;
-	if ((addr = kmap_tmp_range(p->pgdir, (ulong) src, len)) == 0)
+	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) src, len)) == 0)
 		return -1;
 
 	strncpy(dst, addr, len);
@@ -421,9 +392,7 @@ int address_space_init(struct pcb *p)
 			pdi++)
 		pgdir[pdi] = kernel_pgdir[pdi];
 
-	list_add(&f_pgdir->chain, &p->page_mem);
-	list_add(&f_pgtab->chain, &p->page_mem);
-	p->pgdir = (void*) f_pgdir->addr;
+	p->mm.pgdir = (void*) f_pgdir->addr;
 
 	kunmap_page(pgtab);
 	kunmap_page(pgdir);
@@ -433,6 +402,45 @@ nomem3:	kunmap_page(pgdir);
 nomem2:	kfree_frame(f_pgtab);
 nomem1:	kfree_frame(f_pgdir);
 nomem0:	return -ENOMEM;
+}
+
+static int pgtab_fini(ulong phys_pgtab)
+{
+	pmap_t pgtab = kmap_tmp_page(phys_pgtab);
+
+	if (pgtab == NULL)
+		return -ENOMEM;
+
+	for (int i = 0; i < 1024; i++) {
+		if (!(pgtab[i] & PE_P))
+			continue;
+		kfree_frame(phys_to_info(pgtab[i] & ~0xFFF));
+	}
+	kunmap_page(pgtab);
+	kfree_frame(phys_to_info(phys_pgtab));
+	return 0;
+}
+
+#define kernel_pdi addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET)
+
+int address_space_fini(pmap_t phys_pgdir)
+{
+	int rc;
+	pmap_t pgdir = kmap_tmp_page((ulong)phys_pgdir);
+
+	if (pgdir == NULL)
+		return -ENOMEM;
+
+	for (unsigned i = 0; i < kernel_pdi; i++) {
+		if (!(pgdir[i] & PE_P))
+			continue;
+		if ((rc = pgtab_fini(pgdir[i] & ~0xFFF)) != 0)
+			return rc;
+	}
+	kfree_frame(phys_to_info(pgdir[1023] & ~0xFFF));
+	kfree_frame(phys_to_info((ulong)phys_pgdir));
+	kunmap_page(pgdir);
+	return 0;
 }
 
 /*
@@ -446,6 +454,7 @@ struct pf_info *kalloc_frame(void)
 		return NULL; /* TODO: try to free some memory */
 
 	page = list_pop(&frame_pool, struct pf_info, chain);
+	page->ref = 1;
 	return page;
 }
 
@@ -470,13 +479,23 @@ struct pf_info *kzalloc_frame(void)
 	return page;
 }
 
-
 /*
  * Return a page to the frame pool.
  */
-void kfree_frame(struct pf_info *page)
+void _kfree_frame(struct pf_info *page)
 {
 	list_push(&page->chain, &frame_pool);
+}
+
+static pmap_t umap_page_table(pmap_t pgdir, ulong addr)
+{
+	pte_t *pde = addr_to_pde(pgdir, addr);
+
+	if (!(*pde & PE_P)) {
+		struct pf_info *frame = kzalloc_frame();
+		*pde = frame->addr | PE_P | PE_RW | PE_U;
+	}
+	return kmap_tmp_page(*pde & ~0xFFF);
 }
 
 static pmap_t kmap_page_table(ulong addr)
@@ -491,7 +510,7 @@ static pmap_t kmap_page_table(ulong addr)
 		for (uint i = 0; i < PT_SIZE; i++) {
 			struct pcb *p = &proctab[i];
 			if (p->state != STATE_STOPPED) {
-				pmap_t pgdir = kmap_tmp_page((ulong)p->pgdir);
+				pmap_t pgdir = kmap_tmp_page((ulong)p->mm.pgdir);
 				pte_t *upde = addr_to_pde(pgdir, addr);
 				*upde = frame->addr | PE_P | PE_RW;
 				kunmap_page(pgdir);
@@ -502,14 +521,69 @@ static pmap_t kmap_page_table(ulong addr)
 	return kmap_tmp_page(*pde & ~0xFFF);
 }
 
-#define kunmap_page_table(pgtab) kunmap_page(pgtab)
-
-static pmap_t next_page_table(uint i, pmap_t pgtab)
+static pmap_t knext_page_table(uint i, pmap_t pgtab)
 {
 	if (i % 1024 != 0)
 		return pgtab;
-	kunmap_page_table(pgtab);
+	kunmap_page(pgtab);
 	return kmap_page_table(i * FRAME_SIZE);
+}
+
+static pmap_t unext_page_table(unsigned i, pmap_t pgdir, pmap_t pgtab)
+{
+	if (i % 1024 != 0)
+		return pgtab;
+	kunmap_page(pgtab);
+	return umap_page_table(pgdir, i * FRAME_SIZE);
+}
+
+int map_page(pmap_t pgdir, ulong dst, ulong src, uchar attr)
+{
+	struct pf_info *frame = phys_to_info(src);
+	pmap_t pgtab = umap_page_table(pgdir, dst);
+
+	if (pgtab == NULL)
+		return -ENOMEM;
+
+	frame->ref++;
+	pgtab[addr_to_pti(dst)] = src | PE_P | attr;
+
+	kunmap_page(pgtab);
+	return 0;
+}
+
+int map_vpage(pmap_t pgdir, ulong dst, ulong src, uchar attr)
+{
+	ulong phys_addr;
+	pmap_t pgtab;
+
+	if ((pgtab = umap_page_table(pgdir, src)) == NULL)
+		return -ENOMEM;
+
+	phys_addr = pgtab[addr_to_pti(src)] & ~0xFFF;
+	kunmap_page(pgtab);
+
+	return map_page(pgdir, dst, phys_addr, attr);
+}
+
+#define for_each_upage(i, pgdir, pgtab, start, pages) \
+	for (uint i = start; i < (start) + (pages); \
+			i++, pgtab = unext_page_table(i, pgdir, pgtab))
+
+int map_zpages(pmap_t phys_pgdir, ulong dst, unsigned pages, uchar attr)
+{
+	struct pf_info *frame;
+	pmap_t pgdir = kmap_tmp_page((ulong)phys_pgdir);
+	pmap_t pgtab = umap_page_table(pgdir, dst);
+
+	for_each_upage(i, pgdir, pgtab, dst / FRAME_SIZE, pages) {
+		if ((frame = kzalloc_frame()) == NULL)
+			return -ENOMEM;
+		pgtab[i % 1024] = frame->addr | PE_P | attr;
+	}
+	kunmap_page(pgtab);
+	kunmap_page(pgdir);
+	return 0;
 }
 
 void *kalloc_pages(uint n)
@@ -520,7 +594,7 @@ void *kalloc_pages(uint n)
 	pmap_t pgtab = kmap_page_table(i * FRAME_SIZE);
 
 	/* find n consecutive, free pages */
-	for (i = first_free; /*TODO*/; i++, pgtab = next_page_table(i, pgtab)) {
+	for (i = first_free; /*TODO*/; i++, pgtab = knext_page_table(i, pgtab)) {
 		if (pgtab[i % 1024] & PE_P) {
 			count = 0;
 			start = 0;
@@ -531,37 +605,32 @@ void *kalloc_pages(uint n)
 				break;
 		}
 	}
-	kunmap_page_table(pgtab);
+	kunmap_page(pgtab);
 	// TODO: if (i == LIMIT) fail()
 
 	pgtab = kmap_page_table(start * FRAME_SIZE);
 
 	/* allocate and map frames */
-	for (i = start; i < start + n; i++, pgtab = next_page_table(i, pgtab)) {
+	for (i = start; i < start + n; i++, pgtab = knext_page_table(i, pgtab)) {
 		struct pf_info *frame = kalloc_frame();
 		pgtab[i % 1024] = frame->addr | PE_P | PE_RW;
 	}
-	kunmap_page_table(pgtab);
+	kunmap_page(pgtab);
 
 	/* update first_free */
 	if (start == first_free) {
 		pgtab = kmap_page_table((start+n) * FRAME_SIZE);
-		for (i = start + n; ; i++, pgtab = next_page_table(i, pgtab)) {
+		for (i = start + n; ; i++, pgtab = knext_page_table(i, pgtab)) {
 			if (!(pgtab[i % 1024] & PE_P)) {
 				first_free = i;
 				break;
 			}
 		}
-		kunmap_page_table(pgtab);
+		kunmap_page(pgtab);
 		// TODO: check limit
 	}
 	flush_pages(start * FRAME_SIZE, n);
 	return (void*) (start * FRAME_SIZE);
-}
-
-static struct pf_info *phys_to_info(ulong addr)
-{
-	return &frame_table[(addr - fp_start) / FRAME_SIZE];
 }
 
 void kfree_pages(void *addr, uint n)
@@ -569,12 +638,12 @@ void kfree_pages(void *addr, uint n)
 	uint start = (ulong)addr / FRAME_SIZE;
 	pmap_t pgtab = kmap_page_table((ulong)addr);
 
-	for (uint i = start; i < start + n; i++, pgtab = next_page_table(i, pgtab)) {
+	for (uint i = start; i < start + n; i++, pgtab = knext_page_table(i, pgtab)) {
 		struct pf_info *frame = phys_to_info(pgtab[i % 1024] & ~0xFFF);
 		pgtab[i % 1024] = 0;
 		kfree_frame(frame);
 	}
-	kunmap_page_table(pgtab);
+	kunmap_page(pgtab);
 	// TODO: check limit
 
 	if (start < first_free)

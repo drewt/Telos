@@ -53,7 +53,7 @@ static void sig_err(void)
 static void place_sig_args(void* dst, struct pcb *p, void *osp, int sig_no)
 {
 	struct siginfo *info = &p->siginfos[sig_no];
-	ulong *args = kmap_tmp_range(p->pgdir, (ulong) dst,
+	ulong *args = kmap_tmp_range(p->mm.pgdir, (ulong) dst,
 			12 * sizeof(ulong));
 
 	args[0] = (ulong) sig_err;
@@ -87,7 +87,7 @@ static int send_signal_user(struct pcb *p, int sig_no)
 	ulong u_sigframe = u_oldctxt - sizeof(struct ucontext);
 	ulong tramp_fn = siginfo ? (ulong) sigtramp1 : (ulong) sigtramp0;
 
-	sig_frame = kmap_tmp_range(p->pgdir, u_sigframe,
+	sig_frame = kmap_tmp_range(p->mm.pgdir, u_sigframe,
 			sizeof(struct ucontext) * 2);
 	old_ctxt = (struct ucontext*) ((ulong) sig_frame + sizeof(struct ucontext));
 
@@ -157,13 +157,13 @@ long sig_restore(void *osp)
 	current->esp = osp;
 	current->ifp = (void*) ((ulong) osp + sizeof(struct ucontext));
 
-	cx = kmap_tmp_range(current->pgdir, (ulong) osp, sizeof(struct ucontext));
+	cx = kmap_tmp_range(current->mm.pgdir, (ulong) osp, sizeof(struct ucontext));
 
 	old_esp = current->flags & PFLAG_SUPER
 			? (ulong) osp
 			: (ulong) cx->iret_esp;
 
-	rc = kmap_tmp_range(current->pgdir, old_esp, sizeof(ulong));
+	rc = kmap_tmp_range(current->mm.pgdir, old_esp, sizeof(ulong));
 
 	// restore old signal mask and return value
 	current->sig_ignore = cx->reg.eax;

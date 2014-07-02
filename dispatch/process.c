@@ -25,9 +25,13 @@
 #include <kernel/signal.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
+#include <kernel/mm/vma.h>
 
 #define STACK_PAGES 8
 #define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)
+
+#define HEAP_START  0x00100000UL
+#define STACK_START 0x0F000000UL
 
 extern void exit(int status);
 
@@ -62,8 +66,8 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	INIT_LIST_HEAD(&p->send_q);
 	INIT_LIST_HEAD(&p->recv_q);
 	INIT_LIST_HEAD(&p->repl_q);
-	INIT_LIST_HEAD(&p->heap_mem);
-	INIT_LIST_HEAD(&p->page_mem);
+	INIT_LIST_HEAD(&p->mm.map);
+	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->posix_timers);
 
 	p->timestamp = tick_count;
@@ -90,11 +94,11 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	p->pgdir = (pmap_t) kernel_to_phys(&_kernel_pgd);
+	p->mm.pgdir = (pmap_t) kernel_to_phys(&_kernel_pgd);
 
-	if ((stack_mem = kmalloc(STACK_SIZE)) == NULL)
+	stack_mem = kalloc_pages(STACK_SIZE / FRAME_SIZE);
+	if (stack_mem == NULL)
 		return -ENOMEM;
-	list_add_tail(&(mem_ptoh(stack_mem))->chain, &p->heap_mem);
 
 	frame = ((char*) stack_mem + STACK_SIZE - sizeof(struct kcontext) - 128);
 	put_iret_kframe(frame, (ulong) func);
@@ -119,8 +123,8 @@ static void copy_args(struct pcb *p, int argc, char **argv)
 
 	copy_from_current(kargv, argv, sizeof(char*) * argc);
 
-	arg_addr = p->heap_start + 128;
-	uargv = kmap_tmp_range(p->pgdir, p->heap_start, 128);
+	arg_addr = HEAP_START + 128;
+	uargv = kmap_tmp_range(p->mm.pgdir, HEAP_START, 128);
 	for (int i = 0; i < argc; i++, arg_addr += 128) {
 		uargv[i] = (char*) arg_addr;
 		copy_string_through_user(p, current, (void*) arg_addr,
@@ -134,8 +138,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 {
 	int rc;
 	struct pcb	*p;
-	struct pf_info	*it;
-	ulong		v_stack, esp;
+	ulong		esp;
 	ulong		*args;
 	void		*v_frame;
 	void		*p_frame;
@@ -148,30 +151,30 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	if ((rc = address_space_init(p)) < 0)
 		return rc;
 
-	p->heap_start = 0x00100000;
-	p->heap_end = p->brk = p->heap_start + FRAME_SIZE;
-	if (map_pages_user(p, p->heap_start, 1, PE_U | PE_RW))
+	p->mm.brk = HEAP_START + FRAME_SIZE;
+	p->mm.heap = zmap(&p->mm, (void*)HEAP_START, FRAME_SIZE, VM_RW);
+	if (p->mm.heap == NULL)
 		goto abort;
 
 	copy_args(p, argc, argv);
 
-	v_stack = 0x0F000000;
-	if (map_pages_user(p, v_stack, STACK_PAGES, PE_U | PE_RW))
+	p->mm.stack = zmap(&p->mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
+	if (p->mm.stack == NULL)
 		goto abort;
 
 	/* set up iret frame */
-	v_frame = (void*) (v_stack + 32 * sizeof(struct ucontext));
-	p_frame = kmap_tmp_range(p->pgdir, (ulong) v_frame,
+	v_frame = (void*) (STACK_START + 32 * sizeof(struct ucontext));
+	p_frame = kmap_tmp_range(p->mm.pgdir, (ulong) v_frame,
 			sizeof(struct ucontext));
-	esp = v_stack + STACK_SIZE - 128;
+	esp = STACK_START + STACK_SIZE - 128;
 	put_iret_uframe(p_frame, (ulong) func, esp);
 	kunmap_range(p_frame, sizeof(struct ucontext));
 
 	/* set up stack for main() */
-	args = kmap_tmp_range(p->pgdir, esp, sizeof(ulong) * 3);
+	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
-	args[2] = (ulong) p->heap_start;
+	args[2] = HEAP_START;
 	kunmap_range(args, sizeof(ulong) * 3);
 
 	p->esp = v_frame;
@@ -180,8 +183,7 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	ready(p);
 	return p->pid;
 abort:
-	dequeue_iterate (it, struct pf_info, chain, &p->page_mem)
-		kfree_frame(it);
+	address_space_fini(p->mm.pgdir);
 	return -ENOMEM;
 }
 
@@ -202,16 +204,13 @@ long sys_exit(int status)
 {
 	struct pcb		*pit;
 	struct mem_header	*hit;
-	struct pf_info		*mit;
 
 	// TODO: see what POSIX requires vis-a-vis process data in handler
 	pit = &proctab[PT_INDEX(current->parent_pid)];
 	__kill(pit, SIGCHLD);
 
 	/* free memory allocated to process */
-	dequeue_iterate (mit, struct pf_info, chain, &current->page_mem)
-		kfree_frame(mit);
-	dequeue_iterate (hit, struct mem_header, chain, &current->heap_mem)
+	dequeue_iterate (hit, struct mem_header, chain, &current->mm.kheap)
 		kfree(hit->data);
 
 	current->state = STATE_STOPPED;
@@ -228,6 +227,8 @@ long sys_exit(int status)
 	for (int i = 0; i < FDT_SIZE; i++)
 		if (current->fds[i] != FD_NONE)
 			sys_close(current->fds[i]);
+
+	address_space_fini(current->mm.pgdir);
 
 	new_process();
 	return 0;

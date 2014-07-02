@@ -106,7 +106,7 @@ unsigned int context_switch(struct pcb *p)
 	/* read-write operands must be in memory */
 	  [KSP] "+m" (ksp)
 	/* values used only in the "top half" may be put in registers */
-	: [PGD] "b" (p->pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
+	: [PGD] "b" (p->mm.pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
 	  [RET] "a" (p->rc), [PSP] "c" (p->esp),
 	/* "bottom half" values must be either immediate or in memory */
 	  [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA)

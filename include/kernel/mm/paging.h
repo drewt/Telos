@@ -36,19 +36,29 @@
 struct pf_info {
 	struct list_head chain;
 	unsigned long addr;
+	unsigned ref;
 };
 
 struct pf_info *kalloc_frame(void);
 struct pf_info *kzalloc_frame(void);
 void *kalloc_pages(uint n);
 void kfree_pages(void *addr, uint n);
-void kfree_frame(struct pf_info *page);
+void _kfree_frame(struct pf_info *page);
 int paging_init(unsigned long start, unsigned long end);
 int address_space_init(struct pcb *p);
-int map_pages(pmap_t pgdir, ulong start, int pages, uchar attr,
-		struct list_head *page_list);
-#define map_pages_user(p, start, pages, attr) \
-	map_pages((p)->pgdir, start, pages, attr, &(p)->page_mem)
+int address_space_fini(pmap_t pgtab);
+int map_zpages(pmap_t pgdir, ulong dst, unsigned pages, uchar attr);
+
+static inline void kfree_frame(struct pf_info *frame)
+{
+	if (--frame->ref == 0)
+		_kfree_frame(frame);
+}
+
+static inline unsigned pages_in_range(ulong addr, ulong len)
+{
+	return (((addr & 0xFFF) + (len - 1)) / FRAME_SIZE) + 1;
+}
 
 static inline ulong align_up(ulong addr, unsigned align)
 {

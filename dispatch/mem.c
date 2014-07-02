@@ -26,26 +26,26 @@
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
 #include <kernel/mm/paging.h>
+#include <kernel/mm/vma.h>
 
 long sys_sbrk(long inc, ulong *oldbrk)
 {
-	unsigned long new = current->brk + inc;
-	unsigned long pages = (inc / FRAME_SIZE) + 1;
+	int rc;
+	unsigned long new = current->mm.brk + inc;
 
 	/* FIXME: check address */
-	copy_to_current(oldbrk, &current->brk, sizeof(current->brk));
+	copy_to_current(oldbrk, &current->mm.brk, sizeof(current->mm.brk));
 
-	if (new < current->heap_start)
+	if (new < current->mm.heap->start)
 		return -EINVAL;
 
-	if (inc <= 0 || new < current->heap_end)
+	if (inc <= 0 || new < current->mm.heap->end)
 		goto skip;
 
-	if (map_pages_user(current, current->heap_end, pages, PE_U | PE_RW))
-		return -ENOMEM;
-	current->heap_end += pages * FRAME_SIZE;
+	if ((rc = vma_grow_up(current->mm.heap, inc)))
+		return rc;
 
 skip:
-	current->brk = new;
+	current->mm.brk = new;
 	return 0;
 }

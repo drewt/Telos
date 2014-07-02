@@ -22,6 +22,7 @@
 #include <kernel/list.h>
 #include <kernel/signal.h>
 #include <kernel/timer.h>
+#include <kernel/mm/vma.h>
 
 #define PT_SIZE  256
 #define PID_MASK (PT_SIZE - 1)
@@ -66,10 +67,7 @@ struct pcb {
 	void		*int_stack;	// stack for interrupts
 	void		*esp;		// stack pointer
 	void		*ifp;		// interrupt frame pointer
-	unsigned long	*pgdir;		// page directory
-	unsigned long   heap_start;
-	unsigned long   heap_end;
-	unsigned long	brk;
+	struct mm_struct mm;
 	/* time */
 	unsigned int	timestamp;	// creation time
 	struct timer	t_alarm;	// alarm timer
@@ -91,8 +89,6 @@ struct pcb {
 	/* */
 	void		*parg;		// pointer to... something
 	dev_t		fds[FDT_SIZE];	// file descriptors
-	struct list_head heap_mem;	// heap allocated memory
-	struct list_head page_mem;
 };
 
 extern struct pcb proctab[];
