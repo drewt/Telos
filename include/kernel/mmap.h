@@ -19,7 +19,10 @@
 #define _KERNEL_MMAP_H_
 
 extern pte_t _kernel_pgd;
-extern unsigned long _kernel_high_pgt;
+extern ulong _kernel_high_pgt;
+extern ulong _kstack;
+
+#define kstack (&_kstack)
 
 /* linker variables */
 extern ulong KERNEL_PAGE_OFFSET;

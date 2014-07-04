@@ -56,18 +56,18 @@ struct pbuf {
 /* process control block */
 struct pcb {
 	struct list_head chain;
+	long		rc;		// return value for system calls
+	void		*esp;		// stack pointer
+	struct mm_struct mm;
 	/* metadata */
 	int		pid;		// process ID
 	int		parent_pid;	// parent process's pid
 	unsigned int	state;		// state
-	long		rc;		// return value for system calls
 	unsigned long	flags;
 	/* memory */
 	void		*stack_mem;	// beginning of stack memory
 	void		*int_stack;	// stack for interrupts
-	void		*esp;		// stack pointer
 	void		*ifp;		// interrupt frame pointer
-	struct mm_struct mm;
 	/* time */
 	unsigned int	timestamp;	// creation time
 	struct timer	t_alarm;	// alarm timer

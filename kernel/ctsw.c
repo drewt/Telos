@@ -55,27 +55,15 @@ void isr_init(void)
 	"movw "reg", %%fs	\n"	\
 	"movw "reg", %%gs	\n"
 
-extern unsigned long _kernel_pgd;
-extern unsigned long KERNEL_PAGE_OFFSET;
-
-unsigned int context_switch(struct pcb *p)
+_Noreturn void switch_to(struct pcb *p)
 {
-	static void *ksp;	// kernel stack pointer
-	void *psp;		// process stack pointer
-	int  rc;		// syscall return code
-	unsigned int iid;	// syscall/interrupt ID
-
-	/* make sure TSS points to the right part of the stack */
-	tss.esp0 = (unsigned long) p->ifp;
+	tss.esp0 = (ulong) p->ifp;
 
 	asm volatile(
 	".set EAX, 0x1C			\n"
 	".set ECX, 0x18			\n"
 	".set EDX, 0x14			\n"
 
-	"pushf				\n" // save kernel context
-	"pusha				\n"
-	"movl  %%esp,   %[KSP]		\n" // switch stacks
 	"movl  %[PSP],  %%esp		\n"
 	"mov   %[PGD],  %%cr3		\n" // switch page directories
 	"movl  %[RET],  EAX(%%esp)	\n" // syscall return code in %eax
@@ -85,7 +73,20 @@ unsigned int context_switch(struct pcb *p)
 "skip_seg_set: "
 	"popa				\n" // restore user context
 	"iret				\n" // return to user process
+	:
+	: [PSP] "g" (p->esp),
+	  [PGD] "g" (p->mm.pgdir),
+	  [RET] "g" (p->rc),
+	  [SPR] "g" (p->flags & PFLAG_SUPER),
+	  [UDS] "i" (SEG_UDATA | 3)
+	:);
+}
 
+_Noreturn void __context_switch(void)
+{
+	asm volatile(
+	".set RC,  0x8			\n"
+	".set PSP, 0xC			\n"
 	ISR_ENTRY(pgf_entry_point,	EXN_PF)
 	ISR_ENTRY(fpe_entry_point,	EXN_FPE)
 	ISR_ENTRY(ill_entry_point,	EXN_ILL)
@@ -94,25 +95,19 @@ unsigned int context_switch(struct pcb *p)
 "syscall_entry_point: "
 	"pusha				\n"
 "common_isr: "
-	SET_SEGS("%[KDS]", "%%cx")
-	"movl  %%esp,   %%ecx		\n" // switch stacks
-	"movl  %[KSP],  %%esp		\n"
-	"movl  %%eax,   EAX(%%esp)	\n" // save interrupt ID in %eax
-	"movl  %%edx,   ECX(%%esp)	\n" // save old %eax value in %ecx
-	"movl  %%ecx,   EDX(%%esp)	\n" // save user %esp in %edx
-	"popa				\n" // restore kernel context
-	"popf				\n"
-	: "=a" (iid), "=c" (rc), "=d" (psp),
-	/* read-write operands must be in memory */
-	  [KSP] "+m" (ksp)
-	/* values used only in the "top half" may be put in registers */
-	: [PGD] "b" (p->mm.pgdir), [SPR] "d" (p->flags & PFLAG_SUPER),
-	  [RET] "a" (p->rc), [PSP] "c" (p->esp),
-	/* "bottom half" values must be either immediate or in memory */
-	  [UDS] "i" (SEG_UDATA | 3), [KDS] "i" (SEG_KDATA)
+	SET_SEGS("%[KDS]", "%%bx")
+	"movl  %%esp,    %%ecx		\n" // switch stacks
+	"movl  $_kstack, %%esp		\n"
+	"addl  $0x4000,  %%esp		\n"
+	"movl  current,  %%ebx		\n"
+	"movl  %%edx,    RC(%%ebx)	\n"
+	"movl  %%ecx,    PSP(%%ebx)	\n"
+	"movl  %%eax,    (%%esp)	\n"
+	"call  dispatch			\n"
+	"movl  current,  %%ebx		\n"
+	"movl  %%ebx, (%%esp)		\n"
+	"call  switch_to		\n"
+	:
+	: [KDS] "i" (SEG_KDATA)
 	:);
-	p->esp = psp;
-	p->rc  = rc;
-
-	return iid;
 }

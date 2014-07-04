@@ -25,7 +25,6 @@
 typedef long(*isr_t)();
 
 /* routines defined in other files */
-extern unsigned int context_switch(struct pcb *p);
 extern int send_signal(struct pcb *p, int sig_no);
 extern void tick(void);
 
@@ -99,56 +98,55 @@ EXPORT_KINIT(dispatch, SUB_DISPATCH, dispatch_init);
  * The dispatcher.  Passes control to the appropriate routines to handle 
  * interrupts, system calls, and other events */
 //*----------------------------------------------------------------------------
-void dispatch(void)
+void dispatch(unsigned req)
 {
-	unsigned req;
 	struct sys_args *args;
 	struct pcb *p;
 
-	current = next();
-	for (;;) {
+	if (req < SYSCALL_MIN && sysactions[req].func != NULL) {
+		sysactions[req].func();
+	} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
 
-		if (current->sig_pending & current->sig_ignore)
-			send_signal(current, fls(current->sig_pending)-1);
-
-		req  = context_switch(current);
-
-		if (req < SYSCALL_MIN && sysactions[req].func != NULL) {
-			sysactions[req].func();
-		} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
-
-			args = current->esp;
-			p = current;
-			switch (sysactions[req].nargs) {
-			case 0:
-				p->rc = sysactions[req].func();
-				break;
-			case 1:
-				p->rc = sysactions[req].func(args->arg0);
-				break;
-			case 2:
-				p->rc = sysactions[req].func(args->arg0,
-						args->arg1);
-				break;
-			case 3:
-				p->rc = sysactions[req].func(args->arg0,
-						args->arg1, args->arg2);
-				break;
-			case 4:
-				p->rc = sysactions[req].func(args->arg0,
-						args->arg1, args->arg2,
-						args->arg3);
-				break;
-			case 5:
-				p->rc = sysactions[req].func(args->arg0,
-						args->arg1, args->arg2,
-						args->arg3, args->arg4);
-				break;
-			}
-		} else {
-			__kill(current, SIGSYS);
+		args = current->esp;
+		p = current;
+		switch (sysactions[req].nargs) {
+		case 0:
+			p->rc = sysactions[req].func();
+			break;
+		case 1:
+			p->rc = sysactions[req].func(args->arg0);
+			break;
+		case 2:
+			p->rc = sysactions[req].func(args->arg0,
+					args->arg1);
+			break;
+		case 3:
+			p->rc = sysactions[req].func(args->arg0,
+					args->arg1, args->arg2);
+			break;
+		case 4:
+			p->rc = sysactions[req].func(args->arg0,
+					args->arg1, args->arg2,
+					args->arg3);
+			break;
+		case 5:
+			p->rc = sysactions[req].func(args->arg0,
+					args->arg1, args->arg2,
+					args->arg3, args->arg4);
+			break;
 		}
+	} else {
+		__kill(current, SIGSYS);
 	}
+
+	if (current->sig_pending & current->sig_ignore)
+		send_signal(current, fls(current->sig_pending)-1);
+}
+
+_Noreturn void kernel_start(void)
+{
+	current = next();
+	switch_to(current);
 }
 
 /*-----------------------------------------------------------------------------

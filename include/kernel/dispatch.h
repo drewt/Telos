@@ -31,7 +31,9 @@ extern struct pcb *current;
 extern int idle_pid;
 extern int root_pid;
 
-void dispatch(void);
+_Noreturn void kernel_start(void);
+_Noreturn void switch_to(struct pcb *p);
+void dispatch(unsigned req);
 void ready(struct pcb *p);
 void new_process(void);
 

@@ -2,7 +2,7 @@
 .global _kernel_pgd
 .global _kernel_high_pgt
 .global _kernel_low_pgt
-.global stack
+.global _kstack
 
 .set STACKSIZE, 0x4000
 .set NR_LOW_PGTS, 16
@@ -15,7 +15,8 @@ _kernel_low_pgt:  .space (0x1000 * NR_LOW_PGTS)
 _kernel_high_pgt: .space 0x1000
 
 .section .data
-stack:            .space STACKSIZE
+.align 0x1000
+_kstack:          .space STACKSIZE
 
 .section .text
 
@@ -32,7 +33,7 @@ stack:            .space STACKSIZE
 
 loader:
     # temporarily use physical address for stack
-    mov  $(stack + STACKSIZE), %esp
+    mov  $(_kstack + STACKSIZE), %esp
     subl $KERNEL_PAGE_OFFSET, %esp
 
     # save multiboot data
