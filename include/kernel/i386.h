@@ -18,25 +18,23 @@
 #ifndef _KERNEL_I386_H_
 #define _KERNEL_I386_H_
 
+#define SEGNR_NULL  0
+#define SEGNR_KCODE 1
+#define SEGNR_KDATA 2
+#define SEGNR_UCODE 3
+#define SEGNR_UDATA 4
+#define SEGNR_TSS   5
+
+#define SEG_KCODE (SEGNR_KCODE << 3)
+#define SEG_KDATA (SEGNR_KDATA << 3)
+#define SEG_UCODE (SEGNR_UCODE << 3)
+#define SEG_UDATA (SEGNR_UDATA << 3)
+#define SEG_TSS   (SEGNR_TSS   << 3)
+
+#ifndef __ASM__
+
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
-
-enum {
-	SEGNR_NULL,
-	SEGNR_KCODE,
-	SEGNR_KDATA,
-	SEGNR_UCODE,
-	SEGNR_UDATA,
-	SEGNR_TSS
-};
-
-enum {
-	SEG_KCODE = SEGNR_KCODE << 3,
-	SEG_KDATA = SEGNR_KDATA << 3,
-	SEG_UCODE = SEGNR_UCODE << 3,
-	SEG_UDATA = SEGNR_UDATA << 3,
-	SEG_TSS   = SEGNR_TSS   << 3
-};
 
 /* general purpose registers (pusha ordering) */
 struct gp_regs {
@@ -235,4 +233,5 @@ struct tm;
 void rtc_date(struct tm *date);
 void clock_init(void);
 
-#endif
+#endif /* __ASM__ */
+#endif /* _KERNEL_I386_H_ */

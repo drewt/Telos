@@ -18,6 +18,13 @@
 #ifndef _KERNEL_PROCESS_H_
 #define _KERNEL_PROCESS_H_
 
+#define PCB_RC  0x08
+#define PCB_ESP 0x0C
+#define PCB_IFP 0x10
+#define PCB_PGD 0x14
+
+#ifndef __ASM__
+
 #include <kernel/device.h>
 #include <kernel/list.h>
 #include <kernel/signal.h>
@@ -58,6 +65,7 @@ struct pcb {
 	struct list_head chain;
 	long		rc;		// return value for system calls
 	void		*esp;		// stack pointer
+	void		*ifp;		// interrupt frame pointer
 	struct mm_struct mm;
 	/* metadata */
 	int		pid;		// process ID
@@ -67,7 +75,6 @@ struct pcb {
 	/* memory */
 	void		*stack_mem;	// beginning of stack memory
 	void		*int_stack;	// stack for interrupts
-	void		*ifp;		// interrupt frame pointer
 	/* time */
 	unsigned int	timestamp;	// creation time
 	struct timer	t_alarm;	// alarm timer
@@ -91,6 +98,15 @@ struct pcb {
 	dev_t		fds[FDT_SIZE];	// file descriptors
 };
 
+#define assert_pcb_offset(member, offset) \
+	_Static_assert(offsetof(struct pcb, member) == offset, \
+			"Misaligned PCB member: " #member)
+
+assert_pcb_offset(rc,  PCB_RC);
+assert_pcb_offset(esp, PCB_ESP);
+assert_pcb_offset(ifp, PCB_IFP);
+assert_pcb_offset(mm,  PCB_PGD);
+
 extern struct pcb proctab[];
 extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
@@ -99,5 +115,5 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 		unsigned long flags);
 
-
-#endif
+#endif /* __ASM__ */
+#endif /* _KERNEL_PROCESS_H_ */
