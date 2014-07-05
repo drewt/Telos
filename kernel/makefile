@@ -1,4 +1,4 @@
-objects = ctsw.o devinit.o gdt.o inthandlers.o intr.o kernel.o mem.o pic.o \
+objects = devinit.o entry.o gdt.o inthandlers.o intr.o kernel.o mem.o pic.o \
 	  paging.o rtc.o sighandlers.o slab.o sysproc.o timer.o vma.o
 clean = $(objects)
 

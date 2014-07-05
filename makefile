@@ -10,13 +10,14 @@ ARFLAGS   = rcs
 AS        = $(CCPREFIX)as --32
 CC        = $(CCPREFIX)gcc -m32 -march=i386
 CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-	    -Wno-attributes -Wdeclaration-after-statement
-ALLCFLAGS = $(CFLAGS) -I $(incdir) -fno-builtin -ffreestanding -std=gnu11 \
+	    -Wno-attributes
+ALLCFLAGS = $(CFLAGS) -fno-builtin -ffreestanding -std=gnu11 \
 	    -include 'kernel/common.h'
+CPPFLAGS  = -I $(incdir)
 LD        = $(CCPREFIX)ld -m elf_i386
 OBJCOPY   = $(CCPREFIX)objcopy
 
-export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS LD OBJCOPY
+export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS CPPFLAGS LD OBJCOPY
 
 findobj = find kernel dispatch drivers -name '*.o' | tr '\n' ' '
 

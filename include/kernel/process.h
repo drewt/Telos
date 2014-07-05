@@ -21,7 +21,10 @@
 #define PCB_RC  0x08
 #define PCB_ESP 0x0C
 #define PCB_IFP 0x10
-#define PCB_PGD 0x14
+#define PCB_FLG 0x14
+#define PCB_PGD 0x18
+
+#define PFLAG_SUPER 0x1
 
 #ifndef __ASM__
 
@@ -50,10 +53,6 @@ enum {
 	STATE_SLEEPING		= 1 << 6
 };
 
-enum {
-	PFLAG_SUPER = 1
-};
-
 struct pbuf {
 	void *buf; // buffer
 	int  len;  // length of buffer
@@ -66,12 +65,12 @@ struct pcb {
 	long		rc;		// return value for system calls
 	void		*esp;		// stack pointer
 	void		*ifp;		// interrupt frame pointer
+	unsigned long	flags;
 	struct mm_struct mm;
 	/* metadata */
 	int		pid;		// process ID
 	int		parent_pid;	// parent process's pid
 	unsigned int	state;		// state
-	unsigned long	flags;
 	/* memory */
 	void		*stack_mem;	// beginning of stack memory
 	void		*int_stack;	// stack for interrupts
@@ -102,10 +101,13 @@ struct pcb {
 	_Static_assert(offsetof(struct pcb, member) == offset, \
 			"Misaligned PCB member: " #member)
 
-assert_pcb_offset(rc,  PCB_RC);
-assert_pcb_offset(esp, PCB_ESP);
-assert_pcb_offset(ifp, PCB_IFP);
-assert_pcb_offset(mm,  PCB_PGD);
+assert_pcb_offset(rc,    PCB_RC);
+assert_pcb_offset(esp,   PCB_ESP);
+assert_pcb_offset(ifp,   PCB_IFP);
+assert_pcb_offset(flags, PCB_FLG);
+assert_pcb_offset(mm,    PCB_PGD);
+_Static_assert(offsetof(struct mm_struct, pgdir) == 0,
+		"Misaligned PCB member: pgdir");
 
 extern struct pcb proctab[];
 extern const struct sigaction default_sigactions[_TELOS_SIGMAX];

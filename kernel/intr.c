@@ -16,6 +16,7 @@
  */
 
 #include <kernel/i386.h>
+#include <kernel/interrupt.h>
 #include <string.h>
 
 #define INTR_GATE 0xE
@@ -67,4 +68,21 @@ void idt_install(void)
 	for (int i = 0; i < 48; i++)
 		set_gate(i, (unsigned long) int_errs[i], SEG_KCODE);
 	load_idt(&idt, sizeof(struct idt_entry) * 256);
+}
+
+void fpe_entry(void);
+void ill_entry(void);
+void pgf_entry(void);
+void timer_entry(void);
+void kbd_entry(void);
+void syscall_entry(void);
+
+void isr_init(void)
+{
+	set_gate(EXN_DBZ,	(ulong) fpe_entry,	SEG_KCODE);
+	set_gate(EXN_ILLOP,	(ulong) ill_entry,	SEG_KCODE);
+	set_gate(EXN_PF,	(ulong) pgf_entry,	SEG_KCODE);
+	set_gate(INTR_TIMER,	(ulong) timer_entry,	SEG_KCODE);
+	set_gate(INTR_KBD,	(ulong) kbd_entry,	SEG_KCODE);
+	set_gate(INTR_SYSCALL,	(ulong) syscall_entry,	SEG_KCODE);
 }
