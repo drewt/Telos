@@ -22,7 +22,8 @@
 #define PCB_ESP 0x0C
 #define PCB_IFP 0x10
 #define PCB_FLG 0x14
-#define PCB_PGD 0x18
+#define PCB_PID 0x18
+#define PCB_PGD 0x1C
 
 #define PFLAG_SUPER 0x1
 
@@ -66,9 +67,9 @@ struct pcb {
 	void		*esp;		// stack pointer
 	void		*ifp;		// interrupt frame pointer
 	unsigned long	flags;
+	int		pid;		// process ID
 	struct mm_struct mm;
 	/* metadata */
-	int		pid;		// process ID
 	int		parent_pid;	// parent process's pid
 	unsigned int	state;		// state
 	/* memory */
@@ -105,6 +106,7 @@ assert_pcb_offset(rc,    PCB_RC);
 assert_pcb_offset(esp,   PCB_ESP);
 assert_pcb_offset(ifp,   PCB_IFP);
 assert_pcb_offset(flags, PCB_FLG);
+assert_pcb_offset(pid,   PCB_PID);
 assert_pcb_offset(mm,    PCB_PGD);
 _Static_assert(offsetof(struct mm_struct, pgdir) == 0,
 		"Misaligned PCB member: pgdir");

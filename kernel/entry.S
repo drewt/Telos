@@ -33,34 +33,33 @@ syscall_entry:
 	pusha
 common_isr:
 	SET_SEGS(SEG_KDATA, %bx)
-	movl %esp,     %ecx
-	movl $_kstack, %esp
-	addl $0x4000,  %esp
-	movl current,  %ebx
-	movl %edx,     PCB_RC(%ebx)
-	movl %ecx,     PCB_ESP(%ebx)
-	movl %eax,     (%esp)
+	movl %esp,          %ecx
+	movl $_kstack,      %esp
+	addl $0x4000,       %esp
+	movl current,       %ebx
+	movl PCB_PID(%ebx), %edi
+	movl %edx,          PCB_RC(%ebx)
+	movl %ecx,          PCB_ESP(%ebx)
+	movl %eax,          (%esp)
 	call dispatch
-	movl current,  %ebx
-	movl %ebx,     (%esp)
-	call switch_to
-
-# switch_to(struct pcb *p)
-switch_to:
-	# get pcb members from struct
-	movl 0x4(%esp),     %eax
-	movl PCB_IFP(%eax), %edx
-	movl PCB_ESP(%eax), %ecx
+	movl current,       %eax
+	movl PCB_PID(%eax), %esi
+	cmp  %edi,          %esi
+	je   __switch_to
+_switch_to:
 	movl PCB_PGD(%eax), %ebx
-	movl PCB_RC(%eax),  %esi
+	movl %ebx,          %cr3
+__switch_to:
+	movl PCB_IFP(%eax), %ebx
+	movl PCB_ESP(%eax), %ecx
+	movl PCB_RC(%eax),  %edx
 	movl PCB_FLG(%eax), %eax
 	and  $PFLAG_SUPER,  %eax
 
-	movl $(tss + 4),    %edi
-	movl %edx,          (%edi)    # tss.esp0 = p->ifp
-	movl %ecx,          %esp      # %esp     = p->esp
-	movl %ebx,          %cr3      # %cr3     = p->mm.pgdir
-	movl %esi,          EAX(%esp) # put p->rc in popa %eax
+	movl %ecx,          %esp
+	movl %edx,          EAX(%esp)
+	movl $(tss + 4),    %ecx
+	movl %ebx,          (%ecx)
 
 	cmp  $0,            %eax
 	jne  skip_seg_set
@@ -68,3 +67,8 @@ switch_to:
 skip_seg_set:
 	popa
 	iret
+
+# for C
+switch_to:
+	movl 0x4(%esp), %eax
+	jmp  _switch_to
