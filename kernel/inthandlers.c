@@ -18,6 +18,7 @@
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 #include <kernel/signal.h>
+#include <klib.h>
 
 /* names of some exceptions */
 static char *exns[20] = {
@@ -65,7 +66,8 @@ static void print_cpu_context(struct ucontext *context)
 	kprintf("stack[3]=%lx\n", reg->stack[3]);
 	kprintf("stack[4]=%lx\n", reg->stack[4]);
 	kprintf("stack[5]=%lx\n", reg->stack[5]);
-	kprintf("Current process is %d\n", current->pid);
+	if (current != NULL)
+		kprintf("Current process is %d\n", current->pid);
 	dump_registers(reg);
 }
 
@@ -84,7 +86,6 @@ void exn_page_fault(void)
 {
 	ulong error, eip, addr;
 	kprintf("page_fault! %d\n", current->pid);
-	for(;;);
 
 	error = ((struct gp_regs*)current->esp)->stack[0];
 	eip   = ((struct gp_regs*)current->esp)->stack[1];
@@ -102,10 +103,21 @@ void exn_page_fault(void)
 	kprintf("\teip=%lx\n\n", eip);
 
 	dump_registers(current->esp);
+	for(;;);
 
 	exn_kill(current->esp, SIGSEGV);
 	ready(current);
 	new_process();
+}
+
+static void exn_breakpoint(unsigned num, struct ucontext ctx)
+{
+	kprintf("Breakpoint Exception:\n");
+	print_cpu_context(&ctx);
+
+	do {
+		while(!(inb(0x64) & 1));
+	} while (kbtoa(inb(0x60)) != '\n');
 }
 
 void exn_fpe(void)
@@ -129,8 +141,7 @@ void exn_err(unsigned int num, struct gp_regs reg)
 {
 	kprintf("\ntrap!\nException %d: %s\n", num,
 			(num < 20) ? exns[num] : "Unknown");
-	//print_cpu_context((struct ctxt*) &reg);
-	print_cpu_context(current->esp);
+	print_cpu_context((struct ucontext*) &reg);
 }
 
 asm("\n"
@@ -139,65 +150,73 @@ asm("\n"
 	"jmp _hlt	\n"
 );
 
-#define MAKE_HANDLER(name, x)		\
-void name(void);			\
-asm("\n"				\
-#name ":"				\
-	"pusha			\n"	\
-	"pushl $"x"		\n"	\
-	"call  exn_err		\n"	\
-	"jmp _hlt		\n"	\
+asm("\n"
+"exn_return:"
+	"popa\n"
+	"iret\n"
 );
 
+#define MAKE_HANDLER(x) MAKE_SPECIAL_HANDLER(x, exn_err, _hlt)
 
-MAKE_HANDLER(int0, "0")
-MAKE_HANDLER(int1, "1")
-MAKE_HANDLER(int2, "2")
-MAKE_HANDLER(int3, "3")
-MAKE_HANDLER(int4, "4")
-MAKE_HANDLER(int5, "5")
-MAKE_HANDLER(int6, "6")
-MAKE_HANDLER(int7, "7")
-MAKE_HANDLER(int8, "8")
-MAKE_HANDLER(int9, "9")
-MAKE_HANDLER(int10, "10")
-MAKE_HANDLER(int11, "11")
-MAKE_HANDLER(int12, "12")
-MAKE_HANDLER(int13, "13")
-MAKE_HANDLER(int14, "14")
-MAKE_HANDLER(int15, "15")
-MAKE_HANDLER(int16, "16")
-MAKE_HANDLER(int17, "17")
-MAKE_HANDLER(int18, "18")
-MAKE_HANDLER(int19, "19")
-MAKE_HANDLER(int20, "20")
-MAKE_HANDLER(int21, "21")
-MAKE_HANDLER(int22, "22")
-MAKE_HANDLER(int23, "23")
-MAKE_HANDLER(int24, "24")
-MAKE_HANDLER(int25, "25")
-MAKE_HANDLER(int26, "26")
-MAKE_HANDLER(int27, "27")
-MAKE_HANDLER(int28, "28")
-MAKE_HANDLER(int29, "29")
-MAKE_HANDLER(int30, "30")
-MAKE_HANDLER(int31, "31")
-MAKE_HANDLER(int32, "32")
-MAKE_HANDLER(int33, "33")
-MAKE_HANDLER(int34, "34")
-MAKE_HANDLER(int35, "35")
-MAKE_HANDLER(int36, "36")
-MAKE_HANDLER(int37, "37")
-MAKE_HANDLER(int38, "38")
-MAKE_HANDLER(int39, "39")
-MAKE_HANDLER(int40, "40")
-MAKE_HANDLER(int41, "41")
-MAKE_HANDLER(int42, "42")
-MAKE_HANDLER(int43, "43")
-MAKE_HANDLER(int44, "44")
-MAKE_HANDLER(int45, "45")
-MAKE_HANDLER(int46, "46")
-MAKE_HANDLER(int47, "47")
+#define MAKE_SPECIAL_HANDLER(x, fn, fini)	\
+void int ## x(void);				\
+asm("\n"					\
+"int"#x":"					\
+	"pusha			\n"		\
+	"movl $"#x", (%esp)	\n"		\
+	"call "#fn"		\n"		\
+	"jmp "#fini"		\n"		\
+);
+
+MAKE_SPECIAL_HANDLER(3, exn_breakpoint, exn_return)
+
+MAKE_HANDLER(0)
+MAKE_HANDLER(1)
+MAKE_HANDLER(2)
+MAKE_HANDLER(4)
+MAKE_HANDLER(5)
+MAKE_HANDLER(6)
+MAKE_HANDLER(7)
+MAKE_HANDLER(8)
+MAKE_HANDLER(9)
+MAKE_HANDLER(10)
+MAKE_HANDLER(11)
+MAKE_HANDLER(12)
+MAKE_HANDLER(13)
+MAKE_HANDLER(14)
+MAKE_HANDLER(15)
+MAKE_HANDLER(16)
+MAKE_HANDLER(17)
+MAKE_HANDLER(18)
+MAKE_HANDLER(19)
+MAKE_HANDLER(20)
+MAKE_HANDLER(21)
+MAKE_HANDLER(22)
+MAKE_HANDLER(23)
+MAKE_HANDLER(24)
+MAKE_HANDLER(25)
+MAKE_HANDLER(26)
+MAKE_HANDLER(27)
+MAKE_HANDLER(28)
+MAKE_HANDLER(29)
+MAKE_HANDLER(30)
+MAKE_HANDLER(31)
+MAKE_HANDLER(32)
+MAKE_HANDLER(33)
+MAKE_HANDLER(34)
+MAKE_HANDLER(35)
+MAKE_HANDLER(36)
+MAKE_HANDLER(37)
+MAKE_HANDLER(38)
+MAKE_HANDLER(39)
+MAKE_HANDLER(40)
+MAKE_HANDLER(41)
+MAKE_HANDLER(42)
+MAKE_HANDLER(43)
+MAKE_HANDLER(44)
+MAKE_HANDLER(45)
+MAKE_HANDLER(46)
+MAKE_HANDLER(47)
 
 typedef void(*isr_t)(void);
 

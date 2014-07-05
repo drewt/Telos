@@ -56,6 +56,11 @@ struct kinit_struct {
 	void(*func)(void);
 };
 
+static inline void breakpoint(void)
+{
+	asm("int $3");
+}
+
 /* export declarations */
 
 #define EXPORT(set, sym) \
