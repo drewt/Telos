@@ -36,18 +36,18 @@
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
 
-/* general purpose registers (pusha ordering) */
+/* general purpose registers (SAVE_ALL ordering) */
 struct gp_regs {
+	unsigned long ebx;
+	unsigned long ecx;
+	unsigned long edx;
 	unsigned long edi;
 	unsigned long esi;
+	unsigned long eax;
 	unsigned long ebp;
 	unsigned long esp;
-	unsigned long ebx;
-	unsigned long edx;
-	unsigned long ecx;
-	unsigned long eax;
 	unsigned long stack[];
-}; 
+};
 
 struct ucontext {
 	struct gp_regs reg;

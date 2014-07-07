@@ -7,7 +7,7 @@
 #define ISR_ENTRY(entry, ident) 	\
 	.global entry;			\
 	entry:	 			\
-		pusha;			\
+		SAVE_ALL;		\
 		mov   %eax,   %edx;	\
 		movl  $ident, %eax;	\
 		jmp   common_isr
@@ -19,7 +19,28 @@
 	movw reg, %fs;		\
 	movw reg, %gs
 
-.set EAX, 0x1C
+#define SAVE_ALL	\
+	pushl %ebp;	\
+	pushl %ebp;	\
+	pushl %eax;	\
+	pushl %esi;	\
+	pushl %edi;	\
+	pushl %edx;	\
+	pushl %ecx;	\
+	pushl %ebx;	\
+
+#define RESTORE_ALL	\
+	popl %ebx;	\
+	popl %ecx;	\
+	popl %edx;	\
+	popl %edi;	\
+	popl %esi;	\
+	popl %eax;	\
+	popl %ebp;	\
+	popl %ebp;	\
+
+#.set EAX, 0x1C
+.set EAX, 0x14
 
 .global switch_to
 .global syscall_entry
@@ -30,7 +51,7 @@ ISR_ENTRY(ill_entry,   EXN_ILL)
 ISR_ENTRY(timer_entry, INTR_TIMER)
 ISR_ENTRY(kbd_entry,   INTR_KBD)
 syscall_entry:
-	pusha
+	SAVE_ALL
 common_isr:
 	SET_SEGS(SEG_KDATA, %bx)
 	movl %esp,          %ecx
@@ -40,6 +61,8 @@ common_isr:
 	movl PCB_PID(%ebx), %edi
 	movl %edx,          PCB_RC(%ebx)
 	movl %ecx,          PCB_ESP(%ebx)
+	subl $8,            %esp
+	movl %ecx,          4(%esp)
 	movl %eax,          (%esp)
 	call dispatch
 	movl current,       %eax
@@ -65,7 +88,7 @@ __switch_to:
 	jne  skip_seg_set
 	SET_SEGS(SEG_UDATA | 3, %ax)
 skip_seg_set:
-	popa
+	RESTORE_ALL
 	iret
 
 # for C

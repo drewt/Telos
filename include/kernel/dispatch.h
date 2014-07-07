@@ -19,6 +19,7 @@
 #define _KERNEL_DISPATCH_H_
 
 #include <kernel/process.h>
+#include <syscall.h>
 
 struct sigaction;
 struct sigevent;
@@ -33,7 +34,7 @@ extern int root_pid;
 
 _Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
-void dispatch(unsigned req);
+void dispatch(ulong call, struct sys_args *args);
 void ready(struct pcb *p);
 void new_process(void);
 

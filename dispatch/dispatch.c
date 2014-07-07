@@ -98,39 +98,37 @@ EXPORT_KINIT(dispatch, SUB_DISPATCH, dispatch_init);
  * The dispatcher.  Passes control to the appropriate routines to handle 
  * interrupts, system calls, and other events */
 //*----------------------------------------------------------------------------
-void dispatch(unsigned req)
+void dispatch(ulong call, struct sys_args *args)
 {
-	struct sys_args *args;
-	struct pcb *p;
+	struct pcb *p = current;
 
-	if (req < SYSCALL_MIN && sysactions[req].func != NULL) {
-		sysactions[req].func();
-	} else if (req < SYSCALL_MAX && sysactions[req].func != NULL) {
+	if (call < SYSCALL_MIN && sysactions[call].func != NULL) {
+		sysactions[call].func();
+	} else if (call < SYSCALL_MAX && sysactions[call].func != NULL) {
 
-		args = current->esp;
 		p = current;
-		switch (sysactions[req].nargs) {
+		switch (sysactions[call].nargs) {
 		case 0:
-			p->rc = sysactions[req].func();
+			p->rc = sysactions[call].func();
 			break;
 		case 1:
-			p->rc = sysactions[req].func(args->arg0);
+			p->rc = sysactions[call].func(args->arg0);
 			break;
 		case 2:
-			p->rc = sysactions[req].func(args->arg0,
+			p->rc = sysactions[call].func(args->arg0,
 					args->arg1);
 			break;
 		case 3:
-			p->rc = sysactions[req].func(args->arg0,
+			p->rc = sysactions[call].func(args->arg0,
 					args->arg1, args->arg2);
 			break;
 		case 4:
-			p->rc = sysactions[req].func(args->arg0,
+			p->rc = sysactions[call].func(args->arg0,
 					args->arg1, args->arg2,
 					args->arg3);
 			break;
 		case 5:
-			p->rc = sysactions[req].func(args->arg0,
+			p->rc = sysactions[call].func(args->arg0,
 					args->arg1, args->arg2,
 					args->arg3, args->arg4);
 			break;

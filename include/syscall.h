@@ -64,13 +64,12 @@ enum syscall_id {
 
 /* structure of arguments on the stack during a system call */
 struct sys_args {
-	unsigned long arg3;
-	unsigned long arg4;
-	unsigned long long _pad0; // unused
-	unsigned long arg0;
-	unsigned long arg2;
-	unsigned long arg1;
-	unsigned long call; // call type
+	ulong arg0;
+	ulong arg1;
+	ulong arg2;
+	ulong arg3;
+	ulong arg4;
+	ulong call;
 };
 
 static inline int syscall0(int call)
