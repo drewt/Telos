@@ -55,9 +55,8 @@ syscall_entry:
 common_isr:
 	SET_SEGS(SEG_KDATA, %bx)
 	movl %esp,          %ecx
-	movl $_kstack,      %esp
-	addl $0x4000,       %esp
 	movl current,       %ebx
+	movl PCB_KSP(%ebx), %esp
 	movl PCB_PID(%ebx), %edi
 	movl %edx,          PCB_RC(%ebx)
 	movl %ecx,          PCB_ESP(%ebx)

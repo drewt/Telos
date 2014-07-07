@@ -42,7 +42,7 @@ long sys_sbrk(long inc, ulong *oldbrk)
 	if (inc <= 0 || new < current->mm.heap->end)
 		goto skip;
 
-	if ((rc = vma_grow_up(current->mm.heap, inc)))
+	if ((rc = vma_grow_up(current->mm.heap, inc, current->mm.heap->flags)))
 		return rc;
 
 skip:

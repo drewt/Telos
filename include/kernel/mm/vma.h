@@ -20,15 +20,16 @@
 
 #include <kernel/list.h>
 
-enum {
-	VM_READ  = 1,
-	VM_WRITE = 2,
-	VM_EXEC  = 4,
-	VM_COW   = 8, /* copy-on-write */
-};
+#define VM_READ  1
+#define VM_WRITE 2
+#define _VM_EXEC 4
+#define _VM_COW  8
+
+#define VM_EXEC (VM_READ | _VM_EXEC)
+#define VM_COW  (VM_READ | VM_WRITE | _VM_COW)
 
 #define VM_RW  (VM_READ | VM_WRITE)
-#define VM_RWE (VM_READ | VM_WRITE | VM_EXEC)
+#define VM_RWE (VM_READ | VM_WRITE | _VM_EXEC)
 
 struct vma {
 	struct list_head chain;
@@ -39,17 +40,18 @@ struct vma {
 };
 
 struct mm_struct {
+	pmap_t pgdir;
 	struct list_head map;
 	struct list_head kheap;
 	struct vma *heap;
 	struct vma *stack;
+	struct vma *kernel_stack;
 	ulong  brk;
-	pmap_t pgdir;
 };
 
 struct vma *vma_find(struct mm_struct *mm, void *addr);
 struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags);
-int vma_grow_up(struct vma *vma, size_t amount);
+int vma_grow_up(struct vma *vma, size_t amount, ulong flags);
 
 static inline bool vma_contains(struct vma *vma, void *addr)
 {

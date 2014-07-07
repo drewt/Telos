@@ -84,10 +84,11 @@ long sys_create(void(*func)(int,char*), int argc, char **argv)
 int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 		ulong flags)
 {
-	struct pcb	*p;
-	void		*stack_mem;
-	void		*frame;
-	ulong		*args;
+	struct pcb *p;
+	void *process_stack;
+	void *kernel_stack;
+	void *frame;
+	ulong *args;
 
 	if ((p = get_free_pcb()) == NULL)
 		return -EAGAIN;
@@ -96,11 +97,17 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	p->mm.pgdir = (pmap_t) kernel_to_phys(&_kernel_pgd);
 
-	stack_mem = kalloc_pages(STACK_SIZE / FRAME_SIZE);
-	if (stack_mem == NULL)
+	process_stack = kalloc_pages(STACK_SIZE / FRAME_SIZE);
+	if (process_stack == NULL)
 		return -ENOMEM;
 
-	frame = ((char*) stack_mem + STACK_SIZE - sizeof(struct kcontext) - 128);
+	kernel_stack = kalloc_pages(4);
+	if (kernel_stack == NULL)
+		return -ENOMEM;
+
+	p->ksp = (char*)kernel_stack + FRAME_SIZE*4;
+
+	frame = ((char*) process_stack + STACK_SIZE - sizeof(struct kcontext) - 128);
 	put_iret_kframe(frame, (ulong) func);
 	args = (ulong*) ((ulong) frame + sizeof(struct kcontext));
 
@@ -161,6 +168,12 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	p->mm.stack = zmap(&p->mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
 	if (p->mm.stack == NULL)
 		goto abort;
+
+	p->mm.kernel_stack = zmap(&p->mm, (void*)(STACK_START + STACK_SIZE), FRAME_SIZE*4, VM_RWE);
+	if (p->mm.kernel_stack == NULL)
+		goto abort;
+
+	p->ksp = (char*)p->mm.kernel_stack->end;
 
 	/* set up iret frame */
 	v_frame = (void*) (STACK_START + 32 * sizeof(struct ucontext));

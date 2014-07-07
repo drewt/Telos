@@ -34,7 +34,7 @@ EXPORT_KINIT(mmap, SUB_LAST, mmap_sysinit);
 static inline ulong vma_to_page_flags(ulong flags)
 {
 	return  ((flags & VM_READ) ? PE_U : 0) |
-		((flags & VM_WRITE) ? PE_RW : 0);
+		((flags & VM_WRITE && !(flags & _VM_COW)) ? PE_RW : 0);
 }
 
 struct vma *vma_find(struct mm_struct *mm, void *addr)
@@ -48,11 +48,17 @@ struct vma *vma_find(struct mm_struct *mm, void *addr)
 	return NULL;
 }
 
-int vma_grow_up(struct vma *vma, size_t amount)
+int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 {
 	int rc;
 	unsigned nr_pages = pages_in_range(vma->end, amount);
 	ulong pflags = vma_to_page_flags(vma->flags);
+
+	if (flags != vma->flags) {
+		if (zmap(vma->mmap, (void*)vma->end, amount, flags) == NULL)
+			return -ENOMEM;
+		return 0;
+	}
 
 	if (vma->chain.next != &vma->mmap->map) {
 		struct vma *next = list_entry(vma->chain.next, struct vma, chain);
@@ -77,6 +83,76 @@ static void vma_insert(struct mm_struct *mm, struct vma *vma)
 	}
 	list_add_tail(&vma->chain, it);
 	vma->mmap = mm;
+}
+
+static int vma_split_left(struct vma *vma, ulong end, ulong flags)
+{
+	struct vma *left;
+
+	if ((left = alloc_vma()) == NULL)
+		return -ENOMEM;
+
+	left->start = vma->start;
+	left->end = end;
+	left->flags = flags;
+	left->mmap = vma->mmap;
+
+	vma->start = end;
+
+	list_add_tail(&left->chain, &vma->chain);
+	return 0;
+}
+
+static int vma_split_right(struct vma *vma, ulong start, ulong flags)
+{
+	struct vma *right;
+
+	if ((right = alloc_vma()) == NULL)
+		return -ENOMEM;
+
+	right->start = start;
+	right->end = vma->end;
+	right->flags = flags;
+	right->mmap = vma->mmap;
+
+	vma->end = start;
+
+	list_add(&right->chain, &vma->chain);
+	return 0;
+}
+
+int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
+{
+	struct vma *mid, *right;
+
+	if (vma->start == start)
+		return vma_split_left(vma, end, flags);
+	else if (vma->end == end)
+		return vma_split_right(vma, start, flags);
+
+	/* split middle */
+	if ((mid = alloc_vma()) == NULL)
+		return -ENOMEM;
+	if ((right = alloc_vma()) == NULL) {
+		free_vma(mid);
+		return -ENOMEM;
+	}
+
+	right->start = end;
+	right->end = vma->end;
+	right->flags = vma->flags;
+	right->mmap = vma->mmap;
+
+	mid->start = start;
+	mid->end = end;
+	mid->flags = flags;
+	mid->mmap = vma->mmap;
+
+	vma->end = start;
+
+	list_add(&mid->chain, &vma->chain);
+	list_add(&right->chain, &mid->chain);
+	return 0;
 }
 
 struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)

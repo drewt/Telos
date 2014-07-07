@@ -20,10 +20,11 @@
 
 #define PCB_RC  0x08
 #define PCB_ESP 0x0C
-#define PCB_IFP 0x10
-#define PCB_FLG 0x14
-#define PCB_PID 0x18
-#define PCB_PGD 0x1C
+#define PCB_KSP 0x10
+#define PCB_IFP 0x14
+#define PCB_FLG 0x18
+#define PCB_PID 0x1C
+#define PCB_PGD 0x20
 
 #define PFLAG_SUPER 0x1
 
@@ -64,7 +65,8 @@ struct pbuf {
 struct pcb {
 	struct list_head chain;
 	long		rc;		// return value for system calls
-	void		*esp;		// stack pointer
+	void		*esp;		// process stack pointer
+	void		*ksp;		// kernel stack pointer
 	void		*ifp;		// interrupt frame pointer
 	unsigned long	flags;
 	int		pid;		// process ID
