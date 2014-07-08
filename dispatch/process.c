@@ -74,6 +74,33 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	p->pid += PT_SIZE;
 	p->parent_pid = parent;
 	p->flags = flags;
+	p->state = STATE_NASCENT;
+}
+
+static int mm_init(struct pcb *p)
+{
+	int rc;
+
+	if ((rc = address_space_init(p)) < 0)
+		return rc;
+
+	p->mm.brk = HEAP_START + FRAME_SIZE;
+	p->mm.heap = zmap(&p->mm, (void*)HEAP_START, FRAME_SIZE, VM_RW);
+	if (p->mm.heap == NULL)
+		goto abort;
+
+	p->mm.stack = zmap(&p->mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
+	if (p->mm.stack == NULL)
+		goto abort;
+
+	p->mm.kernel_stack = zmap(&p->mm, (void*)(STACK_START+STACK_SIZE), FRAME_SIZE*4, VM_RWE);
+	if (p->mm.kernel_stack == NULL)
+		goto abort;
+
+	return 0;
+abort:
+	address_space_fini(p->mm.pgdir);
+	return -ENOMEM;
 }
 
 long sys_create(void(*func)(int,char*), int argc, char **argv)
@@ -81,12 +108,10 @@ long sys_create(void(*func)(int,char*), int argc, char **argv)
 	return create_user_process(func, argc, argv, 0);
 }
 
-int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
-		ulong flags)
+int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 {
+	int rc;
 	struct pcb *p;
-	void *process_stack;
-	void *kernel_stack;
 	void *frame;
 	ulong *args;
 
@@ -95,27 +120,19 @@ int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
 
 	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	p->mm.pgdir = (pmap_t) kernel_to_phys(&_kernel_pgd);
+	if ((rc = mm_init(p)) < 0)
+		return rc;
 
-	process_stack = kalloc_pages(STACK_SIZE / FRAME_SIZE);
-	if (process_stack == NULL)
-		return -ENOMEM;
+	p->ksp = (void*)p->mm.kernel_stack->end;
+	p->esp = ((char*)p->mm.stack->start + STACK_SIZE - sizeof(struct kcontext) - 128);
 
-	kernel_stack = kalloc_pages(4);
-	if (kernel_stack == NULL)
-		return -ENOMEM;
+	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct kcontext) + 16);
+	put_iret_kframe((void*)frame, (ulong)func);
 
-	p->ksp = (char*)kernel_stack + FRAME_SIZE*4;
-
-	frame = ((char*) process_stack + STACK_SIZE - sizeof(struct kcontext) - 128);
-	put_iret_kframe(frame, (ulong) func);
-	args = (ulong*) ((ulong) frame + sizeof(struct kcontext));
-
+	args = (ulong*) ((ulong)frame + sizeof(struct kcontext));
 	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = (ulong) argv;
-
-	p->esp = frame;
+	args[1] = (ulong) arg;
+	kunmap_range(frame, sizeof(struct kcontext) + 16);
 
 	ready(p);
 	return p->pid;
@@ -155,25 +172,12 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 
 	pcb_init(p, current->pid, flags);
 
-	if ((rc = address_space_init(p)) < 0)
+	if ((rc = mm_init(p)) < 0)
 		return rc;
 
-	p->mm.brk = HEAP_START + FRAME_SIZE;
-	p->mm.heap = zmap(&p->mm, (void*)HEAP_START, FRAME_SIZE, VM_RW);
-	if (p->mm.heap == NULL)
-		goto abort;
+	p->ksp = (char*)p->mm.kernel_stack->end;
 
 	copy_args(p, argc, argv);
-
-	p->mm.stack = zmap(&p->mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
-	if (p->mm.stack == NULL)
-		goto abort;
-
-	p->mm.kernel_stack = zmap(&p->mm, (void*)(STACK_START + STACK_SIZE), FRAME_SIZE*4, VM_RWE);
-	if (p->mm.kernel_stack == NULL)
-		goto abort;
-
-	p->ksp = (char*)p->mm.kernel_stack->end;
 
 	/* set up iret frame */
 	v_frame = (void*) (STACK_START + 32 * sizeof(struct ucontext));
@@ -195,9 +199,6 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 
 	ready(p);
 	return p->pid;
-abort:
-	address_space_fini(p->mm.pgdir);
-	return -ENOMEM;
 }
 
 /*-----------------------------------------------------------------------------

@@ -52,7 +52,8 @@ enum {
 	STATE_BLOCKED		= 1 << 3,
 	STATE_SIGWAIT		= 1 << 4,
 	STATE_SIGSUSPEND	= 1 << 5,
-	STATE_SLEEPING		= 1 << 6
+	STATE_SLEEPING		= 1 << 6,
+	STATE_NASCENT		= 1 << 7
 };
 
 struct pbuf {
@@ -118,8 +119,7 @@ extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
 int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		unsigned long flags);
-int create_kernel_process(void(*func)(int,char*), int argc, char **argv,
-		unsigned long flags);
+int create_kernel_process(void(*func)(void*), void *arg, ulong flags);
 
 #endif /* __ASM__ */
 #endif /* _KERNEL_PROCESS_H_ */
