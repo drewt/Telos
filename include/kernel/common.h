@@ -20,14 +20,12 @@
 
 #define __KERNEL__
 
+#include <stdarg.h>
 #include <kernel/types.h>
 #include <kernel/compiler.h>
 #include <errnodefs.h>
 
 #define SYSERR (-1)
-
-#define wprintf(fmt, ...) kprintf_clr(0xC, "WARNING: "fmt"\n", __VA_ARGS__)
-#define wprints(str) kprintf_clr(0xC, "WARNING: "str"\n")
 
 /* linux */
 #define WARN_ON_ONCE(x) x
@@ -37,9 +35,16 @@
 #define USHRT_MAX ((u16)(~0U))
 #define SHRT_MAX ((s16)(USHRT_MAX>>1))
 
-extern int kprintf(const char *fmt, ...) __attribute__((format(printf,1,2)));
-extern int kprintf_clr(unsigned char clr, const char *fmt, ...);
-extern void clear_console(void);
+void clear_console(void);
+int _kvprintf(unsigned char attr, const char *fmt, va_list ap) __printf(2,0);
+int _kprintf(unsigned char attr, const char *fmt, ...) __printf(2,3);
+
+#define TXT_CLR   0x7
+#define kvprintf(fmt,ap) _kvprintf(TXT_CLR, fmt, ap)
+#define kprintf(fmt, ...) _kprintf(TXT_CLR, fmt, ## __VA_ARGS__)
+#define warn(fmt, ...) _kprintf(0xC, "WARNING: "fmt"\n", ## __VA_ARGS__)
+
+_Noreturn void panic(const char *fmt, ...) __printf(1,2);
 
 /* initialization order */
 enum {

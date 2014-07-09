@@ -15,6 +15,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdarg.h>
+
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
 #include <kernel/signal.h>
@@ -69,6 +71,18 @@ static void print_cpu_context(struct ucontext *context)
 	if (current != NULL)
 		kprintf("Current process is %d\n", current->pid);
 	dump_registers(reg);
+}
+
+_Noreturn void panic(const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	kprintf("panic!\n");
+	kvprintf(fmt, ap);
+	va_end(ap);
+
+	/* TODO: dump cpu state */
+	halt();
 }
 
 /*

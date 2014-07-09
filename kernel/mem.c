@@ -108,7 +108,7 @@ static void mem_init(void)
 
 	fix_multiboot_info(mb_info);
 	if (!MULTIBOOT_MEM_VALID(mb_info)) {
-		wprints("failed to detect memory limits; assuming 8MB total");
+		warn("failed to detect memory limits; assuming 8MB total");
 		mb_info->mem_upper = 0x800000;
 	}
 

@@ -113,9 +113,10 @@ static inline unsigned char inb(port_t port)
 	return ret;
 }
 
-static inline void halt(void)
+static inline _Noreturn void halt(void)
 {
 	asm volatile("_halt: hlt\njmp _halt");
+	__builtin_unreachable();
 }
 
 #define MOV(reg,loc) \

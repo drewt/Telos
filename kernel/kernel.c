@@ -66,7 +66,7 @@ static void init_subsystems(void)
 //-----------------------------------------------------------------------------
 void kmain(struct multiboot_info *info, unsigned long magic)
 {
-	#define bprintf(fmt, ...) kprintf_clr(0xA, fmt, ## __VA_ARGS__)
+	#define bprintf(fmt, ...) _kprintf(0xA, fmt, ## __VA_ARGS__)
 
 	mb_info = info;
 
@@ -96,7 +96,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	bprintf("\n----------- MEMORY -----------\n");
 	bprintf("Kernel:    %p - %p\n", &_kstart, &_kend);
 	bprintf("Userspace: %p - %p\n", &_ustart, &_uend);
-	bprintf("Total:     %d bytes\n", MULTIBOOT_MEM_MAX(mb_info));
+	bprintf("Total:     %lu bytes\n", MULTIBOOT_MEM_MAX(mb_info));
 
 	bprintf("Starting Telos...\n\n");
 	idle_pid = create_kernel_process(idle_proc, NULL, 0);

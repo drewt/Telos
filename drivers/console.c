@@ -359,12 +359,13 @@ static inline void kputs(char *s, unsigned char attr)
 /*
  * Prints a formatted string to the visible console
  */
-int kvprintf(unsigned char clr, const char *fmt, va_list ap) {
+int _kvprintf(unsigned char attr, const char *fmt, va_list ap)
+{
 	int ret;
 	char buf[1024];
 
 	ret = vsnprintf(buf, 1024, fmt, ap);
-	kputs(buf, clr);
+	kputs(buf, attr);
 
 	return ret;
 }
@@ -372,27 +373,13 @@ int kvprintf(unsigned char clr, const char *fmt, va_list ap) {
 /*
  * Variadic wrapper for kvprintf
  */
-int kprintf_clr(unsigned char clr, const char *fmt, ...)
+int _kprintf(unsigned char attr, const char *fmt, ...)
 {
 	va_list ap;
 	int ret;
 
 	va_start(ap, fmt);
-	ret = kvprintf(clr, fmt, ap);
-	va_end(ap);
-	return ret;
-}
-
-/*
- * Variadic wrapper for kvprintf which prints in the default text colour
- */
-int kprintf(const char *fmt, ...)
-{
-	va_list ap;
-	int ret;
-
-	va_start(ap, fmt);
-	ret = kvprintf(TXT_CLR, fmt, ap);
+	ret = _kvprintf(attr, fmt, ap);
 	va_end(ap);
 	return ret;
 }

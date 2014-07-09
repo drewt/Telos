@@ -26,6 +26,8 @@
 
 #define __used __attribute__((used))
 
+#define __printf(fmt,args) __attribute__((format(printf,fmt,args)))
+
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
