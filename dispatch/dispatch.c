@@ -17,7 +17,6 @@
 
 #include <kernel/bitops.h>
 #include <kernel/dispatch.h>
-#include <kernel/device.h>
 #include <kernel/interrupt.h>
 #include <kernel/list.h>
 #include <syscall.h>
@@ -45,6 +44,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[EXN_ILL]		= { (isr_t) exn_ill_instr,	0 },
 	[EXN_PF]		= { (isr_t) exn_page_fault,	0 },
 	[INTR_TIMER]		= { (isr_t) tick,		0 },
+	[INTR_KBD]		= { (isr_t) int_keyboard,	0 },
 	[SYS_CREATE]		= { (isr_t) sys_create,		3 },
 	[SYS_YIELD]		= { (isr_t) sys_yield,		0 },
 	[SYS_STOP]		= { (isr_t) sys_exit,		1 },
@@ -77,22 +77,6 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_CLOCK_SETTIME]	= { (isr_t) sys_clock_settime,	2 },
 	[SYS_SBRK]		= { (isr_t) sys_sbrk,		2 },
 };
-
-static inline void set_action(unsigned int vector, isr_t f, int nargs)
-{
-	sysactions[vector] = (struct sysaction) { f, nargs };
-}
-
-/*-----------------------------------------------------------------------------
- * Initializes the dispatcher.  Must be called *after* the device table is
- * initialized, if any device ISRs are assigned dynamically */
-//-----------------------------------------------------------------------------
-static void dispatch_init(void)
-{
-	/* initialize actions that can't be initialized statically */
-	set_action(INTR_KBD, (isr_t) devtab[DEV_CONSOLE_0].dv_op->dviint, 0);
-}
-EXPORT_KINIT(dispatch, SUB_DISPATCH, dispatch_init);
 
 /*-----------------------------------------------------------------------------
  * The dispatcher.  Passes control to the appropriate routines to handle 

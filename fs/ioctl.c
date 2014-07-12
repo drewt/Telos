@@ -15,33 +15,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/device.h>
-#include <kernel/drivers/console.h>
-#include <kernel/drivers/serial.h>
+#include <kernel/dispatch.h>
+#include <kernel/fs.h>
 
-struct device devtab[DT_SIZE] = {
-	[DEV_CONSOLE_0] = {
-		.dvnum   = DEV_CONSOLE_0,
-		.dvname  = "Console 0",
-		.dvioblk = NULL,
-		.dv_op = &console_operations
-	},
-	[DEV_CONSOLE_1] = {
-		.dvnum   = DEV_CONSOLE_1,
-		.dvname  = "Console 1",
-		.dvioblk = NULL,
-		.dv_op = &console_operations
-	},
-	[DEV_SERIAL] = {
-		.dvnum   = DEV_SERIAL,
-		.dvname  = "Serial port",
-		.dvioblk = NULL,
-		.dv_op = NULL
-	}
-};
-
-static void driver_init(void)
+long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
 {
-	devtab[DEV_CONSOLE_0].dv_op->dvinit();
+	struct file *filp;
+
+	if (fd >= NR_FILES || !(filp = current->filp[fd]))
+		return -EBADF;
+
+	if (filp->f_op && filp->f_op->ioctl)
+		return filp->f_op->ioctl(filp->f_inode, filp, cmd, arg);
+	return -EINVAL;
 }
-EXPORT_KINIT(driver, SUB_DRIVER, driver_init);

@@ -28,14 +28,14 @@ static int read_proc()
 	int fd;
 	char in[5];
 
-	puts("Reading: ");
-	if ((fd = open("/dev/kbd", 0)) == -1) {
-		puts("Error opening keyboard");
+	if ((fd = open("/dev/cons0", 0)) == -1) {
+		puts("Error opening console");
 		return -1;
 	}
 
+	puts("Reading: ");
 	if (read(fd, in, 4) == -1) {
-		puts("Error reading from keyboard");
+		puts("Error reading from console");
 		return -1;
 	}
 	in[4] = '\0';

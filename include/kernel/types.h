@@ -81,6 +81,8 @@ typedef unsigned long long	uint64_t;
 
 typedef long			ptrdiff_t;
 
+typedef unsigned long		umode_t;
+
 #define bool	_Bool
 #define true	1
 #define false	0

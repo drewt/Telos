@@ -20,12 +20,14 @@
 #include <kernel/dispatch.h>
 #include <kernel/time.h>
 #include <kernel/mmap.h>
-#include <kernel/device.h>
 #include <kernel/list.h>
+#include <kernel/fs.h>
+#include <kernel/major.h>
 #include <kernel/signal.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
+#include <kernel/drivers/console.h>
 
 #define STACK_PAGES 8
 #define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)
@@ -34,6 +36,30 @@
 #define STACK_START 0x0F000000UL
 
 extern void exit(int status);
+
+#define STDIO_FILE(name) \
+	struct file name = { \
+		.f_count = 1, \
+	}
+
+STDIO_FILE(stdin_file);
+STDIO_FILE(stdout_file);
+STDIO_FILE(stderr_file);
+
+static void stdio_sysinit(void)
+{
+	struct file_operations *fops = get_chrfops(TTY_MAJOR);
+
+	stdin_file.f_op = fops;
+	stdin_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+
+	stdout_file.f_op = fops;
+	stdout_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+
+	stderr_file.f_op = fops;
+	stderr_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+}
+EXPORT_KINIT(stdio, SUB_PROCESS, stdio_sysinit);
 
 static inline struct pcb *get_free_pcb(void)
 {
@@ -56,11 +82,14 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	}
 
 	/* init file data */
-	p->fds[0] = DEV_CONSOLE_0;
-	p->fds[1] = DEV_CONSOLE_0;
-	p->fds[2] = DEV_CONSOLE_1;
-	for (int i = 3; i < FDT_SIZE; i++)
-		p->fds[i] = FD_NONE;
+	p->filp[0] = &stdin_file;
+	p->filp[1] = &stdout_file;
+	p->filp[2] = &stderr_file;
+	stdin_file.f_count++;
+	stdout_file.f_count++;
+	stderr_file.f_count++;
+	for (int i = 3; i < NR_FILES; i++)
+		p->filp[i] = NULL;
 
 	/* init lists */
 	INIT_LIST_HEAD(&p->send_q);
@@ -238,9 +267,9 @@ long sys_exit(int status)
 	CLEAR_MSG_QUEUE(&current->recv_q)
 	CLEAR_MSG_QUEUE(&current->repl_q)
 
-	for (int i = 0; i < FDT_SIZE; i++)
-		if (current->fds[i] != FD_NONE)
-			sys_close(current->fds[i]);
+	for (int i = 0; i < NR_FILES; i++)
+		if (current->filp[i] != NULL)
+			sys_close(i);
 
 	address_space_fini(current->mm.pgdir);
 

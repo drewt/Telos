@@ -19,9 +19,9 @@ OBJCOPY   = $(CCPREFIX)objcopy
 
 export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS CPPFLAGS LD OBJCOPY
 
-findobj = find kernel dispatch drivers -name '*.o' | tr '\n' ' '
+findobj = find kernel dispatch drivers fs -name '*.o' | tr '\n' ' '
 
-submakes = dispatch drivers kernel usr lib
+submakes = dispatch drivers fs kernel usr lib
 clean = kernel.img kernel.bin boot/loader.o
 distclean = pad
 
@@ -41,6 +41,9 @@ dispatch:
 	+$(call cmd,smake)
 
 drivers:
+	+$(call cmd,smake)
+
+fs:
 	+$(call cmd,smake)
 
 kernel:
@@ -72,6 +75,7 @@ clean: topclean
 topclean:
 	@cd dispatch && $(MAKE) clean
 	@cd drivers && $(MAKE) clean
+	@cd fs && $(MAKE) clean
 	@cd kernel && $(MAKE) clean
 	@cd usr && $(MAKE) clean
 	@cd lib && $(MAKE) clean

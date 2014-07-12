@@ -30,8 +30,8 @@
 
 #ifndef __ASM__
 
-#include <kernel/device.h>
 #include <kernel/list.h>
+#include <kernel/fs.h>
 #include <kernel/signal.h>
 #include <kernel/timer.h>
 #include <kernel/mm/vma.h>
@@ -43,6 +43,8 @@
 
 #define FDT_SIZE 8
 #define FD_NONE  (DT_SIZE + 1)
+
+#define NR_FILES 8
 
 /* process status codes */
 enum {
@@ -75,9 +77,6 @@ struct pcb {
 	/* metadata */
 	int		parent_pid;	// parent process's pid
 	unsigned int	state;		// state
-	/* memory */
-	void		*stack_mem;	// beginning of stack memory
-	void		*int_stack;	// stack for interrupts
 	/* time */
 	unsigned int	timestamp;	// creation time
 	struct timer	t_alarm;	// alarm timer
@@ -96,9 +95,10 @@ struct pcb {
 	struct list_head send_q;	// processes waiting to send
 	struct list_head recv_q;	// processes waiting to receive
 	struct list_head repl_q;	// processes waiting for a reply
+	/* vfs */
+	struct file *filp[FDT_SIZE];
 	/* */
 	void		*parg;		// pointer to... something
-	dev_t		fds[FDT_SIZE];	// file descriptors
 };
 
 #define assert_pcb_offset(member, offset) \

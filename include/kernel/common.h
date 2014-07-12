@@ -49,9 +49,9 @@ _Noreturn void panic(const char *fmt, ...) __printf(1,2);
 /* initialization order */
 enum {
 	SUB_MEMORY,
-	SUB_PROCESS,
+	SUB_VFS,
 	SUB_DRIVER,
-	SUB_DISPATCH,
+	SUB_PROCESS,
 
 	SUB_LAST
 };

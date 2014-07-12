@@ -59,6 +59,8 @@ void exn_page_fault(void);
 void exn_fpe(void);
 void exn_ill_instr(void);
 
+void int_keyboard(void);
+
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
 long sys_create(void(*func)(int,char*), int argc, char **argv);
@@ -80,11 +82,11 @@ long sys_sigwait(void);
 long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 long sys_recv(int *src_pid, void *buffer, int length);
 long sys_reply(int src_pid, void *buffer, int length);
-long sys_open(const char *pathname, int flags, ...);
-long sys_close(int fd);
-long sys_read(int fd, void *buf, int nbyte);
-long sys_write(int fd, void *buf, int nbyte);
-long sys_ioctl(int fd, unsigned long command, va_list vargs);
+long sys_open(const char *pathname, int flags, int mode);
+long sys_close(unsigned int fd);
+long sys_read(unsigned int fd, char *buf, size_t nbyte);
+long sys_write(unsigned int fd, char *buf, size_t nbyte);
+long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 long sys_time(time_t *t);
 long sys_clock_getres(clockid_t clockid, struct timespec *res);
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp);

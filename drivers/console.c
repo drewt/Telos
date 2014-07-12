@@ -17,13 +17,14 @@
 
 #include <kernel/i386.h>
 #include <kernel/dispatch.h>
-#include <kernel/device.h>
 #include <kernel/drivers/console.h>
+#include <kernel/fs.h>
+#include <kernel/major.h>
 
 #include <string.h>
 #include <klib.h>
 
-#define N_CONSOLES 2
+#define NR_CONSOLES 2
 
 #define COL  80
 #define ROW  25
@@ -61,7 +62,7 @@ struct console {
 	size_t usr_buf_next;
 };
 
-static struct console constab[N_CONSOLES];
+static struct console constab[NR_CONSOLES];
 
 static unsigned int visible = 0; /* currently visible console */
 
@@ -117,7 +118,7 @@ static bool put_char(struct console *con, char c)
 	return false;
 }
 
-static void console_iint(void)
+void int_keyboard(void)
 {
 	unsigned c, s;
 	struct console *con = &constab[visible];
@@ -151,14 +152,12 @@ end:
 	pic_eoi();
 }
 
-static int console_read(int fd, void *buf, int buf_len)
+static ssize_t console_read(struct file *f, char *buf, size_t len)
 {
-	struct console *con = &constab[current->fds[fd] - DEV_CONSOLE_0];
+	struct console *con = &constab[MINOR(f->f_dev)];
 
-	/* read in progress: queue up work request and block */
 	if (con->reading) {
-		current->pbuf = (struct pbuf)
-			{ .buf = buf, .len = buf_len, .id = fd };
+		current->pbuf = (struct pbuf) { .buf = buf, .len = len };
 		list_add_tail(&current->chain, &con->work_q);
 		new_process();
 		return 0;
@@ -166,7 +165,7 @@ static int console_read(int fd, void *buf, int buf_len)
 
 	con->reader = current;
 	con->usr_buf = buf;
-	con->usr_buf_len = buf_len;
+	con->usr_buf_len = len;
 	con->usr_buf_next = 0;
 
 	/* data ready: copy to user */
@@ -176,7 +175,6 @@ static int console_read(int fd, void *buf, int buf_len)
 	/* data not ready: block */
 	con->reading = true;
 	new_process();
-
 	return 0;
 }
 
@@ -184,31 +182,15 @@ static int console_read(int fd, void *buf, int buf_len)
  * TEXT-MODE VGA
  */
 
-static int console_write(int fd, void *buf, int buf_len)
+static ssize_t console_write(struct file *f, const char *buf, size_t len)
 {
-	int i;
-	unsigned int cno = current->fds[fd] - DEV_CONSOLE_0;
+	size_t i;
+	unsigned cno = MINOR(f->f_dev);
 
-	char *s = buf;
-	for (i = 0; s[i] != '\0' && i < buf_len; i++) {
+	const char *s = buf;
+	for (i = 0; s[i] != '\0' && i < len; i++)
 		console_putc(s[i], TXT_CLR, cno);
-	}
-
 	return i;
-}
-
-static int console_open(dev_t devno)
-{
-	unsigned int cno = devno - DEV_CONSOLE_0;
-	constab[cno].opened++;
-	return 0;
-}
-
-static int console_close(dev_t devno)
-{
-	unsigned int cno = devno - DEV_CONSOLE_0;
-	constab[cno].opened--;
-	return 0;
 }
 
 int console_early_init(void)
@@ -216,7 +198,7 @@ int console_early_init(void)
 	// TODO: probe for colour/monochrome display
 	unsigned short cpos;
 
-	for (int i = 0; i < N_CONSOLES; i++) {
+	for (int i = 0; i < NR_CONSOLES; i++) {
 		constab[i].offset = 0;
 		constab[i].buffered = 0;
 		constab[i].buf_pos = 0;
@@ -248,7 +230,7 @@ int console_init(void)
  */
 int console_switch(unsigned int to)
 {
-	if (to >= N_CONSOLES)
+	if (to >= NR_CONSOLES)
 		return -EINVAL;
 	if (to == visible)
 		return 0;
@@ -272,18 +254,17 @@ void clear_console(void)
 	constab[visible].offset = 0;
 }
 
-static int console_ioctl(int fd, unsigned long command, va_list vargs)
+static int console_ioctl(int fd, unsigned int cmd, unsigned long arg)
 {
-	switch (command) {
+	switch (cmd) {
 	case CONSOLE_IOCTL_SWITCH:
-		return console_switch(va_arg(vargs, unsigned int));
+		return console_switch(arg);
 	case CONSOLE_IOCTL_CLEAR:
 		clear_console();
 		return 0;
 	default:
 		return -EINVAL;
 	}
-	return -EIO;
 }
 
 /*
@@ -384,13 +365,18 @@ int _kprintf(unsigned char attr, const char *fmt, ...)
 	return ret;
 }
 
-struct device_operations console_operations = {
-	.dvinit = console_init,
-	.dvopen = console_open,
-	.dvclose = console_close,
-	.dvread = console_read,
-	.dvwrite = console_write,
-	.dvioctl = console_ioctl,
-	.dviint = console_iint,
-	.dvoint = NULL
+struct file_operations console_fops = {
+	.read = console_read,
+	.write = console_write,
 };
+
+struct inode_operations console_iops = {
+	.default_file_ops = &console_fops,
+};
+
+static void console_sysinit(void)
+{
+	register_chrdev(TTY_MAJOR, "console", &console_fops);
+	enable_irq(1, 0);
+}
+EXPORT_KINIT(console, SUB_DRIVER, console_sysinit);
