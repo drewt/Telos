@@ -91,10 +91,13 @@ void *slab_alloc(struct slab_cache *cache)
 	zero = bitmap_ffz(slab->bitmap, cache->pages_per_slab * 4);
 	bitmap_set(slab->bitmap, zero);
 
-	/* move slab to full list if depleted */
+	/* move slab to full/partial list, as appropriate */
 	if (++slab->in_use == cache->objs_per_slab) {
 		list_del(&slab->chain);
 		list_add(&slab->chain, &cache->full);
+	} else if (slab->in_use == 1) {
+		list_del(&slab->chain);
+		list_add(&slab->chain, &cache->partial);
 	}
 
 	return (void*) ((ulong)slab->mem + zero * cache->obj_size);
