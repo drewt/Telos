@@ -32,6 +32,7 @@
 
 #define SHELL_EXIT  ((void*)-1)
 #define SHELL_CLEAR ((void*)-2)
+#define SHELL_CD    ((void*)-3)
 
 #define PROMPT "TELOS> "
 
@@ -39,11 +40,23 @@ typedef int(*funcptr)(int, char**);
 
 int main(int argc, char *argv[]);
 
-static int help(int argc, char *argv[]);
-extern int echo(int argc, char *argv[]);
-extern int echoserver(int argc, char *argv[]);
-extern int echoclient(int argc, char *argv[]);
-extern int multi(int argc, char *argv[]);
+#define PROGRAM(name) int name(int argc, char *argv[])
+
+static PROGRAM(help);
+extern PROGRAM(cat);
+extern PROGRAM(echo);
+extern PROGRAM(echoserver);
+extern PROGRAM(echoclient);
+extern PROGRAM(uls);
+extern PROGRAM(mount_ramfs);
+extern PROGRAM(uumount);
+extern PROGRAM(umkdir);
+extern PROGRAM(urmdir);
+extern PROGRAM(ulink);
+extern PROGRAM(uunlink);
+extern PROGRAM(urename);
+extern PROGRAM(ustat);
+extern PROGRAM(multi);
 
 struct program {
 	funcptr f;
@@ -53,6 +66,7 @@ struct program {
 static struct program progtab[] = {
 	{ SHELL_EXIT,	"exit"		},
 	{ SHELL_CLEAR,	"clear"		},
+	{ SHELL_CD,     "cd"            },
 	{ help,		"help"		},
 	{ exntest,	"exntest"	},
 	{ proctest,	"proctest"	},
@@ -64,10 +78,20 @@ static struct program progtab[] = {
 	{ memtest,	"memtest"	},
 	{ consoletest,	"consoletest"	},
 	{ jmptest,      "jmptest"       },
+	{ cat,          "cat"           },
 	{ echo,		"echo"		},
 	{ date,		"date"		},
 	{ echoserver,   "echoserver"    },
 	{ echoclient,   "echoclient"    },
+	{ uls,          "ls"            },
+	{ umkdir,       "mkdir"         },
+	{ urmdir,       "rmdir"         },
+	{ mount_ramfs,  "mount-ramfs"   },
+	{ uumount,      "umount"        },
+	{ ustat,        "stat"          },
+	{ ulink,        "link"          },
+	{ uunlink,      "unlink"        },
+	{ urename,      "rename"        },
 	{ multi,        "multi"         },
 	{ main,		"tsh"		}
 };
@@ -176,6 +200,7 @@ int main(int _argc, char *_argv[])
 
 	signal(SIGCHLD, sigchld_handler);
 
+	if (getpid() != 2) for(;;);
 	while (1) {
 		printf(PROMPT);
 		if (read_line(in, IN_LEN) == EOF)
@@ -193,6 +218,11 @@ int main(int _argc, char *_argv[])
 			return 0;
 		if (p == SHELL_CLEAR) {
 			ioctl(STDOUT_FILENO, CONSOLE_IOCTL_CLEAR);
+			continue;
+		}
+		if (p == SHELL_CD) {
+			if (argv[1])
+				chdir(argv[1]);
 			continue;
 		}
 

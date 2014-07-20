@@ -4,6 +4,8 @@ topdir = $(CURDIR)
 incdir = $(topdir)/include
 export topdir incdir
 
+VERSION := $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
+
 CCPREFIX  = #i586-elf-
 AR        = $(CCPREFIX)ar
 ARFLAGS   = rcs
@@ -13,7 +15,7 @@ CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	    -Wno-attributes
 ALLCFLAGS = $(CFLAGS) -fno-builtin -ffreestanding -std=gnu11 \
 	    -include 'kernel/common.h'
-CPPFLAGS  = -I $(incdir)
+CPPFLAGS  = -I $(incdir) -DVERSION=\"$(VERSION)\"
 LD        = $(CCPREFIX)ld -m elf_i386
 OBJCOPY   = $(CCPREFIX)objcopy
 

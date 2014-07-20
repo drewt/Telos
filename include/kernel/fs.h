@@ -2,6 +2,7 @@
 #define _KERNEL_FS_H_
 
 #include <kernel/list.h>
+#include <kernel/dirent.h>
 #include <kernel/mm/slab.h>
 
 /*
@@ -15,6 +16,24 @@ enum {
 	MS_SYNC		= 16, /* writes are synced at once */
 	MS_REMOUNT	= 32, /* alter flags of a mounted FS */
 };
+
+#define MAY_EXEC 1
+#define MAY_WRITE 2
+#define MAY_READ 4
+
+#define READ 0
+#define WRITE 1
+
+/*
+ * These are the fs-independent mount-flags: up to 16 flags are supported
+ */
+#define MS_RDONLY    1 /* mount read-only */
+#define MS_NOSUID    2 /* ignore suid and sgid bits */
+#define MS_NODEV     4 /* disallow access to device special files */
+#define MS_NOEXEC    8 /* disallow program execution */
+#define MS_SYNC     16 /* writes are synced at once */
+#define	MS_REMOUNT  32 /* alter flags of a mounted FS */
+#define MS_MEMFS    64 /* do not free inodes */
 
 /*
  * Flags that can be altered by MS_REMOUNT
@@ -48,16 +67,18 @@ struct super_block;
 struct file_operations {
 	ssize_t (*read)(struct file *, char *, size_t);
 	ssize_t (*write)(struct file *, const char *, size_t);
+	int (*readdir)(struct inode *, struct file *, struct dirent *, int);
 	int (*open)(struct inode *, struct file *);
-	int (*close)(struct inode *, struct file *);
+	int (*release)(struct inode *, struct file *);
 	int (*ioctl)(struct inode *, struct file *, unsigned int, unsigned long);
 };
 
 struct file {
 	struct list_head chain;
 	struct inode *f_inode;
-	umode_t f_mode;
-	dev_t f_dev;
+	mode_t f_mode;
+	dev_t f_rdev;
+	unsigned long f_pos;
 	unsigned short f_flags;
 	unsigned short f_count;
 	struct file_operations *f_op;
@@ -66,22 +87,33 @@ struct file {
 struct inode_operations {
 	int(*create)(struct inode *, const char *, int, int, struct inode **);
 	int(*lookup)(struct inode *, const char *, int, struct inode **);
-	int(*mkdir)(struct inode *, const char *, int);
+	int(*link)(struct inode *, struct inode *, const char *, int);
+	int(*unlink)(struct inode *, const char *, int);
+	int(*mkdir)(struct inode *, const char *, int, int);
 	int(*rmdir)(struct inode *, const char *, int);
+	int(*mknod)(struct inode *, const char *, int, int, dev_t);
 	int(*rename)(struct inode *, const char *, int, struct inode *,
 			const char *, int);
+	int(*follow_link)(struct inode *, struct inode *, int, int, struct inode**);
 	struct file_operations *default_file_ops;
 };
 
 struct inode {
+	struct list_head	i_list;
+	struct hlist_node	i_hash;
 	unsigned long		i_ino;
-	umode_t			i_mode;
+	mode_t			i_mode;
+	nlink_t			i_nlink;
 	dev_t			i_dev;
+	dev_t			i_rdev;
+	unsigned long		i_size;
 	unsigned short		i_count;
 	unsigned short		i_flags;
+	bool			i_dirt;
 	struct inode		*i_mount;
 	struct inode_operations	*i_op;
 	struct super_block	*i_sb;
+	void			*i_private;
 };
 
 struct super_operations {
@@ -100,6 +132,7 @@ struct super_block {
 	struct inode *s_mounted;
 	struct inode *s_covered;
 	struct super_operations *s_op;
+	void *s_private;
 };
 
 struct file_system_type {
@@ -108,17 +141,19 @@ struct file_system_type {
 	int requires_dev;
 };
 
-struct slab_cache *file_cachep;
-struct slab_cache *inode_cachep;
+extern struct inode_operations chrdev_inode_operations;
+extern struct inode_operations blkdev_inode_operations;
+
+extern struct slab_cache *file_cachep;
+extern struct slab_cache *inode_cachep;
+extern struct inode *root_inode;
 
 static inline struct file *get_filp(void)
 {
-	return slab_alloc(file_cachep);
-}
-
-static inline struct inode *iget(void)
-{
-	return slab_alloc(inode_cachep);
+	struct file *filp = slab_alloc(file_cachep);
+	if (filp)
+		filp->f_count = 1;
+	return filp;
 }
 
 static inline void free_filp(struct file *filp)
@@ -126,22 +161,40 @@ static inline void free_filp(struct file *filp)
 	slab_free(file_cachep, filp);
 }
 
-static inline void iput(struct inode *inode)
+static inline struct inode *get_empty_inode(void)
 {
-	if (!inode)
-		return;
-	if (--inode->i_count == 0)
-		slab_free(inode_cachep, inode);
+	return slab_alloc(inode_cachep);
 }
 
+void mount_root(void);
+
+struct inode *iget(struct super_block *sb, unsigned long ino);
+struct inode *__iget(struct super_block *sb, ino_t ino, bool crossmntp);
+void iput(struct inode *inode);
+void insert_inode_hash(struct inode *inode);
+
+static void ifree(struct inode *inode)
+{
+	inode->i_flags &= ~MS_MEMFS;
+	iput(inode);
+}
+
+int permission(struct inode *inode, int mask);
 int fs_may_mount(dev_t dev);
 int fs_may_umount(dev_t dev, struct inode * mount_root);
 extern int fs_may_remount_ro(dev_t dev);
+
+int register_filesystem(
+	struct super_block *(*read_super)(struct super_block*, void*, int),
+	char *name, int requires_dev);
+struct file_system_type *get_fs_type(const char *name);
 
 int fsync_dev(dev_t dev);
 
 extern int namei(const char * pathname, struct inode ** res_inode);
 extern int lnamei(const char * pathname, struct inode ** res_inode);
+extern int open_namei(const char *pathname, int flag, int mode,
+		struct inode **res_inode, struct inode *base);
 
 /* devices.c */
 struct file_operations * get_blkfops(unsigned int major);
@@ -150,8 +203,6 @@ int register_chrdev(unsigned int major, const char * name, struct file_operation
 int register_blkdev(unsigned int major, const char * name, struct file_operations *fops);
 int unregister_chrdev(unsigned int major, const char * name);
 int unregister_blkdev(unsigned int major, const char * name);
-
-int devfs_namei(const char *path, struct inode **inode);
-struct inode *devfs_devi(dev_t dev);
+struct inode *devfs_geti(dev_t dev);
 
 #endif

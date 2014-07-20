@@ -27,6 +27,8 @@ struct sigevent;
 struct timespec;
 struct itimerspec;
 
+struct stat;
+
 extern struct pcb *current;
 
 extern int idle_pid;
@@ -86,7 +88,19 @@ long sys_open(const char *pathname, int flags, int mode);
 long sys_close(unsigned int fd);
 long sys_read(unsigned int fd, char *buf, size_t nbyte);
 long sys_write(unsigned int fd, char *buf, size_t nbyte);
+long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count);
 long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
+long sys_mknod(const char *filename, int mode, dev_t dev);
+long sys_mkdir(const char *pathname, int mode);
+long sys_rmdir(const char *pathname);
+long sys_chdir(const char *pathname);
+long sys_link(const char *oldname, const char *newname);
+long sys_unlink(const char *pathname);
+long sys_rename(const char *oldname, const char *newname);
+long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
+		void *data);
+long sys_umount(const char *name);
+long sys_stat(const char *pathname, struct stat *s);
 long sys_time(time_t *t);
 long sys_clock_getres(clockid_t clockid, struct timespec *res);
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp);

@@ -97,6 +97,8 @@ struct pcb {
 	struct list_head repl_q;	// processes waiting for a reply
 	/* vfs */
 	struct file *filp[FDT_SIZE];
+	struct inode *pwd;
+	struct inode *root;
 	/* */
 	void		*parg;		// pointer to... something
 };

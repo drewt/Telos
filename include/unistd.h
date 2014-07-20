@@ -38,6 +38,10 @@ int close(int fd);
 ssize_t read(int fd, void *buf, size_t nbyte);
 ssize_t write(int fd, const void *buf, size_t nbyte);
 int ioctl(int fd, int command, ...);
+int rmdir(const char *path);
+int chdir(const char *path);
+int unlink(const char *path);
+int link(const char *old, const char *new);
 void *sbrk(long increment);
 
 #endif

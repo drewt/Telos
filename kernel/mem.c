@@ -34,11 +34,6 @@ static LIST_HEAD(free_list);
 ulong kheap_start;
 ulong kheap_end;
 
-static inline ulong MAX(ulong a, ulong b)
-{
-	return a > b ? a : b;
-}
-
 /*
  * XXX: assumes bootloader puts modules, etc. in sane places (i.e. reasonably
  *      close to the kernel).  If it puts them somewhere dumb, like the end of

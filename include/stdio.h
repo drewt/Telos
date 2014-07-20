@@ -54,4 +54,6 @@ int ungetc(int c, FILE *stream);
 int getchar(void);
 char *gets(char *s, int size);
 
+int rename(const char *old, const char *new);
+
 #endif

@@ -92,7 +92,7 @@ int blkdev_open(struct inode * inode, struct file * filp)
 {
 	int i;
 
-	i = MAJOR(inode->i_dev);
+	i = MAJOR(inode->i_rdev);
 	if (i >= MAX_BLKDEV || !blkdevs[i].fops)
 		return -ENODEV;
 	filp->f_op = blkdevs[i].fops;
@@ -121,7 +121,7 @@ int chrdev_open(struct inode * inode, struct file * filp)
 {
 	int i;
 
-	i = MAJOR(inode->i_dev);
+	i = MAJOR(inode->i_rdev);
 	if (i >= MAX_CHRDEV || !chrdevs[i].fops)
 		return -ENODEV;
 	filp->f_op = chrdevs[i].fops;
@@ -142,3 +142,47 @@ struct file_operations def_chr_fops = {
 struct inode_operations chrdev_inode_operations = {
 	.default_file_ops = &def_chr_fops,
 };
+
+/*
+ * "devfs" hack.  This is not a real filesystem, just a means of obtaining
+ * inodes for devices.
+ */
+struct devfs_inode {
+	dev_t dev;
+	struct inode_operations *iops;
+	struct inode *inode;
+};
+
+extern struct inode_operations console_iops;
+static struct devfs_inode devfs[] = {
+	{
+		.dev  = DEVICE(TTY_MAJOR, 0),
+		.iops = &console_iops,
+	},
+	{
+		.dev  = DEVICE(TTY_MAJOR, 1),
+		.iops = &console_iops,
+	},
+};
+#define NR_DEVICES (sizeof(devfs) / sizeof(*devfs))
+
+static struct inode *devfs_get_inode(struct devfs_inode *fsnode)
+{
+	struct inode *inode;
+
+	if (fsnode->inode)
+		return fsnode->inode;
+
+	inode = get_empty_inode();
+	inode->i_op = fsnode->iops;
+	inode->i_rdev = fsnode->dev;
+	return inode;
+}
+
+struct inode *devfs_geti(dev_t dev)
+{
+	for (unsigned devno = 0; devno < NR_DEVICES; devno++)
+		if (devfs[devno].dev == dev)
+			return devfs_get_inode(&devfs[devno]);
+	return NULL;
+}

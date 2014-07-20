@@ -17,67 +17,35 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
+#include <kernel/fcntl.h>
 #include <kernel/major.h>
+#include <kernel/stat.h>
 #include <string.h>
 
-struct devfs_inode {
-	const char * const path;
-	dev_t dev;
-	struct inode_operations *iops;
-	struct inode *inode;
-};
-
-extern struct inode_operations console_iops;
-struct devfs_inode devfs[] = {
-	{
-		.path = "/dev/cons0",
-		.dev  = DEVICE(TTY_MAJOR, 0),
-		.iops = &console_iops,
-	},
-	{
-		.path = "/dev/cons1",
-		.dev  = DEVICE(TTY_MAJOR, 1),
-		.iops = &console_iops,
-	},
-};
-#define NR_DEVICES (sizeof(devfs) / sizeof(*devfs))
-
-static struct inode *devfs_get_inode(struct devfs_inode *fsnode)
+long sys_chdir(const char *pathname)
 {
 	struct inode *inode;
+	int error;
 
-	if (fsnode->inode)
-		return fsnode->inode;
-
-	inode = iget();
-	inode->i_op = fsnode->iops;
-	inode->i_dev = fsnode->dev;
-	return inode;
-}
-
-int devfs_namei(const char *path, struct inode **inode)
-{
-	*inode = NULL;
-	for (unsigned devno = 0; devno < NR_DEVICES; devno++) {
-		if (!strcmp(path, devfs[devno].path)) {
-			*inode = devfs_get_inode(&devfs[devno]);
-			return 0;
-		}
+	error = namei(pathname, &inode);
+	if (error)
+		return error;
+	if (!S_ISDIR(inode->i_mode)) {
+		iput(inode);
+		return -ENOTDIR;
 	}
-	return -ENOENT;
-}
-
-struct inode *devfs_devi(dev_t dev)
-{
-	for (unsigned devno = 0; devno < NR_DEVICES; devno++)
-		if (devfs[devno].dev == dev)
-			return devfs_get_inode(&devfs[devno]);
-	return NULL;
+	if (!permission(inode, MAY_EXEC)) {
+		iput(inode);
+		return -EACCES;
+	}
+	iput(current->pwd);
+	current->pwd = inode;
+	return 0;
 }
 
 long sys_open(const char *pathname, int flags, int mode)
 {
-	int fd, error;
+	int flag, fd, error;
 	struct inode *inode;
 	struct file *filp;
 
@@ -87,30 +55,35 @@ long sys_open(const char *pathname, int flags, int mode)
 	if (fd == NR_FILES)
 		return -EMFILE;
 
-	error = devfs_namei(pathname, &inode);
-	if (error)
+	if (!(filp = get_filp()))
 		return -ENFILE;
-
-	if (!(filp = get_filp())) {
-		iput(inode);
-		return -ENFILE;
-	}
 
 	current->filp[fd] = filp;
-	filp->f_flags = flags;
-	filp->f_mode = mode;
-	filp->f_dev = inode->i_dev;
+	filp->f_flags = flag = flags;
+	filp->f_mode = (flag+1) & O_ACCMODE;
+	if (filp->f_mode)
+		flag++;
+	if (flag & (O_TRUNC | O_CREAT))
+		flag |= 2;
+	error = open_namei(pathname, flag, mode, &inode, NULL);
+	if (error) {
+		current->filp[fd] = NULL;
+		free_filp(filp);
+		return error;
+	}
+
 	filp->f_inode = inode;
+	filp->f_pos = 0;
 	filp->f_op = NULL;
-	filp->f_count = 1;
+	filp->f_rdev = inode->i_rdev;
 	if (inode->i_op)
 		filp->f_op = inode->i_op->default_file_ops;
 	if (filp->f_op && filp->f_op->open) {
 		error = filp->f_op->open(inode, filp);
 		if (error) {
 			iput(inode);
-			filp->f_count--;
 			current->filp[fd] = NULL;
+			free_filp(filp);
 			return error;
 		}
 	}
@@ -122,7 +95,7 @@ static int close_fp(struct file *filp, unsigned int fd)
 	struct inode *inode;
 
 	if (filp->f_count == 0) {
-		kprintf("VFS: close: file count is 0\n");
+		kprintf("VFS: Close: file count is 0\n");
 		return 0;
 	}
 	inode = filp->f_inode;
@@ -130,10 +103,9 @@ static int close_fp(struct file *filp, unsigned int fd)
 		filp->f_count--;
 		return 0;
 	}
-	if (filp->f_op && filp->f_op->close)
-		filp->f_op->close(inode, filp);
-	filp->f_count--;
-	filp->f_inode = NULL;
+	if (filp->f_op && filp->f_op->release)
+		filp->f_op->release(inode, filp);
+	free_filp(filp);
 	iput(inode);
 	return 0;
 }

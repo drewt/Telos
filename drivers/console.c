@@ -154,7 +154,7 @@ end:
 
 static ssize_t console_read(struct file *f, char *buf, size_t len)
 {
-	struct console *con = &constab[MINOR(f->f_dev)];
+	struct console *con = &constab[MINOR(f->f_rdev)];
 
 	if (con->reading) {
 		current->pbuf = (struct pbuf) { .buf = buf, .len = len };
@@ -185,7 +185,7 @@ static ssize_t console_read(struct file *f, char *buf, size_t len)
 static ssize_t console_write(struct file *f, const char *buf, size_t len)
 {
 	size_t i;
-	unsigned cno = MINOR(f->f_dev);
+	unsigned cno = MINOR(f->f_rdev);
 
 	const char *s = buf;
 	for (i = 0; s[i] != '\0' && i < len; i++)

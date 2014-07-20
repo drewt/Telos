@@ -16,9 +16,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
+#include <kernel/major.h>
 #include <telos/process.h>
 
 int tsh(int argc, char **argv);
@@ -31,7 +36,7 @@ int idle_proc()
 
 static void sigchld_handler(int signo) {}
 
-static void reboot(void)
+static _Noreturn void reboot(void)
 {
 	asm volatile(
 	"cli			\n"
@@ -43,11 +48,56 @@ static void reboot(void)
 	"mov $0xFE, %al		\n"
 	"out %al, $0x64		\n"
 	);
+	__builtin_unreachable();
+}
+
+static _Noreturn void die(const char *msg)
+{
+	printf("%s\n", msg);
+	reboot();
+}
+
+#define TTY_MODE (S_IFCHR | S_IRUSR | S_IWUSR | S_IWGRP)
+
+static void fs_init(void)
+{
+	if (mkdir("/dev", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
+		die("fs_init: mkdir failed");
+	if (mknod("/dev/cons0", TTY_MODE, DEVICE(TTY_MAJOR, 0)))
+		die("fs_init: mknod failed");
+	if (mknod("/dev/cons1", TTY_MODE, DEVICE(TTY_MAJOR, 1)))
+		die("fs_init: mknod failed");
+
+	int fd;
+	char buf[5];
+
+	if ((fd = open("/file", O_CREAT, S_IRWXU)) < 0)
+		die("fs_init: open failed");
+	if (close(fd))
+		die("fs_init: close failed");
+	if ((fd = open("/test", O_CREAT, S_IRWXU)) < 0)
+		die("fs_init: open failed");
+	if (write(fd, "test", 4) != 4)
+		die("fs_init: write failed");
+	if (close(fd))
+		die("fs_init: close failed");
+	if ((fd = open("/test", O_RDONLY)) < 0)
+		die("fs_init: open(2) failed");
+	if (read(fd, buf, 6) != 4)
+		die("fs_init: read failed");
+	if (close(fd))
+		die("fs_init: close failed");
+	buf[4] = '\0';
+
+	if (strcmp(buf, "test"))
+		die("fs_init: read/write test failed\n");
 }
 
 void root_proc()
 {
 	int sig;
+
+	fs_init();
 
 	signal(SIGCHLD, sigchld_handler);
 

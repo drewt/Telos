@@ -39,7 +39,7 @@ extern void exit(int status);
 
 #define STDIO_FILE(name) \
 	struct file name = { \
-		.f_count = 1, \
+		.f_count = 2, \
 	}
 
 STDIO_FILE(stdin_file);
@@ -51,13 +51,13 @@ static void stdio_sysinit(void)
 	struct file_operations *fops = get_chrfops(TTY_MAJOR);
 
 	stdin_file.f_op = fops;
-	stdin_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+	stdin_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
 
 	stdout_file.f_op = fops;
-	stdout_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+	stdout_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
 
 	stderr_file.f_op = fops;
-	stderr_file.f_inode = devfs_devi(DEVICE(TTY_MAJOR, 0));
+	stderr_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
 }
 EXPORT_KINIT(stdio, SUB_PROCESS, stdio_sysinit);
 
@@ -104,6 +104,15 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	p->parent_pid = parent;
 	p->flags = flags;
 	p->state = STATE_NASCENT;
+
+	struct pcb *pp = &proctab[PT_INDEX(parent)];
+	if (pp->pid == parent) {
+		p->root = pp->root;
+		p->pwd = pp->pwd;
+	} else {
+		p->root = root_inode;
+		p->pwd = root_inode;
+	}
 }
 
 static int mm_init(struct pcb *p)

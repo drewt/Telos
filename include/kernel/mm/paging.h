@@ -44,6 +44,8 @@ struct pf_info *kzalloc_frame(void);
 void *kalloc_pages(uint n);
 void kfree_pages(void *addr, uint n);
 void _kfree_frame(struct pf_info *page);
+void *kmap_tmp_page(ulong addr);
+void kunmap_page(void *addr);
 int paging_init(unsigned long start, unsigned long end);
 int address_space_init(struct pcb *p);
 int address_space_fini(pmap_t pgtab);

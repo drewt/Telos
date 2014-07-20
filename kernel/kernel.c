@@ -15,12 +15,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/kernel.h>
-#include <kernel/multiboot.h>
-#include <kernel/elf.h>
-#include <kernel/i386.h>
-#include <kernel/mmap.h>
 #include <kernel/dispatch.h>
+#include <kernel/elf.h>
+#include <kernel/fs.h>
+#include <kernel/i386.h>
+#include <kernel/kernel.h>
+#include <kernel/mmap.h>
+#include <kernel/multiboot.h>
 #include <kernel/time.h>
 #include <kernel/drivers/console.h>
 
@@ -80,7 +81,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 		return;
 	}
 
-	bprintf("32 bit Telos 0.2\n");
+	bprintf("32 bit Telos " VERSION "\n");
 
 	bprintf("Initializing machine state...\n");
 	idt_install();
@@ -97,6 +98,8 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	bprintf("Kernel:    %p - %p\n", &_kstart, &_kend);
 	bprintf("Userspace: %p - %p\n", &_ustart, &_uend);
 	bprintf("Total:     %lu bytes\n", MULTIBOOT_MEM_MAX(mb_info));
+
+	mount_root();
 
 	bprintf("Starting Telos...\n\n");
 	idle_pid = create_kernel_process(idle_proc, NULL, 0);

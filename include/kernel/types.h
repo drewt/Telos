@@ -39,13 +39,23 @@ typedef unsigned long timer_t;
 
 typedef unsigned long time_t;
 
+typedef unsigned long ino_t;
+typedef unsigned long mode_t;
+typedef unsigned long nlink_t;
+
+typedef unsigned long uid_t;
+typedef unsigned long gid_t;
+typedef unsigned long off_t;
+typedef unsigned long blksize_t;
+typedef unsigned long blkcnt_t;
+
+typedef unsigned long dev_t;
+
 #ifdef __KERNEL__
 
 #define BITS_PER_LONG 32
 
 typedef unsigned short port_t;
-
-typedef unsigned short dev_t;
 
 typedef unsigned long pte_t;
 typedef unsigned long* pmap_t;
@@ -80,8 +90,6 @@ typedef signed   long long	int64_t;
 typedef unsigned long long	uint64_t;
 
 typedef long			ptrdiff_t;
-
-typedef unsigned long		umode_t;
 
 #define bool	_Bool
 #define true	1
