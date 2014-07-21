@@ -366,7 +366,7 @@ int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
 	return 0;
 }
 
-int address_space_init(struct pcb *p)
+pmap_t new_pgdir(void)
 {
 	struct pf_info *f_pgdir, *f_pgtab;
 	pmap_t pgdir, pgtab;
@@ -392,19 +392,17 @@ int address_space_init(struct pcb *p)
 			pdi++)
 		pgdir[pdi] = kernel_pgdir[pdi];
 
-	p->mm.pgdir = (void*) f_pgdir->addr;
-
 	kunmap_page(pgtab);
 	kunmap_page(pgdir);
-	return 0;
+	return (pmap_t) f_pgdir->addr;
 
 nomem3:	kunmap_page(pgdir);
 nomem2:	kfree_frame(f_pgtab);
 nomem1:	kfree_frame(f_pgdir);
-nomem0:	return -ENOMEM;
+nomem0:	return NULL;
 }
 
-static int pgtab_fini(ulong phys_pgtab)
+static int del_pgtab(ulong phys_pgtab)
 {
 	pmap_t pgtab = kmap_tmp_page(phys_pgtab);
 
@@ -423,7 +421,7 @@ static int pgtab_fini(ulong phys_pgtab)
 
 #define kernel_pdi addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET)
 
-int address_space_fini(pmap_t phys_pgdir)
+int del_pgdir(pmap_t phys_pgdir)
 {
 	int rc;
 	pmap_t pgdir = kmap_tmp_page((ulong)phys_pgdir);
@@ -434,7 +432,7 @@ int address_space_fini(pmap_t phys_pgdir)
 	for (unsigned i = 0; i < kernel_pdi; i++) {
 		if (!(pgdir[i] & PE_P))
 			continue;
-		if ((rc = pgtab_fini(pgdir[i] & ~0xFFF)) != 0)
+		if ((rc = del_pgtab(pgdir[i] & ~0xFFF)) != 0)
 			return rc;
 	}
 	kfree_frame(phys_to_info(pgdir[1023] & ~0xFFF));

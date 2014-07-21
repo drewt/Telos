@@ -49,6 +49,8 @@ struct mm_struct {
 	ulong  brk;
 };
 
+int mm_init(struct mm_struct *mm);
+
 struct vma *vma_find(struct mm_struct *mm, void *addr);
 struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags);
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags);

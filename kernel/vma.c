@@ -31,6 +31,39 @@ EXPORT_KINIT(mmap, SUB_LAST, mmap_sysinit);
 #define alloc_vma() slab_alloc(area_cachep)
 #define free_vma(p) slab_free(area_cachep, p)
 
+#define STACK_PAGES 8
+#define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)
+
+#define HEAP_START  0x00100000UL
+#define STACK_START 0x0F000000UL
+
+#define KSTACK_START (STACK_START+STACK_SIZE)
+#define KSTACK_SIZE (FRAME_SIZE*4)
+
+int mm_init(struct mm_struct *mm)
+{
+	if (!(mm->pgdir = new_pgdir()))
+		return -ENOMEM;
+
+	mm->brk = HEAP_START + FRAME_SIZE;
+	mm->heap = zmap(mm, (void*)HEAP_START, FRAME_SIZE, VM_RW);
+	if (!mm->heap)
+		goto abort;
+
+	mm->stack = zmap(mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
+	if (!mm->stack)
+		goto abort;
+
+	mm->kernel_stack = zmap(mm, (void*)KSTACK_START, KSTACK_SIZE, VM_RWE);
+	if (!mm->kernel_stack)
+		goto abort;
+
+	return 0;
+abort:
+	del_pgdir(mm->pgdir);
+	return -ENOMEM;
+}
+
 static inline ulong vma_to_page_flags(ulong flags)
 {
 	return  ((flags & VM_READ) ? PE_U : 0) |
