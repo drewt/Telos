@@ -53,14 +53,7 @@ DEFINE_HASHTABLE(posix_timers, 9);
 unsigned long tick_count = 0; /* global tick count */
 unsigned long system_clock;   /* seconds since the Epoch */
 
-static struct slab_cache *posix_timers_cachep;
-
-static void posixtime_init(void)
-{
-	posix_timers_cachep = slab_cache_create(sizeof(struct posix_timer));
-}
-EXPORT_KINIT(posix_timer, SUB_LAST, posixtime_init);
-
+static DEFINE_SLAB_CACHE(posix_timers_cachep, sizeof(struct posix_timer));
 #define get_posix_timer() slab_alloc(posix_timers_cachep)
 #define free_posix_timer(p) slab_free(posix_timers_cachep, p)
 

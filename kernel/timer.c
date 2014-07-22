@@ -27,14 +27,7 @@
 
 static LIST_HEAD(timers);
 
-static struct slab_cache *ktimers_cachep;
-
-static void ktimer_sysinit(void)
-{
-	ktimers_cachep = slab_cache_create(sizeof(struct timer));
-}
-EXPORT_KINIT(kernel_timer, SUB_LAST, ktimer_sysinit);
-
+static DEFINE_SLAB_CACHE(ktimers_cachep, sizeof(struct timer));
 #define get_timer() slab_alloc(ktimers_cachep)
 #define free_timer(p) slab_free(ktimers_cachep, p)
 

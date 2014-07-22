@@ -47,6 +47,8 @@ extern ulong _kroend;   // end of kernel read-only memory
 /* export sets */
 extern ulong _kinit_set;
 extern ulong _kinit_set_end;
+extern ulong _slab_set;
+extern ulong _slab_set_end;
 
 #define __set_length(start, end) \
 	(((ulong)end - (ulong)start) / sizeof(ulong))

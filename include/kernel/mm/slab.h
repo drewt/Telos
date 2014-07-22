@@ -34,4 +34,22 @@ struct slab_cache *slab_cache_create(size_t size);
 void *slab_alloc(struct slab_cache *cache);
 void slab_free(struct slab_cache *cache, void *mem);
 
+struct slab_init_struct {
+	struct slab_cache **cache;
+	size_t object_size;
+	const char *name;
+};
+
+#define EXPORT_SLAB_CACHE(_name, size) \
+	static struct slab_init_struct _name ## _init __used = { \
+		.cache = &_name, \
+		.object_size = size, \
+		.name = #_name, \
+	}; \
+	EXPORT(slab, _name ## _init)
+
+#define DEFINE_SLAB_CACHE(name, size) \
+	struct slab_cache *name; \
+	EXPORT_SLAB_CACHE(name, size)
+
 #endif

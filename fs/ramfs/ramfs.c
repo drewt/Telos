@@ -20,7 +20,7 @@ struct ramfs_superblock {
 	unsigned long next_ino;
 };
 
-static struct slab_cache *ramfs_dirent_cachep;
+static DEFINE_SLAB_CACHE(ramfs_dirent_cachep, sizeof(struct ramfs_dirent));
 static struct inode_operations ramfs_dir_iops;
 static struct inode_operations ramfs_reg_iops;
 
@@ -499,6 +499,5 @@ static struct super_block *ramfs_read_super(struct super_block *sb, void *data,
 static void ramfs_sysinit(void)
 {
 	register_filesystem(ramfs_read_super, "ramfs", 0);
-	ramfs_dirent_cachep = slab_cache_create(sizeof(struct ramfs_dirent));
 }
 EXPORT_KINIT(ramfs, SUB_VFS, ramfs_sysinit);

@@ -20,13 +20,7 @@
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vma.h>
 
-static struct slab_cache *area_cachep;
-
-static void mmap_sysinit(void)
-{
-	area_cachep = slab_cache_create(sizeof(struct vma));
-}
-EXPORT_KINIT(mmap, SUB_LAST, mmap_sysinit);
+static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 
 #define alloc_vma() slab_alloc(area_cachep)
 #define free_vma(p) slab_free(area_cachep, p)

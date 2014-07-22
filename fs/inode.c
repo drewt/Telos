@@ -21,6 +21,9 @@
 
 static DEFINE_HASHTABLE(inodes, 9);
 
+DEFINE_SLAB_CACHE(file_cachep, sizeof(struct file));
+DEFINE_SLAB_CACHE(inode_cachep, sizeof(struct inode));
+
 static void write_inode(struct inode *inode)
 {
 	if (!inode->i_dirt)
@@ -89,10 +92,3 @@ void iput(struct inode *inode)
 		slab_free(inode_cachep, inode);
 	}
 }
-
-static void fs_file_sysinit(void)
-{
-	file_cachep = slab_cache_create(sizeof(struct file));
-	inode_cachep = slab_cache_create(sizeof(struct inode));
-}
-EXPORT_KINIT(fs_file, SUB_VFS, fs_file_sysinit);

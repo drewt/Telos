@@ -45,6 +45,9 @@ SECTIONS
 		_kinit_set = .;
 		*(.set.kinit)
 		_kinit_set_end = .;
+		_slab_set = .;
+		*(.set.slab)
+		_slab_set_end = .;
 		*(.data)
 	}
 

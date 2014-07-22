@@ -17,6 +17,7 @@
 
 #include <kernel/bitmap.h>
 #include <kernel/list.h>
+#include <kernel/mmap.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
@@ -26,6 +27,15 @@
 #define slab_size(cache) (cache->pages_per_slab * FRAME_SIZE)
 #define slab_desc_size(cache) (sizeof(struct slab) + bitmap_size(cache))
 #define slab_mem_size(cache) (slab_size(cache) - slab_desc_size(cache))
+
+#define slab_set ((struct slab_init_struct **) &_slab_set)
+#define slab_set_length __set_length(&_slab_set, &_slab_set_end)
+static void slab_sysinit(void)
+{
+	for (unsigned i = 0; i < slab_set_length; i++)
+		*(slab_set[i]->cache) = slab_cache_create(slab_set[i]->object_size);
+}
+EXPORT_KINIT(slab_layer, SUB_SLAB, slab_sysinit);
 
 struct slab {
 	struct list_head chain;
