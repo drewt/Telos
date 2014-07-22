@@ -31,14 +31,22 @@ EXPORT_KINIT(mmap, SUB_LAST, mmap_sysinit);
 #define alloc_vma() slab_alloc(area_cachep)
 #define free_vma(p) slab_free(area_cachep, p)
 
-#define STACK_PAGES 8
-#define STACK_SIZE  (FRAME_SIZE * STACK_PAGES)
-
 #define HEAP_START  0x00100000UL
 #define STACK_START 0x0F000000UL
-
+#define STACK_SIZE  (FRAME_SIZE*8)
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE (FRAME_SIZE*4)
+
+static struct vma *new_vma(ulong start, ulong end, ulong flags)
+{
+	struct vma *vma;
+	if (!(vma = alloc_vma()))
+		return NULL;
+	vma->start = start;
+	vma->end = end;
+	vma->flags = flags;
+	return vma;
+}
 
 int mm_init(struct mm_struct *mm)
 {
@@ -62,6 +70,25 @@ int mm_init(struct mm_struct *mm)
 abort:
 	del_pgdir(mm->pgdir);
 	return -ENOMEM;
+}
+
+int mm_clone(struct mm_struct *dst, struct mm_struct *src)
+{
+	struct vma *vma;
+
+	if (!(dst->pgdir = clone_pgdir()))
+		return -ENOMEM;
+
+	list_for_each_entry(vma, &src->map, chain) {
+		struct vma *new = new_vma(vma->start, vma->end, vma->flags);
+		list_add_tail(&new->chain, &dst->map);
+	}
+	// TODO: dst->kheap
+	dst->heap = src->heap;
+	dst->stack = src->stack;
+	dst->kernel_stack = src->kernel_stack;
+	dst->brk = src->brk;
+	return 0;
 }
 
 static inline ulong vma_to_page_flags(ulong flags)
@@ -195,7 +222,7 @@ struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
 	unsigned nr_pages = pages_in_range((ulong)dstp, len);
 	ulong pflags = vma_to_page_flags(flags);
 
-	if ((vma = alloc_vma()) == NULL)
+	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
 	if (map_zpages(mm->pgdir, dst, nr_pages, pflags)) {
@@ -203,10 +230,6 @@ struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
 		return NULL;
 	}
 
-	vma->start = dst;
-	vma->end = dst + nr_pages*FRAME_SIZE;
-	vma->flags = flags;
 	vma_insert(mm, vma);
-
 	return vma;
 }

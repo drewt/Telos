@@ -70,6 +70,7 @@ enum syscall_id {
 	SYS_RENAME,
 	SYS_CHDIR,
 	SYS_STAT,
+	SYS_FORK,
 	SYSCALL_MAX
 };
 

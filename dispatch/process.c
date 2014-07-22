@@ -109,6 +109,45 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	}
 }
 
+static struct pcb *pcb_clone(struct pcb *src)
+{
+	struct pcb *p;
+
+	if (!(p = get_free_pcb()))
+		return NULL;
+
+	p->esp = src->esp;
+	p->ksp = src->ksp;
+	p->ifp = src->ifp;
+
+	p->sig_pending = src->sig_pending;
+	p->sig_accept = src->sig_accept;
+	p->sig_ignore = src->sig_ignore;
+	for (int i = 0; i < _TELOS_SIGMAX; i++)
+		p->sigactions[i] = src->sigactions[i];
+
+	for (int i = 0; i < NR_FILES; i++)
+		if ((p->filp[i] = src->filp[i]))
+			p->filp[i]->f_count++;
+
+	INIT_LIST_HEAD(&p->send_q);
+	INIT_LIST_HEAD(&p->recv_q);
+	INIT_LIST_HEAD(&p->repl_q);
+	INIT_LIST_HEAD(&p->mm.map);
+	INIT_LIST_HEAD(&p->mm.kheap);
+	INIT_LIST_HEAD(&p->posix_timers);
+
+	p->timestamp = tick_count;
+	p->pid += PT_SIZE;
+	p->parent_pid = src->pid;
+	p->flags = src->flags;
+	p->state = STATE_NASCENT;
+
+	p->root = src->root;
+	p->pwd = src->pwd;
+	return p;
+}
+
 long sys_create(void(*func)(int,char*), int argc, char **argv)
 {
 	return create_user_process(func, argc, argv, 0);
@@ -203,6 +242,22 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	p->esp = v_frame;
 	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
 
+	ready(p);
+	return p->pid;
+}
+
+long sys_fork(void)
+{
+	int rc;
+	struct pcb *p;
+
+	if (!(p = pcb_clone(current)))
+		return -EAGAIN;
+
+	if ((rc = mm_clone(&p->mm, &current->mm)) < 0)
+		return rc;
+
+	p->rc = 0;
 	ready(p);
 	return p->pid;
 }

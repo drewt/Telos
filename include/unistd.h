@@ -30,6 +30,7 @@ enum {
 	STDERR_FILENO,
 };
 
+pid_t fork(void);
 unsigned int alarm(unsigned int seconds);
 pid_t getpid(void);
 unsigned int sleep(unsigned int seconds);

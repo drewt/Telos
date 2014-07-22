@@ -47,6 +47,7 @@ void _kfree_frame(struct pf_info *page);
 void *kmap_tmp_page(ulong addr);
 void kunmap_page(void *addr);
 int paging_init(unsigned long start, unsigned long end);
+pmap_t clone_pgdir(void);
 pmap_t new_pgdir(void);
 int del_pgdir(pmap_t phys_pgdir);
 int map_zpages(pmap_t pgdir, ulong dst, unsigned pages, uchar attr);

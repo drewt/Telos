@@ -66,6 +66,7 @@ void int_keyboard(void);
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
 long sys_create(void(*func)(int,char*), int argc, char **argv);
+long sys_fork(void);
 long sys_yield(void);
 long sys_exit(int status);
 long sys_getpid(void);
