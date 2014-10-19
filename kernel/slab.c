@@ -22,7 +22,7 @@
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
 
-#define bitmap_length(cache) (cache->pages_per_slab * 4)
+#define bitmap_length(cache) (cache->pages_per_slab * 8)
 #define bitmap_size(cache) (bitmap_length(cache) * sizeof(ulong))
 #define slab_size(cache) (cache->pages_per_slab * FRAME_SIZE)
 #define slab_desc_size(cache) (sizeof(struct slab) + bitmap_size(cache))
@@ -72,6 +72,8 @@ static struct slab *new_slab(struct slab_cache *cache)
 
 	slab->mem = slab->bitmap + bitmap_length(cache);
 	slab->in_use = 0;
+	for (uint i = 0; i < bitmap_length(cache); i++)
+		slab->bitmap[i] = 0;
 	return slab;
 }
 
@@ -98,7 +100,7 @@ void *slab_alloc(struct slab_cache *cache)
 	struct slab *slab = get_slab(cache);
 
 	/* find first free object and update bitmap */
-	zero = bitmap_ffz(slab->bitmap, cache->pages_per_slab * 4);
+	zero = bitmap_ffz(slab->bitmap, bitmap_length(cache));
 	bitmap_set(slab->bitmap, zero);
 
 	/* move slab to full/partial list, as appropriate */
