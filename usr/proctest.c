@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <telos/process.h>
 
@@ -37,7 +38,13 @@ static int stop_proc()
 
 int main(void)
 {
+	sigset_t mask;
 	char *a = "a", *s = "s", *d = "d", *f = "f";
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
+
 	printf("Testing syscreate... asdf ?= ");
 	syscreate(print_proc, 1, &a);
 	sleep(1);

@@ -24,6 +24,7 @@
 #include <kernel/fs.h>
 #include <kernel/major.h>
 #include <kernel/signal.h>
+#include <kernel/stat.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
@@ -93,6 +94,9 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->posix_timers);
 
+	p->t_alarm.flags = 0;
+	p->t_sleep.flags = 0;
+
 	p->timestamp = tick_count;
 	p->pid += PT_SIZE;
 	p->parent_pid = parent;
@@ -120,7 +124,7 @@ static struct pcb *pcb_clone(struct pcb *src)
 	p->ksp = src->ksp;
 	p->ifp = src->ifp;
 
-	p->sig_pending = src->sig_pending;
+	p->sig_pending = 0;
 	p->sig_accept = src->sig_accept;
 	p->sig_ignore = src->sig_ignore;
 	for (int i = 0; i < _TELOS_SIGMAX; i++)
@@ -136,6 +140,9 @@ static struct pcb *pcb_clone(struct pcb *src)
 	INIT_LIST_HEAD(&p->mm.map);
 	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->posix_timers);
+
+	p->t_alarm.flags = 0;
+	p->t_sleep.flags = 0;
 
 	p->timestamp = tick_count;
 	p->pid += PT_SIZE;
@@ -177,7 +184,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	args = (ulong*) ((ulong)frame + sizeof(struct kcontext));
 	args[0] = (ulong) exit;
 	args[1] = (ulong) arg;
-	kunmap_range(frame, sizeof(struct kcontext) + 16);
+	kunmap_tmp_range(frame, sizeof(struct kcontext) + 16);
 
 	ready(p);
 	return p->pid;
@@ -199,7 +206,7 @@ static void copy_args(struct pcb *p, int argc, char **argv)
 		copy_string_through_user(p, current, (void*) arg_addr,
 				kargv[i], 128);
 	}
-	kunmap_range(uargv, 128);
+	kunmap_tmp_range(uargv, 128);
 }
 
 int create_user_process(void(*func)(int,char*), int argc, char **argv,
@@ -230,20 +237,88 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 			sizeof(struct ucontext));
 	esp = p->mm.stack->end - 128;
 	put_iret_uframe(p_frame, (ulong) func, esp);
-	kunmap_range(p_frame, sizeof(struct ucontext));
+	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
 
 	/* set up stack for main() */
 	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
 	args[2] = p->mm.heap->start;
-	kunmap_range(args, sizeof(ulong) * 3);
+	kunmap_tmp_range(args, sizeof(ulong) * 3);
 
 	p->esp = v_frame;
 	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
 
 	ready(p);
 	return p->pid;
+}
+
+long sys_fcreate(const char *pathname, int argc, char **argv)
+{
+	int error;
+	struct inode *inode;
+
+	error = namei(pathname, &inode);
+	if (error)
+		return error;
+	if (!S_ISFUN(inode->i_mode))
+		return -EINVAL;
+
+	return create_user_process(inode->i_private, argc, argv, 0);
+}
+
+#define ARG_MAX 32
+#include <string.h>
+static int _copy_args(char **argv)
+{
+	int argc;
+	ulong addr = current->mm.heap->start + (ARG_MAX * sizeof(char*));
+	char **uargv = (char**) current->mm.heap->start;
+
+	if (!argv)
+		return 0;
+
+	for (argc = 0; argc < ARG_MAX && argv[argc]; argc++, addr += 128) {
+		uargv[argc] = (char*) addr;
+		memcpy((void*)addr, argv[argc], 128);
+	}
+	return argc;
+}
+
+long sys_execve(const char *pathname, char **argv, char **envp)
+{
+	int error, argc;
+	ulong esp;
+	ulong *args;
+	void *v_frame, *p_frame;
+	struct inode *inode;
+
+	error = namei(pathname, &inode);
+	if (error)
+		return error;
+	if (!S_ISFUN(inode->i_mode))
+		return -EINVAL;
+
+	argc = _copy_args(argv);
+
+	/* set up iret frame */
+	v_frame = (void*) (current->mm.stack->start + 32 * sizeof(struct ucontext));
+	p_frame = kmap_tmp_range(current->mm.pgdir, (ulong)v_frame,
+			sizeof(struct ucontext));
+	esp = current->mm.stack->end - 128;
+	put_iret_uframe(p_frame, (ulong)inode->i_private, esp);
+	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
+
+	/* set up stack for main() */
+	args = kmap_tmp_range(current->mm.pgdir, esp, sizeof(ulong) * 3);
+	args[0] = (ulong) exit;
+	args[1] = (ulong) argc;
+	args[2] = current->mm.heap->start;
+	kunmap_tmp_range(args, sizeof(ulong) * 3);
+
+	current->esp = v_frame;
+	current->ifp = (void*) ((ulong)current->esp + sizeof(struct ucontext));
+	return 0;
 }
 
 long sys_fork(void)

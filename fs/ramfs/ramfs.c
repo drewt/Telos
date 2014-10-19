@@ -1,5 +1,4 @@
 
-#include <kernel/hashtable.h>
 #include <kernel/list.h>
 #include <kernel/fs.h>
 #include <kernel/ramfs.h>
@@ -35,7 +34,7 @@ static inline struct ramfs_dirent *__lookup(struct inode *dir,
 	return NULL;
 }
 
-static int ramfs_lookup(struct inode *dir, const char *name, int len,
+int ramfs_lookup(struct inode *dir, const char *name, int len,
 		struct inode **result)
 {
 	struct ramfs_dirent *ent;
@@ -87,7 +86,7 @@ static struct ramfs_dirent *ramfs_new_dirent(const char *name, int len,
 	return fsnode;
 }
 
-static int ramfs_do_mknod(struct inode *dir, const char *name, int len,
+int ramfs_do_mknod(struct inode *dir, const char *name, int len,
 		struct inode **res_inode)
 {
 	struct inode *inode;
@@ -132,7 +131,7 @@ static int grow_file(struct inode *inode, size_t amount)
 	return 0;
 }
 
-static int ramfs_read(struct file *file, char *buf, size_t len)
+int ramfs_read(struct file *file, char *buf, size_t len)
 {
 	char *fbuf;
 	struct pf_info *frame;
@@ -185,7 +184,7 @@ static int ramfs_do_write(struct file *f, const char *buf, size_t len)
 	return len;
 }
 
-static int ramfs_write(struct file *file, const char *buf, size_t len)
+int ramfs_write(struct file *file, const char *buf, size_t len)
 {
 	int error;
 	unsigned long next_pos = file->f_pos + len;
@@ -199,8 +198,8 @@ static int ramfs_write(struct file *file, const char *buf, size_t len)
 	return ramfs_do_write(file, buf, len);
 }
 
-static int ramfs_readdir(struct inode *dir, struct file *file,
-		struct dirent *dirent, int count)
+int ramfs_readdir(struct inode *dir, struct file *file, struct dirent *dirent,
+		int count)
 {
 	struct ramfs_dirent *ent;
 	unsigned long i = 0;
@@ -220,7 +219,7 @@ static int ramfs_readdir(struct inode *dir, struct file *file,
 	return 0;
 }
 
-static int ramfs_create(struct inode *dir, const char *name, int len, int mode,
+int ramfs_create(struct inode *dir, const char *name, int len, int mode,
 		struct inode **res_inode)
 {
 	struct inode *inode;
@@ -240,7 +239,7 @@ static int ramfs_create(struct inode *dir, const char *name, int len, int mode,
 	return 0;
 }
 
-static int ramfs_mknod(struct inode *dir, const char *name, int len, int mode,
+int ramfs_mknod(struct inode *dir, const char *name, int len, int mode,
 		dev_t rdev)
 {
 	struct inode *inode;
@@ -280,8 +279,7 @@ static int mkdir_links(struct inode *parent_dir, struct inode *dir)
 	return 0;
 }
 
-static int ramfs_mkdir(struct inode *dir, const char *name, int len,
-		int mode)
+int ramfs_mkdir(struct inode *dir, const char *name, int len, int mode)
 {
 	int error;
 	struct inode *inode;
@@ -304,7 +302,7 @@ static int ramfs_mkdir(struct inode *dir, const char *name, int len,
 	return 0;
 }
 
-static int ramfs_rmdir(struct inode *dir, const char *name, int len)
+int ramfs_rmdir(struct inode *dir, const char *name, int len)
 {
 	int retval;
 	struct inode *inode = NULL;
@@ -345,7 +343,7 @@ end:
 	return retval;
 }
 
-static int ramfs_unlink(struct inode *dir, const char *name, int len)
+int ramfs_unlink(struct inode *dir, const char *name, int len)
 {
 	int retval;
 	struct inode *inode = NULL;
@@ -372,8 +370,8 @@ end:
 	return retval;
 }
 
-static int ramfs_link(struct inode *oldinode, struct inode *dir,
-		const char *name, int len)
+int ramfs_link(struct inode *oldinode, struct inode *dir, const char *name,
+		int len)
 {
 	struct ramfs_dirent *dirent;
 
@@ -397,9 +395,8 @@ static int ramfs_link(struct inode *oldinode, struct inode *dir,
 	return 0;
 }
 
-static int ramfs_rename(struct inode *old_dir, const char *old_name,
-		int old_len, struct inode *new_dir, const char *new_name,
-		int new_len)
+int ramfs_rename(struct inode *old_dir, const char *old_name, int old_len,
+		struct inode *new_dir, const char *new_name, int new_len)
 {
 	struct ramfs_dirent *fsnode;
 
@@ -447,7 +444,7 @@ struct super_operations ramfs_super_ops = {
 	.read_inode = NULL,
 };
 
-static struct super_block *ramfs_read_super(struct super_block *sb, void *data,
+struct super_block *ramfs_read_super(struct super_block *sb, void *data,
 		int silent)
 {
 	struct inode *root;

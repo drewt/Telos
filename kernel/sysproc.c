@@ -21,12 +21,11 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 
 #include <kernel/major.h>
 #include <telos/process.h>
-
-int tsh(int argc, char **argv);
 
 int idle_proc()
 {
@@ -67,9 +66,13 @@ static void fs_init(void)
 		die("fs_init: mknod failed");
 	if (mknod("/dev/cons1", TTY_MODE, DEVICE(TTY_MAJOR, 1)))
 		die("fs_init: mknod failed");
+	if (mkdir("/bin", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
+		die("fs_init: mkdir failed");
+	if (mount(NULL, "/bin", "binfs", 0, NULL))
+		die("fs_init: mount failed");
 
 	int fd;
-	char buf[5];
+	char buf[6];
 
 	if ((fd = open("/file", O_CREAT, S_IRWXU)) < 0)
 		die("fs_init: open failed");
@@ -77,19 +80,19 @@ static void fs_init(void)
 		die("fs_init: close failed");
 	if ((fd = open("/test", O_CREAT, S_IRWXU)) < 0)
 		die("fs_init: open failed");
-	if (write(fd, "test", 4) != 4)
+	if (write(fd, "test\n", 5) != 5)
 		die("fs_init: write failed");
 	if (close(fd))
 		die("fs_init: close failed");
 	if ((fd = open("/test", O_RDONLY)) < 0)
 		die("fs_init: open(2) failed");
-	if (read(fd, buf, 6) != 4)
+	if (read(fd, buf, 7) != 5)
 		die("fs_init: read failed");
 	if (close(fd))
 		die("fs_init: close failed");
-	buf[4] = '\0';
+	buf[5] = '\0';
 
-	if (strcmp(buf, "test"))
+	if (strcmp(buf, "test\n"))
 		die("fs_init: read/write test failed\n");
 }
 
@@ -101,7 +104,8 @@ void root_proc()
 
 	signal(SIGCHLD, sigchld_handler);
 
-	syscreate(tsh, 0, NULL);
+	char *argv[2] = { "/bin/tsh", NULL };
+	fcreate(argv[0], 1, argv);
 	for (sig = sigwait(); sig != SIGCHLD; sig = sigwait());
 
 	printf("\nPress any key to reboot");

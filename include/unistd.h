@@ -31,6 +31,7 @@ enum {
 };
 
 pid_t fork(void);
+int execve(const char *pathname, char *const argv[], char *const env[]);
 unsigned int alarm(unsigned int seconds);
 pid_t getpid(void);
 unsigned int sleep(unsigned int seconds);

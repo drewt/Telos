@@ -16,6 +16,7 @@
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -26,94 +27,56 @@
 
 #include <usr/test.h>
 
-#define N_CMDS   (sizeof progtab / sizeof *progtab)
 #define IN_LEN   512
 #define MAX_ARGS 100
 
-#define SHELL_EXIT  ((void*)-1)
-#define SHELL_CLEAR ((void*)-2)
-#define SHELL_CD    ((void*)-3)
-
 #define PROMPT "TELOS> "
 
-typedef int(*funcptr)(int, char**);
-
-int main(int argc, char *argv[]);
-
-#define PROGRAM(name) int name(int argc, char *argv[])
-
-static PROGRAM(help);
-extern PROGRAM(cat);
-extern PROGRAM(echo);
-extern PROGRAM(echoserver);
-extern PROGRAM(echoclient);
-extern PROGRAM(uls);
-extern PROGRAM(mount_ramfs);
-extern PROGRAM(uumount);
-extern PROGRAM(umkdir);
-extern PROGRAM(urmdir);
-extern PROGRAM(ulink);
-extern PROGRAM(uunlink);
-extern PROGRAM(urename);
-extern PROGRAM(ustat);
-extern PROGRAM(multi);
-
-struct program {
-	funcptr f;
-	char *name;
-};
-
-static struct program progtab[] = {
-	{ SHELL_EXIT,	"exit"		},
-	{ SHELL_CLEAR,	"clear"		},
-	{ SHELL_CD,     "cd"            },
-	{ help,		"help"		},
-	{ exntest,	"exntest"	},
-	{ proctest,	"proctest"	},
-	{ sigtest,	"sigtest"	},
-	{ kbdtest,	"kbdtest"	},
-	{ strtest,	"strtest"	},
-	{ eventtest,	"eventtest"	},
-	{ msgtest,	"msgtest"	},
-	{ memtest,	"memtest"	},
-	{ consoletest,	"consoletest"	},
-	{ jmptest,      "jmptest"       },
-	{ cat,          "cat"           },
-	{ echo,		"echo"		},
-	{ date,		"date"		},
-	{ echoserver,   "echoserver"    },
-	{ echoclient,   "echoclient"    },
-	{ uls,          "ls"            },
-	{ umkdir,       "mkdir"         },
-	{ urmdir,       "rmdir"         },
-	{ mount_ramfs,  "mount-ramfs"   },
-	{ uumount,      "umount"        },
-	{ ustat,        "stat"          },
-	{ ulink,        "link"          },
-	{ uunlink,      "unlink"        },
-	{ urename,      "rename"        },
-	{ multi,        "multi"         },
-	{ main,		"tsh"		}
-};
-
-static void sigchld_handler(int signo) {}
-
-static int help(int argc, char *argv[])
+static _Noreturn void builtin_exit(void)
 {
-	puts("Valid commands are:");
-	for (size_t i = 0; i < N_CMDS; i++)
-		printf("\t%s\n", progtab[i].name);
+	exit(0);
+}
+
+static int builtin_cd(int argc, char *argv[])
+{
+	if (argc != 2) {
+		printf("cd: wrong number of arguments\n");
+		return -1;
+	}
+	chdir(argv[1]);
 	return 0;
 }
 
-static funcptr lookup(char *in)
+static int builtin_clear(void)
 {
-	size_t i;
-	for (i = 0; i < N_CMDS; i++)
-		if (!strcmp(in, progtab[i].name))
-			return progtab[i].f;
+	ioctl(STDOUT_FILENO, CONSOLE_IOCTL_CLEAR);
+	return 0;
+}
+
+typedef int(*funptr)(int, char**);
+
+struct tsh_builtin {
+	funptr f;
+	char *name;
+};
+
+#define BUILTIN(fun, name) { (funptr)fun, name }
+static struct tsh_builtin builtins[] = {
+	BUILTIN(builtin_exit,  "exit"),
+	BUILTIN(builtin_cd,    "cd"),
+	BUILTIN(builtin_clear, "clear"),
+};
+#define NR_BUILTIN (sizeof(builtins)/sizeof(*builtins))
+
+static funptr builtin_lookup(const char *name)
+{
+	for (unsigned i = 0; i < NR_BUILTIN; i++)
+		if (!strcmp(name, builtins[i].name))
+			return builtins[i].f;
 	return NULL;
 }
+
+static void sigchld_handler(int signo) {}
 
 static ssize_t read_line(char *buf, size_t len)
 {
@@ -189,9 +152,18 @@ static int parse_input(char *in, char *(*args)[])
 	return bg;
 }
 
+static int exec_with_prefix(const char *prefix, int argc, char *argv[])
+{
+	char path[256];
+	strcpy(path, prefix);
+	strcat(path, argv[0]);
+	return execve(path, argv, NULL);
+	//return fcreate(path, argc, argv);
+}
+
 int main(int _argc, char *_argv[])
 {
-	funcptr p;
+	funptr p;
 	char in[IN_LEN];
 	char *argv[MAX_ARGS];
 	int argc;
@@ -200,7 +172,6 @@ int main(int _argc, char *_argv[])
 
 	signal(SIGCHLD, sigchld_handler);
 
-	if (getpid() != 2) for(;;);
 	while (1) {
 		printf(PROMPT);
 		if (read_line(in, IN_LEN) == EOF)
@@ -209,25 +180,26 @@ int main(int _argc, char *_argv[])
 			continue;
 
 		bg = parse_input(in, &argv);
-		if (!(p = lookup(argv[0]))) {
-			printf("tsh: '%s' not found\n", argv[0]);
+		for (argc = 0; argv[argc]; argc++);
+		if ((p = builtin_lookup(argv[0]))) {
+			p(argc, argv);
 			continue;
 		}
 
-		if (p == SHELL_EXIT)
-			return 0;
-		if (p == SHELL_CLEAR) {
-			ioctl(STDOUT_FILENO, CONSOLE_IOCTL_CLEAR);
-			continue;
+		// FIXME: fork/exec seems to cause stack corruption in some cases
+		if (!fork()) {
+			execve(argv[0], argv, NULL);
+			exec_with_prefix("/bin/", argc, argv);
+			printf("tsh: %s: command not found\n", argv[0]);
+			exit(1);
 		}
-		if (p == SHELL_CD) {
-			if (argv[1])
-				chdir(argv[1]);
+		/*if (fcreate(argv[0], argc, argv) > 0);
+		else if (exec_with_prefix("/bin/", argc, argv) > 0);
+		else {
+			printf("tsh: %s: command not found\n", argv[0]);
 			continue;
-		}
+		}*/
 
-		for (argc = 0; argv[argc] != NULL; argc++);
-		syscreate(p, argc, argv);
 		if (!bg)
 			for (sig = 0; sig != SIGCHLD; sig = sigwait());
 	}

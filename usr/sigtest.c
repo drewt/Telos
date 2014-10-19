@@ -96,7 +96,7 @@ static void priority_test(void)
 	syscreate(sig_proc, 0, NULL);
 	sig = sigwait();
 	if (sig != SIGUSR1)
-		puts("sig_test: bad signal");
+		printf("sig_test: bad signal: %d\n", sig);
 }
 
 static void sigaction_test(void)
@@ -137,7 +137,12 @@ static void sigaction_test(void)
 
 int main(void)
 {
+	sigset_t mask;
 	sigtest_pid = getpid();
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
 
 	kill_test();
 	sigprocmask_test();

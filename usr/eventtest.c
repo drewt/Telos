@@ -56,6 +56,7 @@ static int sleep_proc(int argc, char *argv[])
 static int nanosleep_proc(int argc, char *argvp[])
 {
 	const struct timespec *spec = argc == 1 ? &less_than_one : &less_than_two;
+	printf("NANO");
 	nanosleep(spec, NULL);
 	printf("%d ", argc);
 	return 0;
@@ -64,10 +65,15 @@ static int nanosleep_proc(int argc, char *argvp[])
 static void sleep_test(void)
 {
 	printf("Testing sleep...\nVerify ascending: ");
+	printf("A");
 	syscreate(nanosleep_proc, 1, NULL);
+	printf("A");
 	syscreate(sleep_proc, 2, NULL);
+	printf("A");
 	syscreate(sleep_proc, 4, NULL);
+	printf("A");
 	syscreate(nanosleep_proc, 3, NULL);
+	printf("A");
 	nanosleep(&less_than_three, NULL);
 	puts("");
 }
@@ -124,7 +130,7 @@ static void timer_test(void)
 	if (timer_settime(tid, 0, &time, NULL) < 0) {
 		printf("timer_settime() failed\n");
 	}
-	sleep(1);
+	sleep(200); /* should be interrupted */
 	puts("2");
 }
 
@@ -144,12 +150,14 @@ static void clock_test(void)
 		return;
 	}
 
-	printf("CLOCK_REALTIME: %d\n", t.tv_sec);
+	printf("CLOCK_REALTIME: %x\n", t.tv_sec);
 }
 
+#include <stdlib.h>
 int main(int argc, char *argv[])
 {
-	sleep_test();
+	//if (fork()) exit(0);
+	//sleep_test();
 	alarm_test();
 	timer_test();
 	clock_test();

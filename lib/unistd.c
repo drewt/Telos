@@ -28,6 +28,11 @@ pid_t fork(void)
 	return rc;
 }
 
+int execve(const char *pathname, char *const argv[], char *const envp[])
+{
+	return syscall3(SYS_EXECVE, (void*)pathname, (void*)argv, (void*)envp);
+}
+
 /*-----------------------------------------------------------------------------
  * */
 //-----------------------------------------------------------------------------

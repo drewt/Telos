@@ -71,6 +71,8 @@ enum syscall_id {
 	SYS_CHDIR,
 	SYS_STAT,
 	SYS_FORK,
+	SYS_EXECVE,
+	SYS_FCREATE,
 	SYSCALL_MAX
 };
 

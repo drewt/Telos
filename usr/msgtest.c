@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <telos/msg.h>
 #include <telos/process.h>
@@ -56,11 +57,16 @@ int send_proc()
 
 int main(void)
 {
+	sigset_t mask;
 	pid_t pids[10];
 	char buf[40];
 	char *msg = "msg";
 
 	main_pid = getpid();
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
 
 	puts("Testing block-on-recv...");
 	for (int i = 0; i < 10; i++)

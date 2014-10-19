@@ -75,12 +75,16 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 
 	list_for_each_entry(vma, &src->map, chain) {
 		struct vma *new = new_vma(vma->start, vma->end, vma->flags);
+		new->mmap = dst;
 		list_add_tail(&new->chain, &dst->map);
+		if (vma == src->heap)
+			dst->heap = new;
+		else if (vma == src->stack)
+			dst->stack = new;
+		else if (vma == src->kernel_stack)
+			dst->kernel_stack = new;
 	}
 	// TODO: dst->kheap
-	dst->heap = src->heap;
-	dst->stack = src->stack;
-	dst->kernel_stack = src->kernel_stack;
 	dst->brk = src->brk;
 	return 0;
 }

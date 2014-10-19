@@ -73,7 +73,7 @@ static void place_sig_args(void* dst, struct pcb *p, void *osp, int sig_no)
 		args[4]  = p->rc;
 	}
 
-	kunmap_range(args, 12 * sizeof(ulong));
+	kunmap_tmp_range(args, 12 * sizeof(ulong));
 }
 
 static int send_signal_user(struct pcb *p, int sig_no)
@@ -103,7 +103,7 @@ static int send_signal_user(struct pcb *p, int sig_no)
 			: (u32) (~0 << (sig_no + 1));
 	clear_bit(sig_no, &p->sig_pending);
 
-	kunmap_range(sig_frame, sizeof(struct ucontext) * 2);
+	kunmap_tmp_range(sig_frame, sizeof(struct ucontext) * 2);
 	return 0;
 }
 
@@ -169,8 +169,8 @@ long sig_restore(void *osp)
 	current->sig_ignore = cx->reg.eax;
 	old_rc = rc[-2];
 
-	kunmap_range(cx, sizeof(struct ucontext));
-	kunmap_range(rc, sizeof(ulong));
+	kunmap_tmp_range(cx, sizeof(struct ucontext));
+	kunmap_tmp_range(rc, sizeof(ulong));
 
 	return old_rc;
 }

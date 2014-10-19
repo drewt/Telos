@@ -28,6 +28,11 @@ pid_t syscreate(int(*func)(int,char**), int argc, char *argv[])
 	return syscall3(SYS_CREATE, func, (void*) argc, argv);
 }
 
+pid_t fcreate(const char *pathname, int argc, char *const argv[])
+{
+	return syscall3(SYS_FCREATE, (void*)pathname, (void*)argc, (void*)argv);
+}
+
 /*-----------------------------------------------------------------------------
  * Yield the processor */
 //-----------------------------------------------------------------------------

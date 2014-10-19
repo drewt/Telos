@@ -278,10 +278,17 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
-/*
- * Unmap all pages overlapping the given memory region.
- */
-void kunmap_range(void *addrp, size_t len)
+void kunmap_tmp_range(void *addrp, size_t len)
+{
+	unsigned nr_pages = pages_in_range((ulong)addrp, len);
+	unsigned starti = addr_to_pti((ulong)addrp);
+
+	for (unsigned i = starti; i < starti + nr_pages; i++) {
+		tmp_pgtab[i] = 0;
+	}
+}
+
+/*void kunmap_range(void *addrp, size_t len)
 {
 	pte_t *pte;
 	pmap_t pgtab;
@@ -296,7 +303,7 @@ void kunmap_range(void *addrp, size_t len)
 		*pte = 0;
 		flush_page(addr + i*FRAME_SIZE);
 	}
-}
+}*/
 
 int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 {
@@ -305,7 +312,7 @@ int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
 		return -1;
 
 	memcpy(dst, addr, len);
-	kunmap_range(addr, len);
+	kunmap_tmp_range(addr, len);
 
 	return 0;
 }
@@ -317,7 +324,7 @@ int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
 		return -1;
 
 	memcpy(addr, src, len);
-	kunmap_range(addr, len);
+	kunmap_tmp_range(addr, len);
 
 	return 0;
 }
@@ -331,13 +338,13 @@ int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		return -1;
 
 	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
-		kunmap_range(dst_addr, len);
+		kunmap_tmp_range(dst_addr, len);
 		return -1;
 	}
 
 	memcpy(dst_addr, src_addr, len);
-	kunmap_range(dst_addr, len);
-	kunmap_range(src_addr, len);
+	kunmap_tmp_range(dst_addr, len);
+	kunmap_tmp_range(src_addr, len);
 
 	return 0;
 }
@@ -351,13 +358,13 @@ int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
 		return -1;
 
 	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
-		kunmap_range(dst_addr, len);
+		kunmap_tmp_range(dst_addr, len);
 		return -1;
 	}
 
 	strncpy(dst_addr, src_addr, len);
-	kunmap_range(dst_addr, len);
-	kunmap_range(src_addr, len);
+	kunmap_tmp_range(dst_addr, len);
+	kunmap_tmp_range(src_addr, len);
 
 	return 0;
 }

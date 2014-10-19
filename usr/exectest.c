@@ -15,11 +15,25 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_PROCESS_H_
-#define _TELOS_PROCESS_H_
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
-pid_t syscreate(int(*func)(int,char**), int argc, char *argv[]);
-pid_t fcreate(const char *pathname, int argc, char *const argv[]);
-void sysyield(void);
+int newproc(int argc, char *argv[])
+{
+	printf("OK\n");
+	return 0;
+}
 
-#endif
+int main(void)
+{
+	char *argv[] = { "/bin/ls", "/bin" };
+	if (!fork()) {
+		printf("Testing execve... ");
+		execve("/bin/ls", argv, NULL);
+	}
+	sleep(1);
+	printf("Exiting in parent\n");
+	return 0;
+}
