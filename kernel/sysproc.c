@@ -60,15 +60,24 @@ static _Noreturn void die(const char *msg)
 
 static void fs_init(void)
 {
+	/* /dev/ */
 	if (mkdir("/dev", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
 		die("fs_init: mkdir failed");
 	if (mknod("/dev/cons0", TTY_MODE, DEVICE(TTY_MAJOR, 0)))
 		die("fs_init: mknod failed");
 	if (mknod("/dev/cons1", TTY_MODE, DEVICE(TTY_MAJOR, 1)))
 		die("fs_init: mknod failed");
+
+	/* /bin/ */
 	if (mkdir("/bin", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
 		die("fs_init: mkdir failed");
 	if (mount(NULL, "/bin", "binfs", 0, NULL))
+		die("fs_init: mount failed");
+
+	/* /mod/ */
+	if (mkdir("/mod", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH))
+		die("fs_init: mkdir failed");
+	if (mount(NULL, "/mod", "modfs", 0, NULL))
 		die("fs_init: mount failed");
 
 	int fd;
