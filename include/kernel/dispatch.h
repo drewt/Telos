@@ -72,8 +72,6 @@ long sys_fork(void);
 long sys_yield(void);
 long sys_exit(int status);
 long sys_getpid(void);
-long sys_puts(char *s);
-long sys_report(char *s);
 long sys_sleep(unsigned long ms);
 long sys_alarm(unsigned long ms);
 long sig_restore(void *osp);

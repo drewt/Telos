@@ -52,7 +52,6 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_YIELD]		= { (isr_t) sys_yield,		0 },
 	[SYS_STOP]		= { (isr_t) sys_exit,		1 },
 	[SYS_GETPID]		= { (isr_t) sys_getpid,		0 },
-	[SYS_REPORT]		= { (isr_t) sys_report,		1 },
 	[SYS_SLEEP]		= { (isr_t) sys_sleep,		1 },
 	[SYS_SIGRETURN]		= { (isr_t) sig_restore,	1 },
 	[SYS_KILL]		= { (isr_t) sys_kill,		2 },

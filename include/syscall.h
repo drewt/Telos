@@ -22,14 +22,14 @@
 #define INTR_SYSCALL 0x80
 #endif
 
+#define SYSCALL_MIN 48
+
 enum syscall_id {
 	/* 0-47 reserved for hardware interrupts */
-	SYSCALL_MIN = 48,
-	SYS_CREATE = 48,
+	SYS_CREATE = SYSCALL_MIN,
 	SYS_YIELD,
 	SYS_STOP,
 	SYS_GETPID,
-	SYS_REPORT,
 	SYS_SLEEP,
 	SYS_SIGRETURN,
 	SYS_KILL,
@@ -47,9 +47,6 @@ enum syscall_id {
 	SYS_WRITE,
 	SYS_IOCTL,
 	SYS_ALARM,
-	SYS_MALLOC,
-	SYS_FREE,
-	SYS_PALLOC,
 	SYS_TIMER_CREATE,
 	SYS_TIMER_DELETE,
 	SYS_TIMER_GETTIME,
