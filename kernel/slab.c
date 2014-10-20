@@ -22,7 +22,7 @@
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
 
-#define bitmap_length(cache) (cache->pages_per_slab * 8)
+#define bitmap_length(cache) (cache->pages_per_slab * (256 / BITS_PER_LONG))
 #define bitmap_size(cache) (bitmap_length(cache) * sizeof(ulong))
 #define slab_size(cache) (cache->pages_per_slab * FRAME_SIZE)
 #define slab_desc_size(cache) (sizeof(struct slab) + bitmap_size(cache))
