@@ -66,6 +66,14 @@ abort:
 	return -ENOMEM;
 }
 
+void mm_fini(struct mm_struct *mm)
+{
+	struct vma *vma, *n;
+	list_for_each_entry_safe(vma, n, &mm->map, chain) {
+		free_vma(vma);
+	}
+}
+
 int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 {
 	struct vma *vma;

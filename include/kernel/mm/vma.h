@@ -50,6 +50,7 @@ struct mm_struct {
 };
 
 int mm_init(struct mm_struct *mm);
+void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
 struct vma *vma_find(struct mm_struct *mm, void *addr);

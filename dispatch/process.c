@@ -379,6 +379,7 @@ long sys_exit(int status)
 			sys_close(i);
 
 	del_pgdir(current->mm.pgdir);
+	mm_fini(&current->mm);
 
 	new_process();
 	return 0;
