@@ -45,7 +45,7 @@ typedef unsigned long nlink_t;
 
 typedef unsigned long uid_t;
 typedef unsigned long gid_t;
-typedef unsigned long off_t;
+typedef long off_t;
 typedef unsigned long blksize_t;
 typedef unsigned long blkcnt_t;
 

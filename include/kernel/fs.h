@@ -5,6 +5,13 @@
 #include <kernel/dirent.h>
 #include <kernel/mm/slab.h>
 
+enum {
+	SEEK_SET,
+	SEEK_CUR,
+	SEEK_END,
+	_SEEK_MAX
+};
+
 /*
  * These are the fs-independent mount-flags: up to 16 flags are supported
  */
@@ -15,25 +22,19 @@ enum {
 	MS_NOEXEC	=  8, /* disallow program execution */
 	MS_SYNC		= 16, /* writes are synced at once */
 	MS_REMOUNT	= 32, /* alter flags of a mounted FS */
+	MS_MEMFS        = 64, /* do not free inodes */
 };
 
-#define MAY_EXEC 1
-#define MAY_WRITE 2
-#define MAY_READ 4
+enum {
+	MAY_EXEC  = 1,
+	MAY_WRITE = 2,
+	MAY_READ  = 4,
+};
 
-#define READ 0
-#define WRITE 1
-
-/*
- * These are the fs-independent mount-flags: up to 16 flags are supported
- */
-#define MS_RDONLY    1 /* mount read-only */
-#define MS_NOSUID    2 /* ignore suid and sgid bits */
-#define MS_NODEV     4 /* disallow access to device special files */
-#define MS_NOEXEC    8 /* disallow program execution */
-#define MS_SYNC     16 /* writes are synced at once */
-#define	MS_REMOUNT  32 /* alter flags of a mounted FS */
-#define MS_MEMFS    64 /* do not free inodes */
+enum {
+	READ  = 0,
+	WRITE = 1,
+};
 
 /*
  * Flags that can be altered by MS_REMOUNT
@@ -65,6 +66,7 @@ struct file;
 struct super_block;
 
 struct file_operations {
+	off_t (*lseek)(struct inode *, struct file *, off_t, int);
 	ssize_t (*read)(struct file *, char *, size_t);
 	ssize_t (*write)(struct file *, const char *, size_t);
 	int (*readdir)(struct inode *, struct file *, struct dirent *, int);

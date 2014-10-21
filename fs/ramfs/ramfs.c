@@ -139,6 +139,8 @@ int ramfs_read(struct file *file, char *buf, size_t len)
 	unsigned int frame_nr = file->f_pos / FRAME_SIZE;
 	unsigned int i = 0;
 
+	if (!len || file->f_pos >= file->f_inode->i_size)
+		return 0;
 	len = MIN(len, file->f_inode->i_size - file->f_pos);
 
 	list_for_each_entry(frame, &file->f_inode->i_list, chain) {
@@ -184,16 +186,44 @@ static int ramfs_do_write(struct file *f, const char *buf, size_t len)
 	return len;
 }
 
+static void zero_fill(struct file *f, unsigned long start, size_t len)
+{
+	char *fbuf;
+	struct pf_info *frame;
+	unsigned long offset = start % FRAME_SIZE;
+	unsigned long frame_nr = start / FRAME_SIZE;
+	unsigned int i = 0;
+
+	list_for_each_entry(frame, &f->f_inode->i_list, chain) {
+		if (i++ < frame_nr)
+			continue;
+
+		fbuf = kmap_tmp_page(frame->addr);
+		memset(fbuf+offset, 0, MIN(FRAME_SIZE-offset, len));
+		kunmap_page(fbuf);
+
+		if (len <= FRAME_SIZE)
+			break;
+		len -= FRAME_SIZE - offset;
+		offset = 0;
+	}
+}
+
 int ramfs_write(struct file *file, const char *buf, size_t len)
 {
 	int error;
 	unsigned long next_pos = file->f_pos + len;
+	unsigned long prev_size = file->f_inode->i_size;
 
 	if (next_pos > file->f_inode->i_size) {
 		error = grow_file(file->f_inode, next_pos - file->f_inode->i_size);
 		if (error)
 			return error;
 	}
+
+	// fill gap with zeros if we've seeked past EOF
+	if (file->f_pos > prev_size)
+		zero_fill(file, prev_size, file->f_pos - prev_size);
 
 	return ramfs_do_write(file, buf, len);
 }

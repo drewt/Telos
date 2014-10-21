@@ -64,6 +64,7 @@ static struct sysaction sysactions[SYSCALL_MAX] = {
 	[SYS_CLOSE]		= { (isr_t) sys_close,		1 },
 	[SYS_READ]		= { (isr_t) sys_read,		3 },
 	[SYS_WRITE]		= { (isr_t) sys_write,		3 },
+	[SYS_LSEEK]		= { (isr_t) sys_lseek,		3 },
 	[SYS_READDIR]		= { (isr_t) sys_readdir,	3 },
 	[SYS_IOCTL]		= { (isr_t) sys_ioctl,		3 },
 	[SYS_MKNOD]		= { (isr_t) sys_mknod,		3 },

@@ -89,6 +89,7 @@ long sys_open(const char *pathname, int flags, int mode);
 long sys_close(unsigned int fd);
 long sys_read(unsigned int fd, char *buf, size_t nbyte);
 long sys_write(unsigned int fd, char *buf, size_t nbyte);
+long sys_lseek(unsigned int fd, off_t offset, unsigned int whence);
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count);
 long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 long sys_mknod(const char *filename, int mode, dev_t dev);
