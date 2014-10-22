@@ -97,12 +97,6 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 	return 0;
 }
 
-static inline ulong vma_to_page_flags(ulong flags)
-{
-	return  ((flags & VM_READ) ? PE_U : 0) |
-		((flags & VM_WRITE && !(flags & _VM_COW)) ? PE_RW : 0);
-}
-
 struct vma *vma_find(struct mm_struct *mm, void *addr)
 {
 	struct vma *area;
@@ -118,7 +112,6 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 {
 	int rc;
 	unsigned nr_pages = pages_in_range(vma->end, amount);
-	ulong pflags = vma_to_page_flags(vma->flags);
 
 	if (flags != vma->flags) {
 		if (zmap(vma->mmap, (void*)vma->end, amount, flags) == NULL)
@@ -132,7 +125,7 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 			return -1;
 	}
 
-	if ((rc = map_zpages(vma->mmap->pgdir, vma->end, nr_pages, pflags)))
+	if ((rc = map_zpages(vma->mmap->pgdir, vma->end, nr_pages, flags)))
 		return rc;
 
 	vma->end += page_align(amount);
@@ -226,12 +219,11 @@ struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
 	struct vma *vma;
 	ulong dst = page_base((ulong)dstp);
 	unsigned nr_pages = pages_in_range((ulong)dstp, len);
-	ulong pflags = vma_to_page_flags(flags);
 
 	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
-	if (map_zpages(mm->pgdir, dst, nr_pages, pflags)) {
+	if (map_zpages(mm->pgdir, dst, nr_pages, flags)) {
 		free_vma(vma);
 		return NULL;
 	}

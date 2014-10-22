@@ -50,7 +50,7 @@ int paging_init(unsigned long start, unsigned long end);
 pmap_t clone_pgdir(void);
 pmap_t new_pgdir(void);
 int del_pgdir(pmap_t phys_pgdir);
-int map_zpages(pmap_t pgdir, ulong dst, unsigned pages, uchar attr);
+int map_zpages(pmap_t pgdir, ulong dst, unsigned pages, ulong flags);
 
 static inline void kfree_frame(struct pf_info *frame)
 {
