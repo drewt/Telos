@@ -91,8 +91,12 @@ _Noreturn void panic(const char *fmt, ...)
  */
 static inline void exn_kill(struct ucontext *cx, int sig)
 {
-	cx->stack[0] = cx->stack[1];
-	cx->stack[1] = cx->stack[2];
+	struct gp_regs *reg = (struct gp_regs*) &cx->reg;
+	reg->stack[0] = reg->stack[1];
+	reg->stack[1] = reg->stack[2];
+	reg->stack[2] = reg->stack[3];
+	reg->stack[3] = reg->stack[4];
+	reg->stack[4] = reg->stack[5];
 	__kill(current, sig);
 }
 
@@ -107,7 +111,7 @@ void exn_page_fault(void)
 
 	kprintf("\nPage fault!\n");
 	if (error & 1) {
-	kprintf("\t%s-mode %s %lx\n",
+		kprintf("\t%s-mode %s %lx\n",
 			error & 4 ? "user" : "supervisor",
 			error & 2 ? "write to" : "read from",
 			addr);
@@ -115,13 +119,8 @@ void exn_page_fault(void)
 		kprintf("\tpage not present: %lx\n", addr);
 	}
 	kprintf("\teip=%lx\n\n", eip);
-
 	dump_registers(current->esp);
-	for(;;);
-
 	exn_kill(current->esp, SIGSEGV);
-	ready(current);
-	new_process();
 }
 
 static void exn_breakpoint(unsigned num, struct ucontext ctx)
@@ -138,16 +137,12 @@ void exn_fpe(void)
 {
 	kprintf("Arithmetic error\n");
 	__kill(current, SIGFPE);
-	ready(current);
-	new_process();
 }
 
 void exn_ill_instr(void)
 {
 	kprintf("Illegal instruction\n");
 	__kill(current, SIGILL);
-	ready(current);
-	new_process();
 }
 
 /* prints a nice message when something goes wrong */
