@@ -85,42 +85,62 @@ _Noreturn void panic(const char *fmt, ...)
 	halt();
 }
 
-/*
- * XXX: grotesque hack to make up for dumb signal handling code
- *	which assumes no error code was pushed on the stack.
- */
-static inline void exn_kill(struct ucontext *cx, int sig)
+#include <kernel/mm/paging.h>
+#include <kernel/mm/vma.h>
+
+#define PGF_PERM  1
+#define PGF_WRITE 2
+#define PGF_USER  4
+
+static unsigned long get_error_code(void)
 {
-	struct gp_regs *reg = (struct gp_regs*) &cx->reg;
-	reg->stack[0] = reg->stack[1];
-	reg->stack[1] = reg->stack[2];
-	reg->stack[2] = reg->stack[3];
-	reg->stack[3] = reg->stack[4];
-	reg->stack[4] = reg->stack[5];
-	__kill(current, sig);
+	struct gp_regs *cx = current->esp;
+	unsigned long error = cx->stack[0];
+	cx->stack[0] = cx->stack[1];
+	cx->stack[1] = cx->stack[2];
+	cx->stack[2] = cx->stack[3];
+	if (error & PGF_USER) {
+		cx->stack[3] = cx->stack[4];
+		cx->stack[4] = cx->stack[5];
+	}
+	return error;
 }
 
 void exn_page_fault(void)
 {
-	ulong error, eip, addr;
-	kprintf("page_fault! %d\n", current->pid);
+	unsigned long error, addr;
+	struct vma *vma;
 
-	error = ((struct gp_regs*)current->esp)->stack[0];
-	eip   = ((struct gp_regs*)current->esp)->stack[1];
+	error = get_error_code();
 	MOV("cr2", addr);
 
-	kprintf("\nPage fault!\n");
-	if (error & 1) {
-		kprintf("\t%s-mode %s %lx\n",
-			error & 4 ? "user" : "supervisor",
-			error & 2 ? "write to" : "read from",
-			addr);
-	} else {
-		kprintf("\tpage not present: %lx\n", addr);
+	// address not mapped in process address space
+	if (!(vma = vma_get(&current->mm, (void*)addr)))
+		goto segfault;
+
+	// page not present (demand paging)
+	if (!(error & PGF_PERM)) {
+		// FIXME: kernel has to be interruptable, or else page faults
+		//        will occur in-kernel and clobber the kernel stack
+		goto segfault;
+		/*struct pf_info *frame = kalloc_frame();
+		if (!frame)
+			// FIXME: stall until memory available?
+			goto segfault;
+		if (map_pages(current->mm.pgdir, addr, 1, vma->flags) < 0)
+			// FIXME: as above
+			goto segfault;
+		return;*/
 	}
-	kprintf("\teip=%lx\n\n", eip);
-	dump_registers(current->esp);
-	exn_kill(current->esp, SIGSEGV);
+
+	// copy-on-write
+	if (error & PGF_PERM && error & PGF_WRITE && vma->flags & VM_COW) {
+		kprintf("TODO: copy-on-write\n");
+	}
+
+segfault:
+	print_cpu_context(current->esp);
+	__kill(current, SIGSEGV);
 }
 
 static void exn_breakpoint(unsigned num, struct ucontext ctx)

@@ -31,6 +31,10 @@ static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE (FRAME_SIZE*4)
 
+#define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
+#define USTACK_FLAGS (VM_WRITE | VM_EXEC | VM_ZERO)
+#define KSTACK_FLAGS USTACK_FLAGS
+
 static struct vma *new_vma(ulong start, ulong end, ulong flags)
 {
 	struct vma *vma;
@@ -48,15 +52,15 @@ int mm_init(struct mm_struct *mm)
 		return -ENOMEM;
 
 	mm->brk = HEAP_START + FRAME_SIZE;
-	mm->heap = zmap(mm, (void*)HEAP_START, FRAME_SIZE, VM_RW);
+	mm->heap = vma_map(mm, (void*)HEAP_START, FRAME_SIZE, HEAP_FLAGS);
 	if (!mm->heap)
 		goto abort;
 
-	mm->stack = zmap(mm, (void*)STACK_START, STACK_SIZE, VM_RWE);
+	mm->stack = vma_map(mm, (void*)STACK_START, STACK_SIZE, USTACK_FLAGS);
 	if (!mm->stack)
 		goto abort;
 
-	mm->kernel_stack = zmap(mm, (void*)KSTACK_START, KSTACK_SIZE, VM_RWE);
+	mm->kernel_stack = vma_map(mm, (void*)KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
 	if (!mm->kernel_stack)
 		goto abort;
 
@@ -102,7 +106,7 @@ struct vma *vma_find(struct mm_struct *mm, void *addr)
 	struct vma *area;
 
 	list_for_each_entry(area, &mm->map, chain) {
-		if (area->end < (ulong)addr)
+		if (area->end > (ulong)addr)
 			return area;
 	}
 	return NULL;
@@ -110,11 +114,11 @@ struct vma *vma_find(struct mm_struct *mm, void *addr)
 
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 {
-	int rc;
+	int error;
 	unsigned nr_pages = pages_in_range(vma->end, amount);
 
 	if (flags != vma->flags) {
-		if (zmap(vma->mmap, (void*)vma->end, amount, flags) == NULL)
+		if (vma_map(vma->mmap, (void*)vma->end, amount, flags) == NULL)
 			return -ENOMEM;
 		return 0;
 	}
@@ -122,11 +126,11 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 	if (vma->chain.next != &vma->mmap->map) {
 		struct vma *next = list_entry(vma->chain.next, struct vma, chain);
 		if (next->start < vma->end + amount)
-			return -1;
+			return -ENOMEM;
 	}
 
-	if ((rc = map_zpages(vma->mmap->pgdir, vma->end, nr_pages, flags)))
-		return rc;
+	if ((error = map_pages(vma->mmap->pgdir, vma->end, nr_pages, flags)))
+		return error;
 
 	vma->end += page_align(amount);
 	return 0;
@@ -214,7 +218,7 @@ int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
 	return 0;
 }
 
-struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
+struct vma *vma_map(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
 {
 	struct vma *vma;
 	ulong dst = page_base((ulong)dstp);
@@ -223,7 +227,8 @@ struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
 	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
-	if (map_zpages(mm->pgdir, dst, nr_pages, flags)) {
+	// TODO: demand paging
+	if (map_pages(mm->pgdir, dst, nr_pages, flags)) {
 		free_vma(vma);
 		return NULL;
 	}

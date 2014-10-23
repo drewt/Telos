@@ -20,16 +20,12 @@
 
 #include <kernel/list.h>
 
-#define VM_READ  1
-#define VM_WRITE 2
-#define _VM_EXEC 4
-#define _VM_COW  8
-
-#define VM_EXEC (VM_READ | _VM_EXEC)
-#define VM_COW  (VM_READ | VM_WRITE | _VM_COW)
-
-#define VM_RW  (VM_READ | VM_WRITE)
-#define VM_RWE (VM_READ | VM_WRITE | _VM_EXEC)
+enum {
+	VM_WRITE = 0x1,  /* write permission */
+	VM_EXEC  = 0x2,  /* execute permission */
+	VM_COW   = 0x4,  /* copy-on-write */
+	VM_ZERO  = 0x8,  /* area should be initialized with zeros */
+};
 
 struct vma {
 	struct list_head chain;
@@ -54,12 +50,18 @@ void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
 struct vma *vma_find(struct mm_struct *mm, void *addr);
-struct vma *zmap(struct mm_struct *mm, void *dstp, size_t len, ulong flags);
+struct vma *vma_map(struct mm_struct *mm, void *dstp, size_t len, ulong flags);
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags);
 
 static inline bool vma_contains(struct vma *vma, void *addr)
 {
-	return (ulong)addr > vma->start && (ulong)addr < vma->end;
+	return (ulong)addr >= vma->start && (ulong)addr < vma->end;
+}
+
+static inline struct vma *vma_get(struct mm_struct *mm, void *addr)
+{
+	struct vma *vma = vma_find(mm, addr);
+	return (vma && vma_contains(vma, addr)) ? vma : NULL;
 }
 
 #endif

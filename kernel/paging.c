@@ -626,11 +626,14 @@ static pmap_t unext_page_table(unsigned i, pmap_t pgdir, pmap_t pgtab)
 
 static inline ulong vma_to_page_flags(ulong flags)
 {
-	return  ((flags & VM_READ) ? PE_U : 0) |
-		((flags & VM_WRITE && !(flags & _VM_COW)) ? PE_RW : 0);
+	return PE_U | ((flags & VM_WRITE && !(flags & VM_COW)) ? PE_RW : 0);
 }
 
-int map_zpages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
+/*
+ * Map 'pages' pages starting at the virtual address 'dst' into the (physical)
+ * page directory 'pgdir'.
+ */
+int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
 {
 	struct pf_info *frame;
 	uchar attr = vma_to_page_flags(flags);
@@ -638,7 +641,8 @@ int map_zpages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
 	pmap_t pgtab = umap_page_table(pgdir, dst);
 
 	for_each_upage(i, pgdir, pgtab, dst / FRAME_SIZE, pages) {
-		if ((frame = kzalloc_frame()) == NULL)
+		frame = (flags & VM_ZERO) ? kzalloc_frame() : kalloc_frame();
+		if (!frame)
 			return -ENOMEM;
 		pgtab[i % 1024] = frame->addr | PE_P | attr;
 	}
