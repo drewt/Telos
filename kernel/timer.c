@@ -73,16 +73,16 @@ struct timer *ktimer_create(void(*act)(void*), void *data, unsigned int flags)
 	return timer;
 }
 
-unsigned long ktimer_destroy(struct timer *timer)
+unsigned long ktimer_destroy(struct timer *t)
 {
-	unsigned long expires = timer->expires;
+	unsigned long expires = t->expires;
 
-	if (timer->flags & TF_ALWAYS && expires > tick_count)
-		timer->action(timer->data);
+	if (t->flags & TF_ARMED && t->flags & TF_ALWAYS && expires > tick_count)
+		t->action(t->data);
 
-	list_del(&timer->chain);
-	if (!(timer->flags & TF_STATIC))
-		free_timer(&timer);
+	list_del(&t->chain);
+	if (!(t->flags & TF_STATIC))
+		free_timer(&t);
 
 	return (expires <= tick_count) ? 0 : expires - tick_count;
 }
