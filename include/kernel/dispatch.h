@@ -29,6 +29,8 @@ struct itimerspec;
 
 struct stat;
 
+struct ucontext;
+
 extern struct pcb *current;
 
 extern int idle_pid;
@@ -74,7 +76,7 @@ long sys_exit(int status);
 long sys_getpid(void);
 long sys_sleep(unsigned long ms);
 long sys_alarm(unsigned long ms);
-long sig_restore(void *osp);
+long sig_restore(struct ucontext *cx);
 long sys_sigaction(int sig, struct sigaction *act,
 		struct sigaction *oact);
 long sys_signal(int sig, void(*func)(int));

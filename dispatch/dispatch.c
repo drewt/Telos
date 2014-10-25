@@ -24,7 +24,6 @@
 typedef long(*isr_t)();
 
 /* routines defined in other files */
-extern int send_signal(struct pcb *p, int sig_no);
 extern void tick(void);
 
 struct pcb *current = NULL;	/* the running process */
@@ -134,9 +133,6 @@ void dispatch(ulong call, struct sys_args *args)
 	} else {
 		__kill(current, SIGSYS);
 	}
-
-	if (current->sig_pending & current->sig_ignore)
-		send_signal(current, fls(current->sig_pending)-1);
 }
 
 _Noreturn void kernel_start(void)

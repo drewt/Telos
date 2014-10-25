@@ -56,7 +56,6 @@ common_isr:
 	SET_SEGS(SEG_KDATA, %bx)
 	movl %esp,          %ecx
 	movl current,       %ebx
-	movl PCB_KSP(%ebx), %esp
 	movl PCB_PID(%ebx), %edi
 	movl %edx,          PCB_RC(%ebx)
 	movl %ecx,          PCB_ESP(%ebx)
@@ -72,13 +71,15 @@ _switch_to:
 	movl PCB_PGD(%eax), %ebx
 	movl %ebx,          %cr3
 __switch_to:
+	movl PCB_ESP(%eax), %esp
+	call handle_signal
+	movl current,       %eax
+	movl PCB_ESP(%eax), %esp
 	movl PCB_IFP(%eax), %ebx
-	movl PCB_ESP(%eax), %ecx
 	movl PCB_RC(%eax),  %edx
 	movl PCB_FLG(%eax), %eax
 	and  $PFLAG_SUPER,  %eax
 
-	movl %ecx,          %esp
 	movl %edx,          EAX(%esp)
 	movl $(tss + 4),    %ecx
 	movl %ebx,          (%ecx)

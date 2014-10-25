@@ -59,15 +59,31 @@ EXPORT_KINIT(stdio, SUB_PROCESS, stdio_sysinit);
 static inline struct pcb *get_free_pcb(void)
 {
 	int i;
+	struct pcb *p;
+
 	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
 		/* nothing */;
-	return (i == PT_SIZE) ? NULL : &proctab[i];
+	if (i == PT_SIZE)
+		return NULL;
+
+	p = &proctab[i];
+	p->sig_pending = 0;
+	p->t_alarm.flags = 0;
+	p->t_sleep.flags = 0;
+	p->timestamp = tick_count;
+	p->state = STATE_NASCENT;
+	INIT_LIST_HEAD(&p->send_q);
+	INIT_LIST_HEAD(&p->recv_q);
+	INIT_LIST_HEAD(&p->repl_q);
+	INIT_LIST_HEAD(&p->mm.map);
+	INIT_LIST_HEAD(&p->mm.kheap);
+	INIT_LIST_HEAD(&p->posix_timers);
+	return p;
 }
 
 static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 {
 	/* init signal data */
-	p->sig_pending = 0;
 	p->sig_accept  = 0;
 	p->sig_ignore  = ~0;
 	for (int i = 0; i < _TELOS_SIGMAX; i++) {
@@ -86,22 +102,9 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	for (int i = 3; i < NR_FILES; i++)
 		p->filp[i] = NULL;
 
-	/* init lists */
-	INIT_LIST_HEAD(&p->send_q);
-	INIT_LIST_HEAD(&p->recv_q);
-	INIT_LIST_HEAD(&p->repl_q);
-	INIT_LIST_HEAD(&p->mm.map);
-	INIT_LIST_HEAD(&p->mm.kheap);
-	INIT_LIST_HEAD(&p->posix_timers);
-
-	p->t_alarm.flags = 0;
-	p->t_sleep.flags = 0;
-
-	p->timestamp = tick_count;
 	p->pid += PT_SIZE;
 	p->parent_pid = parent;
 	p->flags = flags;
-	p->state = STATE_NASCENT;
 
 	struct pcb *pp = &proctab[PT_INDEX(parent)];
 	if (pp->pid == parent) {
@@ -124,7 +127,6 @@ static struct pcb *pcb_clone(struct pcb *src)
 	p->ksp = src->ksp;
 	p->ifp = src->ifp;
 
-	p->sig_pending = 0;
 	p->sig_accept = src->sig_accept;
 	p->sig_ignore = src->sig_ignore;
 	for (int i = 0; i < _TELOS_SIGMAX; i++)
@@ -134,57 +136,35 @@ static struct pcb *pcb_clone(struct pcb *src)
 		if ((p->filp[i] = src->filp[i]))
 			p->filp[i]->f_count++;
 
-	INIT_LIST_HEAD(&p->send_q);
-	INIT_LIST_HEAD(&p->recv_q);
-	INIT_LIST_HEAD(&p->repl_q);
-	INIT_LIST_HEAD(&p->mm.map);
-	INIT_LIST_HEAD(&p->mm.kheap);
-	INIT_LIST_HEAD(&p->posix_timers);
-
-	p->t_alarm.flags = 0;
-	p->t_sleep.flags = 0;
-
-	p->timestamp = tick_count;
 	p->pid += PT_SIZE;
 	p->parent_pid = src->pid;
 	p->flags = src->flags;
-	p->state = STATE_NASCENT;
 
 	p->root = src->root;
 	p->pwd = src->pwd;
 	return p;
 }
 
-long sys_create(void(*func)(int,char*), int argc, char **argv)
-{
-	return create_user_process(func, argc, argv, 0);
-}
-
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 {
-	int rc;
+	int error;
+	struct kcontext *frame;
 	struct pcb *p;
-	void *frame;
-	ulong *args;
 
-	if ((p = get_free_pcb()) == NULL)
+	if (!(p = get_free_pcb()))
 		return -EAGAIN;
-
 	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	if ((rc = mm_init(&p->mm)) < 0)
-		return rc;
+	if ((error = mm_init(&p->mm)) < 0)
+		return error;
 
-	p->ksp = (void*)p->mm.kernel_stack->end;
-	p->esp = ((char*)p->mm.stack->end - sizeof(struct kcontext) - 128);
+	p->esp = ((char*)p->mm.kernel_stack->end - sizeof(struct kcontext) - 16);
 
 	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct kcontext) + 16);
-	put_iret_kframe((void*)frame, (ulong)func);
-
-	args = (ulong*) ((ulong)frame + sizeof(struct kcontext));
-	args[0] = (ulong) exit;
-	args[1] = (ulong) arg;
-	kunmap_tmp_range(frame, sizeof(struct kcontext) + 16);
+	put_iret_kframe(frame, (ulong)func);
+	frame->stack[0] = (ulong) exit;
+	frame->stack[1] = (ulong) arg;
+	kunmap_tmp_range(frame, sizeof(struct kcontext));
 
 	ready(p);
 	return p->pid;
@@ -212,45 +192,42 @@ static void copy_args(struct pcb *p, int argc, char **argv)
 int create_user_process(void(*func)(int,char*), int argc, char **argv,
 		ulong flags)
 {
-	int rc;
-	struct pcb	*p;
-	ulong		esp;
-	ulong		*args;
-	void		*v_frame;
-	void		*p_frame;
+	int error;
+	ulong esp;
+	ulong *args;
+	void *frame;
+	struct pcb *p;
 
 	if ((p = get_free_pcb()) == NULL)
 		return -EAGAIN;
-
 	pcb_init(p, current->pid, flags);
 
-	if ((rc = mm_init(&p->mm)) < 0)
-		return rc;
+	if ((error = mm_init(&p->mm)) < 0)
+		return error;
 
-	p->ksp = (char*)p->mm.kernel_stack->end;
+	p->ifp = (char*)p->mm.kernel_stack->end - 16;
+	p->esp = (char*)p->ifp - sizeof(struct ucontext);
 
 	copy_args(p, argc, argv);
 
-	/* set up iret frame */
-	v_frame = (void*) (p->mm.stack->start + 32 * sizeof(struct ucontext));
-	p_frame = kmap_tmp_range(p->mm.pgdir, (ulong) v_frame,
-			sizeof(struct ucontext));
-	esp = p->mm.stack->end - 128;
-	put_iret_uframe(p_frame, (ulong) func, esp);
-	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
+	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct ucontext));
+	esp = p->mm.stack->end - 16;
+	put_iret_uframe(frame, (ulong)func, esp);
+	kunmap_tmp_range(frame, sizeof(struct ucontext));
 
-	/* set up stack for main() */
 	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
 	args[2] = p->mm.heap->start;
 	kunmap_tmp_range(args, sizeof(ulong) * 3);
 
-	p->esp = v_frame;
-	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
-
 	ready(p);
 	return p->pid;
+}
+
+long sys_create(void(*func)(int,char*), int argc, char **argv)
+{
+	return create_user_process(func, argc, argv, 0);
 }
 
 long sys_fcreate(const char *pathname, int argc, char **argv)
@@ -290,34 +267,31 @@ long sys_execve(const char *pathname, char **argv, char **envp)
 	int error, argc;
 	ulong esp;
 	ulong *args;
-	void *v_frame, *p_frame;
+	void *frame;
 	struct inode *inode;
 
 	error = namei(pathname, &inode);
 	if (error)
 		return error;
 	if (!S_ISFUN(inode->i_mode))
-		return -EINVAL;
+		return -EACCES;
 
 	argc = _copy_args(argv);
 
-	/* set up iret frame */
-	v_frame = (void*) (current->mm.stack->start + 32 * sizeof(struct ucontext));
-	p_frame = kmap_tmp_range(current->mm.pgdir, (ulong)v_frame,
-			sizeof(struct ucontext));
-	esp = current->mm.stack->end - 128;
-	put_iret_uframe(p_frame, (ulong)inode->i_private, esp);
-	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
+	current->ifp = (char*)current->mm.kernel_stack->end - 16;
+	current->esp = (char*)current->ifp - sizeof(struct ucontext);
 
-	/* set up stack for main() */
+	frame = kmap_tmp_range(current->mm.pgdir, (ulong)current->esp, sizeof(struct ucontext));
+	esp = current->mm.stack->end - 16;
+	put_iret_uframe(frame, (ulong)inode->i_private, esp);
+	kunmap_tmp_range(frame, sizeof(struct ucontext));
+
 	args = kmap_tmp_range(current->mm.pgdir, esp, sizeof(ulong) * 3);
 	args[0] = (ulong) exit;
 	args[1] = (ulong) argc;
 	args[2] = current->mm.heap->start;
 	kunmap_tmp_range(args, sizeof(ulong) * 3);
 
-	current->esp = v_frame;
-	current->ifp = (void*) ((ulong)current->esp + sizeof(struct ucontext));
 	return 0;
 }
 
