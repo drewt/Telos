@@ -64,7 +64,13 @@ pid_t getpid(void)
 //-----------------------------------------------------------------------------
 int open(const char *pathname, int flags, ...)
 {
-	int rv = syscall2(SYS_OPEN, (void*) pathname, (void*) flags);
+	int rv;
+	va_list ap;
+	unsigned long mode;
+	va_start(ap, flags);
+	mode = va_arg(ap, unsigned long);
+	va_end(ap);
+	rv = syscall3(SYS_OPEN, (void*) pathname, (void*) flags, (void*) mode);
 	if (rv < 0)
 		return -1;
 	return rv;
@@ -121,8 +127,12 @@ int ioctl(int fd, int command, ...)
 {
 	int rv;
 	va_list ap;
+	unsigned long arg;
 	va_start(ap, command);
-	rv = syscall3(SYS_IOCTL, (void*) fd, (void*) command, ap);
+	arg = va_arg(ap, unsigned long);
 	va_end(ap);
-	return (rv < 0) ? -1 : rv;
+	rv = syscall3(SYS_IOCTL, (void*) fd, (void*) command, (void*) arg);
+	if (rv < 0)
+		return -1;
+	return rv;
 }
