@@ -18,8 +18,8 @@
 #ifndef _TELOS_PROCESS_H_
 #define _TELOS_PROCESS_H_
 
-pid_t syscreate(int(*func)(int,char**), int argc, char *argv[]);
-pid_t fcreate(const char *pathname, int argc, char *const argv[]);
+pid_t syscreate(int(*func)(void*), void *arg);
+pid_t fcreate(const char *pathname);
 void sysyield(void);
 
 #endif

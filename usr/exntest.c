@@ -24,7 +24,7 @@
 
 int _dbz_ = 0;
 
-int dbz_proc()
+int dbz_proc(void *arg)
 {
 	printf("Dividing by zero... ");
 	_dbz_ = 1 / _dbz_;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 {
 	signal(SIGCHLD, sigchld_handler);
 
-	syscreate(dbz_proc, 0, 0);
+	syscreate(dbz_proc, NULL);
 	for (int sig = 0; sig != SIGCHLD; sig = sigwait());
 	printf("done.\n");
 	return 0;

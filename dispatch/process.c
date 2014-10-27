@@ -155,7 +155,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 		return -EAGAIN;
 	pcb_init(p, 0, flags | PFLAG_SUPER);
 
-	if ((error = mm_init(&p->mm)) < 0)
+	if ((error = mm_kinit(&p->mm)) < 0)
 		return error;
 
 	p->esp = ((char*)p->mm.kernel_stack->end - sizeof(struct kcontext) - 16);
@@ -170,27 +170,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	return p->pid;
 }
 
-/* TODO: something better than this crap */
-static void copy_args(struct pcb *p, int argc, char **argv)
-{
-	char *kargv[argc];
-	char **uargv;
-	ulong arg_addr;
-
-	copy_from_current(kargv, argv, sizeof(char*) * argc);
-
-	arg_addr = p->mm.heap->start + 128;
-	uargv = kmap_tmp_range(p->mm.pgdir, p->mm.heap->start, 128);
-	for (int i = 0; i < argc; i++, arg_addr += 128) {
-		uargv[i] = (char*) arg_addr;
-		copy_string_through_user(p, current, (void*) arg_addr,
-				kargv[i], 128);
-	}
-	kunmap_tmp_range(uargv, 128);
-}
-
-int create_user_process(void(*func)(int,char*), int argc, char **argv,
-		ulong flags)
+int create_user_process(void(*func)(void*), void *arg, ulong flags)
 {
 	int error;
 	ulong esp;
@@ -208,45 +188,45 @@ int create_user_process(void(*func)(int,char*), int argc, char **argv,
 	p->ifp = (char*)p->mm.kernel_stack->end - 16;
 	p->esp = (char*)p->ifp - sizeof(struct ucontext);
 
-	copy_args(p, argc, argv);
-
 	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct ucontext));
 	esp = p->mm.stack->end - 16;
 	put_iret_uframe(frame, (ulong)func, esp);
 	kunmap_tmp_range(frame, sizeof(struct ucontext));
 
-	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 3);
+	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 2);
 	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = p->mm.heap->start;
-	kunmap_tmp_range(args, sizeof(ulong) * 3);
+	args[1] = (ulong) arg;
+	kunmap_tmp_range(args, sizeof(ulong) * 2);
 
 	ready(p);
 	return p->pid;
 }
 
-long sys_create(void(*func)(int,char*), int argc, char **argv)
+long sys_create(void(*func)(void*), void *arg)
 {
-	return create_user_process(func, argc, argv, 0);
+	if (vm_verify(&current->mm, func, sizeof(*func), 0))
+		return -EFAULT;
+	return create_user_process(func, arg, 0);
 }
 
-long sys_fcreate(const char *pathname, int argc, char **argv)
+long sys_fcreate(const char *pathname)
 {
 	int error;
 	struct inode *inode;
 
+	// TODO: verify pathname addr
 	error = namei(pathname, &inode);
 	if (error)
 		return error;
 	if (!S_ISFUN(inode->i_mode))
 		return -EINVAL;
 
-	return create_user_process(inode->i_private, argc, argv, 0);
+	return create_user_process(inode->i_private, NULL, 0);
 }
 
 #define ARG_MAX 32
 #include <string.h>
-static int _copy_args(char **argv)
+static int copy_args(char **argv)
 {
 	int argc;
 	ulong addr = current->mm.heap->start + (ARG_MAX * sizeof(char*));
@@ -270,13 +250,14 @@ long sys_execve(const char *pathname, char **argv, char **envp)
 	void *frame;
 	struct inode *inode;
 
+	// TODO: verify addresses
 	error = namei(pathname, &inode);
 	if (error)
 		return error;
 	if (!S_ISFUN(inode->i_mode))
 		return -EACCES;
 
-	argc = _copy_args(argv);
+	argc = copy_args(argv);
 
 	current->ifp = (char*)current->mm.kernel_stack->end - 16;
 	current->esp = (char*)current->ifp - sizeof(struct ucontext);

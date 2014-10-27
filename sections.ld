@@ -25,8 +25,10 @@ SECTIONS
 
 	udata ALIGN (0x1000) : AT(ADDR(udata) - KERNEL_PAGE_OFFSET)
 	{
+		_urwstart = .;
 		usr/usr.a:*(.data .bss COMMON)
 		lib/klib.a:*(.data .bss COMMON)
+		_urwend = .;
 		_uend = .;
 	}
 

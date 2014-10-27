@@ -23,7 +23,7 @@
 
 #include <telos/process.h>
 
-static int read_proc()
+static int read_proc(void *arg)
 {
 	int fd;
 	char in[5];
@@ -51,8 +51,8 @@ int main(void)
 
 	signal(SIGCHLD, sigchld_handler);
 
-	syscreate(read_proc, 0, NULL);
-	syscreate(read_proc, 0, NULL);
+	syscreate(read_proc, NULL);
+	syscreate(read_proc, NULL);
 
 	for (sig = 0; sig != SIGCHLD; sig = sigwait());
 	for (sig = 0; sig != SIGCHLD; sig = sigwait());

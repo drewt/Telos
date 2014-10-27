@@ -32,6 +32,8 @@ extern ulong _ustart;   // start of user-space
 extern ulong _uend;     // end of user-space
 extern ulong _urostart; // start of user-space read-only memory
 extern ulong _uroend;   // end of user-space read-only memory
+extern ulong _urwstart; // start of user-space read-write memory
+extern ulong _urwend;   // end of user-space read-write memory
 extern ulong _krostart; // start of kernel read-only memory
 extern ulong _kroend;   // end of kernel read-only memory
 
@@ -41,6 +43,8 @@ extern ulong _kroend;   // end of kernel read-only memory
 #define uend     ((ulong)&_uend)
 #define urostart ((ulong)&_urostart)
 #define uroend   ((ulong)&_uroend)
+#define urwstart ((ulong)&_urwstart)
+#define urwend   ((ulong)&_urwend)
 #define krostart ((ulong)&_krostart)
 #define kroend   ((ulong)&_kroend)
 

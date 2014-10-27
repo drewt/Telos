@@ -17,6 +17,7 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
+#include <kernel/mm/vma.h>
 
 #include <string.h>
 
@@ -29,6 +30,10 @@ long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 	int tmp;
 	struct pcb *dest;
 
+	if (vm_verify(&current->mm, obuf, olen, 0))
+		return -EFAULT;
+	if (ibuf && vm_verify(&current->mm, ibuf, ilen, VM_WRITE))
+		return -EFAULT;
 	if (olen <= 0 || dest_pid <= 0)
 		return -EINVAL;
 
@@ -48,8 +53,8 @@ long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 			(!dest->pbuf.id || dest->pbuf.id == current->pid)) {
 
 		if (!dest->pbuf.id)
-			copy_to_user(dest, dest->parg, &current->pid,
-					sizeof(int));
+			vm_copy_to(&dest->mm, dest->parg, &current->pid,
+					sizeof(current->pid));
 
 		/* unblock receiver */
 		list_del(&dest->chain);
@@ -57,7 +62,7 @@ long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen)
 
 		/* send message */
 		tmp = (olen < dest->pbuf.len) ? olen : dest->pbuf.len;
-		copy_through_user(dest, current, dest->pbuf.buf, obuf, tmp);
+		vm_copy_to(&dest->mm, dest->pbuf.buf, obuf, tmp);
 		dest->rc = tmp;
 
 		/* if sender expects reply, block in receiver's reply queue */
@@ -85,8 +90,12 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 	int tmp, src_pid;
 	struct pcb *src = NULL;
 
-	copy_from_current(&src_pid, pid_ptr, sizeof(int));
+	if (vm_verify(&current->mm, pid_ptr, sizeof(*pid_ptr), VM_WRITE))
+		return -EFAULT;
+	if (vm_verify(&current->mm, buffer, length, VM_WRITE))
+		return -EFAULT;
 
+	src_pid = *pid_ptr;
 	if (length <= 0 || src_pid < 0)
 		return -EINVAL;
 
@@ -103,7 +112,7 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 		} else {
 			/* set *src_pid and pretend it was set all along... */
 			src_pid = ((struct pcb*) current->send_q.next)->pid;
-			copy_to_current(pid_ptr, &src_pid, sizeof(int));
+			*pid_ptr = src_pid;
 		}
 	}
 
@@ -130,7 +139,7 @@ long sys_recv(int *pid_ptr, void *buffer, int length)
 
 		/* receive message */
 		tmp = (length < src->pbuf.len) ? length : src->pbuf.len;
-		copy_through_user(current, src, buffer, src->pbuf.buf, tmp);
+		vm_copy_from(&src->mm, buffer, src->pbuf.buf, tmp);
 		return tmp;
 	}
 	return 0;
@@ -144,6 +153,8 @@ long sys_reply(int src_pid, void *buffer, int length)
 	int tmp;
 	struct pcb *src;
 
+	if (vm_verify(&current->mm, buffer, length, 0))
+		return -EFAULT;
 	if (length < 0 || src_pid <= 0)
 		return -EINVAL;
 
@@ -159,7 +170,7 @@ long sys_reply(int src_pid, void *buffer, int length)
 
 	/* send reply */
 	tmp = (length < src->reply_blk.len) ? length : src->reply_blk.len;
-	copy_through_user(src, current, src->reply_blk.buf, buffer, tmp);
+	vm_copy_to(&src->mm, src->reply_blk.buf, buffer, tmp);
 	src->rc = tmp;
 
 	/* unblock sender */

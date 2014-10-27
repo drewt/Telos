@@ -44,20 +44,8 @@ void new_process(void);
 
 void __kill(struct pcb *p, int sig_no);
 
-int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len);
-int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len);
-int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len);
-int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len);
 void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
 void kunmap_tmp_range(void *addrp, size_t len);
-
-#define copy_to_current(dst, src, len) \
-	copy_to_user(current, dst, src, len)
-
-#define copy_from_current(dst, src, len) \
-	copy_from_user(current, dst, src, len)
 
 void exn_page_fault(void);
 void exn_fpe(void);
@@ -67,8 +55,8 @@ void int_keyboard(void);
 
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
-long sys_create(void(*func)(int,char*), int argc, char **argv);
-long sys_fcreate(const char *pathname, int argc, char **argv);
+long sys_create(void(*func)(void*), void *arg);
+long sys_fcreate(const char *pathname);
 long sys_execve(const char *pathname, char **argv, char **envp);
 long sys_fork(void);
 long sys_yield(void);

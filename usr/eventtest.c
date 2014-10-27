@@ -45,20 +45,20 @@ static const TIMESPEC(less_than_one, 0, HALFSEC_NSEC);
 static const TIMESPEC(less_than_two, 1, HALFSEC_NSEC);
 static const TIMESPEC(less_than_three, 2, HALFSEC_NSEC);
 
-static int sleep_proc(int argc, char *argv[])
+static int sleep_proc(void *arg)
 {
-	int sec = argc == 2 ? 1 : 2;
+	int sec = (unsigned long)arg == 2 ? 1 : 2;
 	sleep(sec);
-	printf("%d ", argc);
+	printf("%d ", (unsigned long) arg);
 	return 0;
 }
 
-static int nanosleep_proc(int argc, char *argvp[])
+static int nanosleep_proc(void *arg)
 {
-	const struct timespec *spec = argc == 1 ? &less_than_one : &less_than_two;
+	const struct timespec *spec = (unsigned long)arg == 1 ? &less_than_one : &less_than_two;
 	printf("NANO");
 	nanosleep(spec, NULL);
-	printf("%d ", argc);
+	printf("%d ", (unsigned long) arg);
 	return 0;
 }
 
@@ -66,13 +66,13 @@ static void sleep_test(void)
 {
 	printf("Testing sleep...\nVerify ascending: ");
 	printf("A");
-	syscreate(nanosleep_proc, 1, NULL);
+	syscreate(nanosleep_proc, (void*)1);
 	printf("A");
-	syscreate(sleep_proc, 2, NULL);
+	syscreate(sleep_proc, (void*)2);
 	printf("A");
-	syscreate(sleep_proc, 4, NULL);
+	syscreate(sleep_proc, (void*)4);
 	printf("A");
-	syscreate(nanosleep_proc, 3, NULL);
+	syscreate(nanosleep_proc, (void*)3);
 	printf("A");
 	nanosleep(&less_than_three, NULL);
 	puts("");

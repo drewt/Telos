@@ -144,14 +144,18 @@ long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 {
 	struct sigaction *sap = &current->sigactions[sig];
 
+	if (act && vm_verify(&current->mm, act, sizeof(*act), 0))
+		return -EFAULT;
+	if (oact && vm_verify(&current->mm, oact, sizeof(*oact), VM_WRITE))
+		return -EFAULT;
 	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig))
 		return -EINVAL;
 
 	if (oact)
-		copy_to_current(oact, sap, sizeof(*sap));
+		*oact = *sap;
 
 	if (act) {
-		copy_from_current(sap, act, sizeof(*sap));
+		*sap = *act;
 		set_bit(sig, &current->sig_accept);
 	}
 
@@ -165,6 +169,8 @@ long sys_signal(int sig, void(*func)(int))
 {
 	long rv = (long) current->sigactions[sig].sa_handler;;
 
+	if (vm_verify(&current->mm, func, sizeof(*func), 0))
+		return -EFAULT;
 	if (SIGNO_INVALID(sig) || SIG_UNBLOCKABLE(sig))
 		return -EINVAL;
 
@@ -186,10 +192,13 @@ long sys_signal(int sig, void(*func)(int))
 //-----------------------------------------------------------------------------
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
-	if (oset) {
-		u32 tmp = ~(current->sig_ignore);
-		copy_to_current(oset, &tmp, sizeof(u32));
-	}
+	if (set && vm_verify(&current->mm, set, sizeof(*set), 0))
+		return -EFAULT;
+	if (oset && vm_verify(&current->mm, oset, sizeof(*oset), VM_WRITE))
+		return -EFAULT;
+
+	if (oset)
+		*oset = ~(current->sig_ignore);
 
 	if (set) {
 		switch (how) {
@@ -222,13 +231,10 @@ void __kill(struct pcb *p, int sig_no)
 	set_bit(sig_no, &p->sig_pending);
 
 	if (p->sigactions[sig_no].sa_flags & SA_SIGINFO) {
-		struct ucontext cx;
-
-		copy_from_user(p, &cx, (void*) p->esp, sizeof(cx));
-
+		struct ucontext *cx = p->esp;
 		p->siginfos[sig_no].si_errno = 0;
 		p->siginfos[sig_no].si_pid   = current->pid;
-		p->siginfos[sig_no].si_addr = (void*) cx.iret_eip;
+		p->siginfos[sig_no].si_addr = (void*) cx->iret_eip;
 	}
 
 	/* ready process if it's blocked */

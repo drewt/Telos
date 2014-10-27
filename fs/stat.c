@@ -15,15 +15,18 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/stat.h>
+#include <kernel/mm/vma.h>
 
 long sys_stat(const char *pathname, struct stat *s)
 {
 	int error;
 	struct inode *inode;
 
-	// TODO: check pointer
+	if (vm_verify(&current->mm, s, sizeof(*s), VM_WRITE))
+		return -EFAULT;
 	error = namei(pathname, &inode);
 	if (error)
 		return error;

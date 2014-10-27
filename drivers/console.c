@@ -89,7 +89,7 @@ static size_t send_to_reader(struct console *con)
 	size_t buffered = con->buffered - con->buf_pos;
 	size_t len = buffered < con->usr_buf_len ? buffered : con->usr_buf_len;
 
-	copy_to_user(con->reader, to, from, len);
+	vm_copy_to(&con->reader->mm, to, from, len);
 
 	con->buf_pos += len;
 	if (con->buf_pos == READ_BUF_SIZE || con->buf_pos == con->buffered) {

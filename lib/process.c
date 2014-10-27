@@ -23,14 +23,14 @@ typedef int pid_t;
 /*-----------------------------------------------------------------------------
  * Create a process */
 //-----------------------------------------------------------------------------
-pid_t syscreate(int(*func)(int,char**), int argc, char *argv[])
+pid_t syscreate(int(*func)(void*), void *arg)
 {
-	return syscall3(SYS_CREATE, func, (void*) argc, argv);
+	return syscall2(SYS_CREATE, func, arg);
 }
 
-pid_t fcreate(const char *pathname, int argc, char *const argv[])
+pid_t fcreate(const char *pathname)
 {
-	return syscall3(SYS_FCREATE, (void*)pathname, (void*)argc, (void*)argv);
+	return syscall1(SYS_FCREATE, (void*)pathname);
 }
 
 /*-----------------------------------------------------------------------------

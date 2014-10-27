@@ -113,8 +113,7 @@ void root_proc()
 
 	signal(SIGCHLD, sigchld_handler);
 
-	char *argv[2] = { "/bin/tsh", NULL };
-	fcreate(argv[0], 1, argv);
+	fcreate("/bin/tsh");
 	for (sig = sigwait(); sig != SIGCHLD; sig = sigwait());
 
 	printf("\nPress any key to reboot");

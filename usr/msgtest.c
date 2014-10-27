@@ -26,24 +26,26 @@
 
 pid_t main_pid;
 
+static char *gmsg = "msg";
+
 void die(const char *msg)
 {
 	printf("error: %s\n", msg);
 	exit(-1);
 }
 
-int recv_proc(int argc, char *argv[])
+int recv_proc(void *arg)
 {
 	char msg[40];
 
 	if (recv(&main_pid, msg, 40) == -1)
 		die("recv returned -1");
-	if (strcmp(msg, argv[0]))
+	if (strcmp(msg, arg))
 		die("recv: msg != arg");
 	return 0;
 }
 
-int send_proc()
+int send_proc(void *arg)
 {
 	char msg[40] = "msg";
 	char reply[40];
@@ -70,14 +72,14 @@ int main(void)
 
 	puts("Testing block-on-recv...");
 	for (int i = 0; i < 10; i++)
-		pids[i] = syscreate(recv_proc, 1, &msg);
+		pids[i] = syscreate(recv_proc, gmsg);
 	sleep(1);
 	for (int i = 0; i < 10; i++)
 		send(pids[i], msg, 4, NULL, 0);
 
 	puts("Testing block-on-send...");
 	for (int i = 0; i < 10; i++)
-		pids[i] = syscreate(send_proc, 0, NULL);
+		pids[i] = syscreate(send_proc, NULL);
 	sleep(1);
 	for (int i = 0; i < 10; i++) {
 		if (recv(&pids[i], buf, 40) == -1)

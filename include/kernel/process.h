@@ -119,8 +119,7 @@ _Static_assert(offsetof(struct mm_struct, pgdir) == 0,
 extern struct pcb proctab[];
 extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
-int create_user_process(void(*func)(int,char*), int argc, char **argv,
-		unsigned long flags);
+int create_user_process(void(*func)(void*), void *arg, unsigned long flags);
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags);
 
 #endif /* __ASM__ */

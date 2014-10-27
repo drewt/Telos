@@ -23,9 +23,14 @@
 
 #include <telos/process.h>
 
-static int print_proc(int argc, char *argv[])
+static char *a = "a";
+static char *s = "s";
+static char *d = "d";
+static char *f = "f";
+
+static int print_proc(void *arg)
 {
-	printf("%s", (char*) argv[0]);
+	printf("%s", arg);
 	return 0;
 }
 
@@ -39,25 +44,24 @@ static int stop_proc()
 int main(void)
 {
 	sigset_t mask;
-	char *a = "a", *s = "s", *d = "d", *f = "f";
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGCHLD);
 	sigprocmask(SIG_BLOCK, &mask, NULL);
 
 	printf("Testing syscreate... asdf ?= ");
-	syscreate(print_proc, 1, &a);
+	syscreate(print_proc, a);
 	sleep(1);
-	syscreate(print_proc, 1, &s);
+	syscreate(print_proc, s);
 	sleep(1);
-	syscreate(print_proc, 1, &d);
+	syscreate(print_proc, d);
 	sleep(1);
-	syscreate(print_proc, 1, &f);
+	syscreate(print_proc, f);
 	sleep(1);
 	puts("");
 
 	printf("Testing sysstop...");
-	syscreate(stop_proc, 0, NULL);
+	syscreate(stop_proc, NULL);
 	sleep(1);
 	puts("");
 	return 0;

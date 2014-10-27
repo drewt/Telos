@@ -42,21 +42,25 @@ static void sigusr2_action(int signo, siginfo_t *info, void *data)
 
 static void sigusr2_handler(int signo)
 {
+	if (signo != SIGUSR2)
+		printf("sigusr2_handler: wrong signal: %d\n", signo);
 	printf("b");
 }
 
 static void sigusr1_handler(int signo)
 {
 	int sig;
+	if (signo != SIGUSR1)
+		printf("sigusr1_handler: wrong signal: %d\n", signo);
 	printf("a");
 	sig = sigwait();
 	if (sig != SIGUSR2)
-		puts("SIGUSR1 handler: bad signal");
+		printf("SIGUSR1 handler: bad signal: %d\n", signo);
 	else
 		puts("c");
 }
 
-static int sig_proc()
+static int sig_proc(void *arg)
 {
 	sleep(1);
 	kill(sigtest_pid, SIGUSR1);
@@ -93,7 +97,7 @@ static void priority_test(void)
 	printf("Testing signal priority... abc ?= ");
 	signal(SIGUSR1, sigusr1_handler);
 	signal(SIGUSR2, sigusr2_handler);
-	syscreate(sig_proc, 0, NULL);
+	syscreate(sig_proc, NULL);
 	sig = sigwait();
 	if (sig != SIGUSR1)
 		printf("sig_test: bad signal: %d\n", sig);
