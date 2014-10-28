@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <telos/process.h>
 
@@ -139,6 +140,29 @@ static void sigaction_test(void)
 		puts("FAIL: rejected valid signo");
 }
 
+static void child_proc(void)
+{
+	struct timespec t = {
+		.tv_sec = 0,
+		.tv_nsec = 100000000,
+	};
+	printf("Kill m");
+	for (;;) {
+		putchar('e');
+		nanosleep(&t, NULL);
+	}
+}
+
+static void sigkill_test(void)
+{
+	pid_t child;
+	if (!(child = fork()))
+		child_proc();
+	sleep(1);
+	kill(child, SIGKILL);
+	printf("\nKilled child\n");
+}
+
 int main(void)
 {
 	sigset_t mask;
@@ -152,6 +176,7 @@ int main(void)
 	sigprocmask_test();
 	priority_test();
 	sigaction_test();
+	sigkill_test();
 
 	return 0;
 }

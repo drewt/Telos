@@ -61,13 +61,12 @@ static inline struct pcb *get_free_pcb(void)
 	int i;
 	struct pcb *p;
 
-	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
+	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_DEAD; i++)
 		/* nothing */;
 	if (i == PT_SIZE)
 		return NULL;
 
 	p = &proctab[i];
-	p->sig_pending = 0;
 	p->t_alarm.flags = 0;
 	p->t_sleep.flags = 0;
 	p->timestamp = tick_count;
@@ -83,14 +82,7 @@ static inline struct pcb *get_free_pcb(void)
 
 static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 {
-	/* init signal data */
-	p->sig_accept  = 0;
-	p->sig_ignore  = ~0;
-	for (int i = 0; i < _TELOS_SIGMAX; i++) {
-		p->sigactions[i] = default_sigactions[i];
-		if (default_sigactions[i].sa_handler != SIG_IGN)
-			p->sig_accept |= 1 << i;
-	}
+	sig_init(&p->sig);
 
 	/* init file data */
 	p->filp[0] = &stdin_file;
@@ -127,10 +119,7 @@ static struct pcb *pcb_clone(struct pcb *src)
 	p->ksp = src->ksp;
 	p->ifp = src->ifp;
 
-	p->sig_accept = src->sig_accept;
-	p->sig_ignore = src->sig_ignore;
-	for (int i = 0; i < _TELOS_SIGMAX; i++)
-		p->sigactions[i] = src->sigactions[i];
+	sig_clone(&p->sig, &src->sig);
 
 	for (int i = 0; i < NR_FILES; i++)
 		if ((p->filp[i] = src->filp[i]))
@@ -258,6 +247,7 @@ long sys_execve(const char *pathname, char **argv, char **envp)
 		return -EACCES;
 
 	argc = copy_args(argv);
+	sig_exec(&current->sig);
 
 	current->ifp = (char*)current->mm.kernel_stack->end - 16;
 	current->esp = (char*)current->ifp - sizeof(struct ucontext);
@@ -302,23 +292,20 @@ long sys_yield(void)
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Stop the current process and free all resources associated with it */
-//-----------------------------------------------------------------------------
-long sys_exit(int status)
+void do_exit(struct pcb *p, int status)
 {
-	struct pcb		*pit;
-	struct mem_header	*hit;
+	struct pcb *pit;
+	struct mem_header *hit;
 
 	// TODO: see what POSIX requires vis-a-vis process data in handler
-	pit = &proctab[PT_INDEX(current->parent_pid)];
+	pit = &proctab[PT_INDEX(p->parent_pid)];
 	__kill(pit, SIGCHLD);
 
 	/* free memory allocated to process */
-	dequeue_iterate (hit, struct mem_header, chain, &current->mm.kheap)
+	dequeue_iterate(hit, struct mem_header, chain, &current->mm.kheap)
 		kfree(hit->data);
 
-	current->state = STATE_STOPPED;
+	current->state = STATE_DEAD;
 
 	#define CLEAR_MSG_QUEUE(q)			\
 	dequeue_iterate (pit, struct pcb, chain, (q)) {	\
@@ -335,7 +322,14 @@ long sys_exit(int status)
 
 	del_pgdir(current->mm.pgdir);
 	mm_fini(&current->mm);
+}
 
+/*-----------------------------------------------------------------------------
+ * Stop the current process and free all resources associated with it */
+//-----------------------------------------------------------------------------
+long sys_exit(int status)
+{
+	do_exit(current, status);
 	new_process();
 	return 0;
 }

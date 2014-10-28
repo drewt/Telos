@@ -48,14 +48,15 @@
 
 /* process status codes */
 enum {
-	STATE_STOPPED		= 0,
-	STATE_RUNNING		= 1 << 1,
-	STATE_READY		= 1 << 2,
-	STATE_BLOCKED		= 1 << 3,
-	STATE_SIGWAIT		= 1 << 4,
-	STATE_SIGSUSPEND	= 1 << 5,
-	STATE_SLEEPING		= 1 << 6,
-	STATE_NASCENT		= 1 << 7
+	STATE_DEAD       = 0,
+	STATE_RUNNING    = 1 << 1,
+	STATE_READY      = 1 << 2,
+	STATE_BLOCKED    = 1 << 3,
+	STATE_SIGWAIT    = 1 << 4,
+	STATE_SIGSUSPEND = 1 << 5,
+	STATE_SLEEPING   = 1 << 6,
+	STATE_NASCENT    = 1 << 7,
+	STATE_STOPPED    = 1 << 8,
 };
 
 struct pbuf {
@@ -84,11 +85,7 @@ struct pcb {
 	struct list_head posix_timers;
 	timer_t		posix_timer_id;
 	/* signals */
-	struct sigaction sigactions[_TELOS_SIGMAX];	// signal handlers
-	struct siginfo   siginfos[_TELOS_SIGMAX];	// signal information
-	u32		sig_pending;	// bitmask for pending signals
-	u32		sig_accept;	// bitmask for accepted signals
-	u32		sig_ignore;	// bitmask for ignored signals
+	struct sig_struct sig;
 	/* message passing IPC */
 	struct pbuf	pbuf;		// saved buffer
 	struct pbuf	reply_blk;
@@ -117,7 +114,6 @@ _Static_assert(offsetof(struct mm_struct, pgdir) == 0,
 		"Misaligned PCB member: pgdir");
 
 extern struct pcb proctab[];
-extern const struct sigaction default_sigactions[_TELOS_SIGMAX];
 
 int create_user_process(void(*func)(void*), void *arg, unsigned long flags);
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags);

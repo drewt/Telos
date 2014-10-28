@@ -67,7 +67,6 @@ long sys_alarm(unsigned long ms);
 long sig_restore(struct ucontext *cx);
 long sys_sigaction(int sig, struct sigaction *act,
 		struct sigaction *oact);
-long sys_signal(int sig, void(*func)(int));
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset);
 long sys_kill(pid_t pid, int sig);
 long sys_sigqueue(pid_t pid, int sig, const union sigval value);

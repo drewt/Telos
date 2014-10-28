@@ -51,19 +51,20 @@ enum sig_nums {
 	SIGURG,
 	SIGVTALRM,
 	SIGXCPU,
+	SIGXFSZ,
 	SIGSTOP,
 	SIGKILL,
 	_TELOS_SIGMAX
 };
 
 enum {
-	SA_NOCLDSTOP	= 1,
-	SA_ONSTACK	= 1 << 1,
-	SA_RESETHAND	= 1 << 2,
-	SA_RESTART	= 1 << 3,
-	SA_SIGINFO	= 1 << 4,
-	SA_NOCLDWAIT	= 1 << 5,
-	SA_NODEFER	= 1 << 6
+	SA_NOCLDSTOP = 1,
+	SA_ONSTACK   = 1 << 1,
+	SA_RESETHAND = 1 << 2,
+	SA_RESTART   = 1 << 3,
+	SA_SIGINFO   = 1 << 4,
+	SA_NOCLDWAIT = 1 << 5,
+	SA_NODEFER   = 1 << 6,
 };
 
 enum {
@@ -128,6 +129,16 @@ static inline int sigismember(const sigset_t *set, int signum)
 }
 
 #ifdef __KERNEL__
+
+struct sig_struct {
+	sigset_t pending;
+	sigset_t mask;
+	struct sigaction actions[_TELOS_SIGMAX];
+	struct siginfo infos[_TELOS_SIGMAX];
+};
+void sig_init(struct sig_struct *sig);
+void sig_clone(struct sig_struct *dst, struct sig_struct *src);
+void sig_exec(struct sig_struct *sig);
 
 static inline int signo_valid(int signo)
 {

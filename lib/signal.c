@@ -31,7 +31,16 @@ int sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 //-----------------------------------------------------------------------------
 void(*signal(int sig, void(*func)(int)))(int)
 {
-	return (void(*)(int)) syscall2(SYS_SIGNAL, (void*) sig, func);
+	struct sigaction oact;
+	struct sigaction act = {
+		.sa_handler = func,
+		.sa_flags = 0,
+		.sa_mask = 0,
+	};
+	int rv = sigaction(sig, &act, &oact);
+	if (rv < 0)
+		return SIG_ERR;
+	return oact.sa_handler;
 }
 
 /*-----------------------------------------------------------------------------
@@ -67,5 +76,3 @@ int sigwait(void)
 {
 	return syscall0(SYS_SIGWAIT);
 }
-
-
