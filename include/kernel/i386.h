@@ -46,6 +46,10 @@ struct gp_regs {
 	unsigned long eax;
 	unsigned long ebp;
 	unsigned long esp;
+	unsigned long ds;
+	unsigned long es;
+	unsigned long fs;
+	unsigned long gs;
 	unsigned long stack[];
 };
 
@@ -211,6 +215,11 @@ static inline void put_iret_uframe(struct ucontext *f, unsigned long eip,
 	f->eflags   = EFLAGS_IOPL(0) | EFLAGS_IF;
 	f->iret_esp = esp;
 	f->iret_ss  = SEG_UDATA | 3;
+
+	f->reg.ds = SEG_UDATA | 3;
+	f->reg.es = SEG_UDATA | 3;
+	f->reg.fs = SEG_UDATA | 3;
+	f->reg.gs = SEG_UDATA | 3;
 }
 
 static inline void put_iret_kframe(struct kcontext *f, unsigned long eip)
@@ -218,12 +227,17 @@ static inline void put_iret_kframe(struct kcontext *f, unsigned long eip)
 	f->iret_eip = eip;
 	f->iret_cs  = SEG_KCODE;
 	f->eflags   = EFLAGS_IOPL(3) | EFLAGS_IF;
+
+	f->reg.ds = SEG_KDATA;
+	f->reg.es = SEG_KDATA;
+	f->reg.fs = SEG_KDATA;
+	f->reg.gs = SEG_KDATA;
 }
 
 extern void gdt_install(void);
 extern void idt_install(void);
 extern void set_gate(unsigned int num, unsigned long handler,
-		unsigned short selector);
+		unsigned short selector, unsigned int dpl);
 extern void pic_init(u16 off1, u16 off2);
 extern void enable_irq(unsigned char irq, bool disable);
 extern void pic_eoi(void);

@@ -20,6 +20,10 @@
 	movw reg, %gs
 
 #define SAVE_ALL	\
+	pushl %gs;	\
+	pushl %fs;	\
+	pushl %es;	\
+	pushl %ds;	\
 	pushl %ebp;	\
 	pushl %ebp;	\
 	pushl %eax;	\
@@ -38,12 +42,25 @@
 	popl %eax;	\
 	popl %ebp;	\
 	popl %ebp;	\
+	popl %ds;	\
+	popl %es;	\
+	popl %fs;	\
+	popl %gs;	\
 
 #.set EAX, 0x1C
 .set EAX, 0x14
 
 .global switch_to
 .global syscall_entry
+.global schedule_entry
+
+# entry point for the schedule() interrupt
+schedule_entry:
+	SAVE_ALL
+	movl current, %ebx
+	movl %esp,    PCB_ESP(%ebx)
+	call _schedule
+	jmp  _switch_to
 
 ISR_ENTRY(pgf_entry,   EXN_PF)
 ISR_ENTRY(fpe_entry,   EXN_FPE)
@@ -53,7 +70,6 @@ ISR_ENTRY(kbd_entry,   INTR_KBD)
 syscall_entry:
 	SAVE_ALL
 common_isr:
-	SET_SEGS(SEG_KDATA, %bx)
 	movl %esp,          %ecx
 	movl current,       %ebx
 	movl PCB_PID(%ebx), %edi
@@ -77,16 +93,10 @@ __switch_to:
 	movl PCB_ESP(%eax), %esp
 	movl PCB_IFP(%eax), %ebx
 	movl PCB_RC(%eax),  %edx
-	movl PCB_FLG(%eax), %eax
-	and  $PFLAG_SUPER,  %eax
 
 	movl %edx,          EAX(%esp)
 	movl $(tss + 4),    %ecx
 	movl %ebx,          (%ecx)
-
-	cmp  $0,            %eax
-	jne  skip_seg_set
-	SET_SEGS(SEG_UDATA | 3, %ax)
 skip_seg_set:
 	RESTORE_ALL
 	iret
@@ -95,3 +105,4 @@ skip_seg_set:
 switch_to:
 	movl 0x4(%esp), %eax
 	jmp  _switch_to
+

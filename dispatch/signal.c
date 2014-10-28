@@ -145,7 +145,7 @@ static void place_sig_frame(struct ucontext *sig_cx, int sig_no)
 
 static inline struct ucontext *frame_pos(ulong old_esp)
 {
-	return (struct ucontext*) ((ulong*)old_esp - 20);
+	return (struct ucontext*) ((ulong*)old_esp - 30);
 }
 
 static int send_signal_user(int sig_no)

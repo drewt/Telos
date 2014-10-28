@@ -41,6 +41,7 @@ _Noreturn void switch_to(struct pcb *p);
 void dispatch(ulong call, struct sys_args *args);
 void ready(struct pcb *p);
 void new_process(void);
+void schedule(void);
 
 void __kill(struct pcb *p, int sig_no);
 

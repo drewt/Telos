@@ -38,13 +38,13 @@ struct idt_entry {
 
 struct idt_entry idt[256];
 
-#define IDT_GATE(num,handler,selector)		\
+#define IDT_GATE(num,handler,selector,priv)	\
 {						\
 	.off_low	= handler,		\
 	.selector	= selector,		\
 	.zero		= 0,			\
 	.type		= INTR_GATE,		\
-	.dpl		= 3,			\
+	.dpl		= priv,			\
 	.present	= 1,			\
 	.off_high	= handler >> 16		\
 }
@@ -53,9 +53,9 @@ struct idt_entry idt[256];
  * Installs a trap gate at vector [num] with the given handler */
 //-----------------------------------------------------------------------------
 void set_gate(unsigned int num, unsigned long handler,
-		unsigned short selector)
+		unsigned short selector, unsigned int dpl)
 {
-	idt[num] = (struct idt_entry) IDT_GATE(num, handler, selector);
+	idt[num] = (struct idt_entry) IDT_GATE(num, handler, selector, dpl);
 }
 
 /*-----------------------------------------------------------------------------
@@ -66,7 +66,7 @@ void idt_install(void)
 {
 	memset(idt, 0, sizeof(struct idt_entry) * 256);
 	for (int i = 0; i < 48; i++)
-		set_gate(i, (unsigned long) int_errs[i], SEG_KCODE);
+		set_gate(i, (unsigned long) int_errs[i], SEG_KCODE, 3);
 	load_idt(&idt, sizeof(struct idt_entry) * 256);
 }
 
@@ -76,13 +76,15 @@ void pgf_entry(void);
 void timer_entry(void);
 void kbd_entry(void);
 void syscall_entry(void);
+void schedule_entry(void);
 
 void isr_init(void)
 {
-	set_gate(EXN_DBZ,	(ulong) fpe_entry,	SEG_KCODE);
-	set_gate(EXN_ILLOP,	(ulong) ill_entry,	SEG_KCODE);
-	set_gate(EXN_PF,	(ulong) pgf_entry,	SEG_KCODE);
-	set_gate(INTR_TIMER,	(ulong) timer_entry,	SEG_KCODE);
-	set_gate(INTR_KBD,	(ulong) kbd_entry,	SEG_KCODE);
-	set_gate(INTR_SYSCALL,	(ulong) syscall_entry,	SEG_KCODE);
+	set_gate(EXN_DBZ,       (ulong) fpe_entry,      SEG_KCODE, 3);
+	set_gate(EXN_ILLOP,     (ulong) ill_entry,      SEG_KCODE, 3);
+	set_gate(EXN_PF,        (ulong) pgf_entry,      SEG_KCODE, 3);
+	set_gate(INTR_TIMER,    (ulong) timer_entry,    SEG_KCODE, 3);
+	set_gate(INTR_KBD,      (ulong) kbd_entry,      SEG_KCODE, 3);
+	set_gate(INTR_SYSCALL,  (ulong) syscall_entry,  SEG_KCODE, 3);
+	set_gate(INTR_SCHEDULE, (ulong) schedule_entry, SEG_KCODE, 0);
 }
