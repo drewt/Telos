@@ -38,7 +38,6 @@ extern int root_pid;
 
 _Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
-void dispatch(ulong call, struct sys_args *args);
 void ready(struct pcb *p);
 void new_process(void);
 void schedule(void);

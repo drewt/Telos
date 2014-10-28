@@ -29,6 +29,8 @@ extern void tick(void);
 struct pcb *current = NULL;	/* the running process */
 static LIST_HEAD(ready_queue); 	/* queue of ready processes */
 
+const int NR_SYSCALLS = SYSCALL_MAX;
+
 #define next() (list_dequeue(&ready_queue, struct pcb, chain))
 
 struct sysaction {
@@ -36,103 +38,52 @@ struct sysaction {
 	int nargs;
 };
 
-/* table of actions to be taken for interrupts/system calls */
-static struct sysaction sysactions[SYSCALL_MAX] = {
-/*	INDEX			ACTION			NR ARGS */
-	[EXN_FPE]		= { (isr_t) exn_fpe,		0 },
-	[EXN_ILL]		= { (isr_t) exn_ill_instr,	0 },
-	[EXN_PF]		= { (isr_t) exn_page_fault,	0 },
-	[INTR_TIMER]		= { (isr_t) tick,		0 },
-	[INTR_KBD]		= { (isr_t) int_keyboard,	0 },
-	[SYS_CREATE]		= { (isr_t) sys_create,		2 },
-	[SYS_FCREATE]		= { (isr_t) sys_fcreate,	1 },
-	[SYS_EXECVE]		= { (isr_t) sys_execve,		3 },
-	[SYS_FORK]		= { (isr_t) sys_fork,		0 },
-	[SYS_YIELD]		= { (isr_t) sys_yield,		0 },
-	[SYS_STOP]		= { (isr_t) sys_exit,		1 },
-	[SYS_GETPID]		= { (isr_t) sys_getpid,		0 },
-	[SYS_SLEEP]		= { (isr_t) sys_sleep,		1 },
-	[SYS_SIGRETURN]		= { (isr_t) sig_restore,	1 },
-	[SYS_KILL]		= { (isr_t) sys_kill,		2 },
-	[SYS_SIGQUEUE]		= { (isr_t) sys_sigqueue,	3 },
-	[SYS_SIGWAIT]		= { (isr_t) sys_sigwait,	0 },
-	[SYS_SIGACTION]		= { (isr_t) sys_sigaction,	4 },
-	[SYS_SIGMASK]		= { (isr_t) sys_sigprocmask,	3 },
-	[SYS_OPEN]		= { (isr_t) sys_open,		3 },
-	[SYS_CLOSE]		= { (isr_t) sys_close,		1 },
-	[SYS_READ]		= { (isr_t) sys_read,		3 },
-	[SYS_WRITE]		= { (isr_t) sys_write,		3 },
-	[SYS_LSEEK]		= { (isr_t) sys_lseek,		3 },
-	[SYS_READDIR]		= { (isr_t) sys_readdir,	3 },
-	[SYS_IOCTL]		= { (isr_t) sys_ioctl,		3 },
-	[SYS_MKNOD]		= { (isr_t) sys_mknod,		3 },
-	[SYS_MKDIR]		= { (isr_t) sys_mkdir,		2 },
-	[SYS_RMDIR]		= { (isr_t) sys_rmdir,		1 },
-	[SYS_CHDIR]		= { (isr_t) sys_chdir,		1 },
-	[SYS_LINK]		= { (isr_t) sys_link,		2 },
-	[SYS_UNLINK]		= { (isr_t) sys_unlink,		1 },
-	[SYS_RENAME]		= { (isr_t) sys_rename,		2 },
-	[SYS_MOUNT]		= { (isr_t) sys_mount,          5 },
-	[SYS_UMOUNT]		= { (isr_t) sys_umount,		1 },
-	[SYS_STAT]		= { (isr_t) sys_stat,		2 },
-	[SYS_ALARM]		= { (isr_t) sys_alarm,		1 },
-	[SYS_SEND]		= { (isr_t) sys_send,		5 },
-	[SYS_RECV]		= { (isr_t) sys_recv,		3 },
-	[SYS_REPLY]		= { (isr_t) sys_reply,		3 },
-	[SYS_TIMER_CREATE]	= { (isr_t) sys_timer_create,	3 },
-	[SYS_TIMER_DELETE]	= { (isr_t) sys_timer_delete,	1 },
-	[SYS_TIMER_GETTIME]	= { (isr_t) sys_timer_gettime,	2 },
-	[SYS_TIMER_SETTIME]	= { (isr_t) sys_timer_settime,	4 },
-	[SYS_TIME]		= { (isr_t) sys_time,		1 },
-	[SYS_CLOCK_GETRES]	= { (isr_t) sys_clock_getres,	2 },
-	[SYS_CLOCK_GETTIME]	= { (isr_t) sys_clock_gettime,	2 },
-	[SYS_CLOCK_SETTIME]	= { (isr_t) sys_clock_settime,	2 },
-	[SYS_SBRK]		= { (isr_t) sys_sbrk,		2 },
+isr_t systab[SYSCALL_MAX] = {
+	[SYS_CREATE]		= (isr_t) sys_create,
+	[SYS_FCREATE]		= (isr_t) sys_fcreate,
+	[SYS_EXECVE]		= (isr_t) sys_execve,
+	[SYS_FORK]		= (isr_t) sys_fork,
+	[SYS_YIELD]		= (isr_t) sys_yield,
+	[SYS_STOP]		= (isr_t) sys_exit,
+	[SYS_GETPID]		= (isr_t) sys_getpid,
+	[SYS_SLEEP]		= (isr_t) sys_sleep,
+	[SYS_SIGRETURN]		= (isr_t) sig_restore,
+	[SYS_KILL]		= (isr_t) sys_kill,
+	[SYS_SIGQUEUE]		= (isr_t) sys_sigqueue,
+	[SYS_SIGWAIT]		= (isr_t) sys_sigwait,
+	[SYS_SIGACTION]		= (isr_t) sys_sigaction,
+	[SYS_SIGMASK]		= (isr_t) sys_sigprocmask,
+	[SYS_OPEN]		= (isr_t) sys_open,
+	[SYS_CLOSE]		= (isr_t) sys_close,
+	[SYS_READ]		= (isr_t) sys_read,
+	[SYS_WRITE]		= (isr_t) sys_write,
+	[SYS_LSEEK]		= (isr_t) sys_lseek,
+	[SYS_READDIR]		= (isr_t) sys_readdir,
+	[SYS_IOCTL]		= (isr_t) sys_ioctl,
+	[SYS_MKNOD]		= (isr_t) sys_mknod,
+	[SYS_MKDIR]		= (isr_t) sys_mkdir,
+	[SYS_RMDIR]		= (isr_t) sys_rmdir,
+	[SYS_CHDIR]		= (isr_t) sys_chdir,
+	[SYS_LINK]		= (isr_t) sys_link,
+	[SYS_UNLINK]		= (isr_t) sys_unlink,
+	[SYS_RENAME]		= (isr_t) sys_rename,
+	[SYS_MOUNT]		= (isr_t) sys_mount,
+	[SYS_UMOUNT]		= (isr_t) sys_umount,
+	[SYS_STAT]		= (isr_t) sys_stat,
+	[SYS_ALARM]		= (isr_t) sys_alarm,
+	[SYS_SEND]		= (isr_t) sys_send,
+	[SYS_RECV]		= (isr_t) sys_recv,
+	[SYS_REPLY]		= (isr_t) sys_reply,
+	[SYS_TIMER_CREATE]	= (isr_t) sys_timer_create,
+	[SYS_TIMER_DELETE]	= (isr_t) sys_timer_delete,
+	[SYS_TIMER_GETTIME]	= (isr_t) sys_timer_gettime,
+	[SYS_TIMER_SETTIME]	= (isr_t) sys_timer_settime,
+	[SYS_TIME]		= (isr_t) sys_time,
+	[SYS_CLOCK_GETRES]	= (isr_t) sys_clock_getres,
+	[SYS_CLOCK_GETTIME]	= (isr_t) sys_clock_gettime,
+	[SYS_CLOCK_SETTIME]	= (isr_t) sys_clock_settime,
+	[SYS_SBRK]		= (isr_t) sys_sbrk,
 };
-
-/*-----------------------------------------------------------------------------
- * The dispatcher.  Passes control to the appropriate routines to handle 
- * interrupts, system calls, and other events */
-//*----------------------------------------------------------------------------
-void dispatch(ulong call, struct sys_args *args)
-{
-	struct pcb *p = current;
-
-	if (call < SYSCALL_MIN && sysactions[call].func != NULL) {
-		sysactions[call].func();
-	} else if (call < SYSCALL_MAX && sysactions[call].func != NULL) {
-
-		p = current;
-		switch (sysactions[call].nargs) {
-		case 0:
-			p->rc = sysactions[call].func();
-			break;
-		case 1:
-			p->rc = sysactions[call].func(args->arg0);
-			break;
-		case 2:
-			p->rc = sysactions[call].func(args->arg0,
-					args->arg1);
-			break;
-		case 3:
-			p->rc = sysactions[call].func(args->arg0,
-					args->arg1, args->arg2);
-			break;
-		case 4:
-			p->rc = sysactions[call].func(args->arg0,
-					args->arg1, args->arg2,
-					args->arg3);
-			break;
-		case 5:
-			p->rc = sysactions[call].func(args->arg0,
-					args->arg1, args->arg2,
-					args->arg3, args->arg4);
-			break;
-		}
-	} else {
-		__kill(current, SIGSYS);
-	}
-}
 
 _Noreturn void kernel_start(void)
 {

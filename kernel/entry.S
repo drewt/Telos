@@ -4,13 +4,15 @@
 #include <kernel/interrupt.h>
 #include <kernel/process.h>
 
-#define ISR_ENTRY(entry, ident) 	\
-	.global entry;			\
-	entry:	 			\
-		SAVE_ALL;		\
-		mov   %eax,   %edx;	\
-		movl  $ident, %eax;	\
-		jmp   common_isr
+#define ISR_ENTRY(entry, handler)			\
+	.global entry;					\
+	entry:	SAVE_ALL;				\
+		movl current,       %ebx;		\
+		movl %eax,          PCB_RC(%ebx);	\
+		movl %esp,          PCB_ESP(%ebx);	\
+		movl PCB_PID(%ebx), %edi;		\
+		call handler;				\
+		jmp  return_from_interrupt
 
 #define SET_SEGS(val, reg)	\
 	movw $val, reg;		\
@@ -31,7 +33,7 @@
 	pushl %edi;	\
 	pushl %edx;	\
 	pushl %ecx;	\
-	pushl %ebx;	\
+	pushl %ebx
 
 #define RESTORE_ALL	\
 	popl %ebx;	\
@@ -45,16 +47,13 @@
 	popl %ds;	\
 	popl %es;	\
 	popl %fs;	\
-	popl %gs;	\
+	popl %gs
 
-#.set EAX, 0x1C
 .set EAX, 0x14
 
-.global switch_to
-.global syscall_entry
-.global schedule_entry
 
 # entry point for the schedule() interrupt
+.global schedule_entry
 schedule_entry:
 	SAVE_ALL
 	movl current, %ebx
@@ -62,23 +61,25 @@ schedule_entry:
 	call _schedule
 	jmp  _switch_to
 
-ISR_ENTRY(pgf_entry,   EXN_PF)
-ISR_ENTRY(fpe_entry,   EXN_FPE)
-ISR_ENTRY(ill_entry,   EXN_ILL)
-ISR_ENTRY(timer_entry, INTR_TIMER)
-ISR_ENTRY(kbd_entry,   INTR_KBD)
+ISR_ENTRY(pgf_entry,   exn_page_fault)
+ISR_ENTRY(fpe_entry,   exn_fpe)
+ISR_ENTRY(ill_entry,   exn_ill_instr)
+ISR_ENTRY(timer_entry, tick)
+ISR_ENTRY(kbd_entry,   int_keyboard)
+
+.global syscall_entry
 syscall_entry:
 	SAVE_ALL
-common_isr:
-	movl %esp,          %ecx
 	movl current,       %ebx
 	movl PCB_PID(%ebx), %edi
-	movl %edx,          PCB_RC(%ebx)
-	movl %ecx,          PCB_ESP(%ebx)
-	subl $8,            %esp
-	movl %ecx,          4(%esp)
-	movl %eax,          (%esp)
-	call dispatch
+	movl $-1,           PCB_RC(%ebx)
+	cmpl NR_SYSCALLS,   %eax
+	jae  return_from_interrupt
+	movl %esp,          PCB_ESP(%ebx)
+	call *systab(,%eax,4)
+	movl %eax,          PCB_RC(%ebx)
+
+return_from_interrupt:
 	movl current,       %eax
 	movl PCB_PID(%eax), %esi
 	cmp  %edi,          %esi
@@ -102,6 +103,7 @@ skip_seg_set:
 	iret
 
 # for C
+.global switch_to
 switch_to:
 	movl 0x4(%esp), %eax
 	jmp  _switch_to

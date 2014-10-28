@@ -22,11 +22,8 @@
 #define INTR_SYSCALL 0x80
 #endif
 
-#define SYSCALL_MIN 48
-
-enum syscall_id {
-	/* 0-47 reserved for hardware interrupts */
-	SYS_CREATE = SYSCALL_MIN,
+enum {
+	SYS_CREATE,
 	SYS_YIELD,
 	SYS_STOP,
 	SYS_GETPID,
@@ -71,16 +68,6 @@ enum syscall_id {
 	SYS_EXECVE,
 	SYS_FCREATE,
 	SYSCALL_MAX
-};
-
-/* structure of arguments on the stack during a system call */
-struct sys_args {
-	ulong arg0;
-	ulong arg1;
-	ulong arg2;
-	ulong arg3;
-	ulong arg4;
-	ulong call;
 };
 
 static inline int syscall0(int call)
