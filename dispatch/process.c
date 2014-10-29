@@ -71,9 +71,6 @@ static inline struct pcb *get_free_pcb(void)
 	p->t_sleep.flags = 0;
 	p->timestamp = tick_count;
 	p->state = STATE_NASCENT;
-	INIT_LIST_HEAD(&p->send_q);
-	INIT_LIST_HEAD(&p->recv_q);
-	INIT_LIST_HEAD(&p->repl_q);
 	INIT_LIST_HEAD(&p->mm.map);
 	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->posix_timers);
@@ -271,24 +268,23 @@ long sys_fork(void)
 	int rc;
 	struct pcb *p;
 
+	// set return value to zero for child
+	((struct ucontext*)current->esp)->reg.eax = 0;
+
 	if (!(p = pcb_clone(current)))
 		return -EAGAIN;
 
 	if ((rc = mm_clone(&p->mm, &current->mm)) < 0)
 		return rc;
 
-	p->rc = 0;
 	ready(p);
 	return p->pid;
 }
 
-/*-----------------------------------------------------------------------------
- * Yeild control to another process */
-//-----------------------------------------------------------------------------
 long sys_yield(void)
 {
 	ready(current);
-	new_process();
+	schedule();
 	return 0;
 }
 
@@ -301,20 +297,9 @@ void do_exit(struct pcb *p, int status)
 	pit = &proctab[PT_INDEX(p->parent_pid)];
 	__kill(pit, SIGCHLD);
 
-	/* free memory allocated to process */
+	// free memory allocated to process
 	dequeue_iterate(hit, struct mem_header, chain, &current->mm.kheap)
 		kfree(hit->data);
-
-	current->state = STATE_DEAD;
-
-	#define CLEAR_MSG_QUEUE(q)			\
-	dequeue_iterate (pit, struct pcb, chain, (q)) {	\
-		pit->rc = SYSERR;			\
-		ready(pit);				\
-	}
-	CLEAR_MSG_QUEUE(&current->send_q)
-	CLEAR_MSG_QUEUE(&current->recv_q)
-	CLEAR_MSG_QUEUE(&current->repl_q)
 
 	for (int i = 0; i < NR_FILES; i++)
 		if (current->filp[i] != NULL)
@@ -322,21 +307,16 @@ void do_exit(struct pcb *p, int status)
 
 	del_pgdir(current->mm.pgdir);
 	mm_fini(&current->mm);
+	zombie(p);
 }
 
-/*-----------------------------------------------------------------------------
- * Stop the current process and free all resources associated with it */
-//-----------------------------------------------------------------------------
 long sys_exit(int status)
 {
 	do_exit(current, status);
-	new_process();
+	schedule();
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Return the current process's pid */
-//-----------------------------------------------------------------------------
 long sys_getpid(void)
 {
 	return current->pid;

@@ -57,6 +57,7 @@ enum {
 	STATE_SLEEPING   = 1 << 6,
 	STATE_NASCENT    = 1 << 7,
 	STATE_STOPPED    = 1 << 8,
+	STATE_ZOMBIE     = 1 << 9,
 };
 
 struct pbuf {
@@ -88,10 +89,6 @@ struct pcb {
 	struct sig_struct sig;
 	/* message passing IPC */
 	struct pbuf	pbuf;		// saved buffer
-	struct pbuf	reply_blk;
-	struct list_head send_q;	// processes waiting to send
-	struct list_head recv_q;	// processes waiting to receive
-	struct list_head repl_q;	// processes waiting for a reply
 	/* vfs */
 	struct file *filp[FDT_SIZE];
 	struct inode *pwd;

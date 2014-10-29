@@ -86,5 +86,4 @@ void isr_init(void)
 	set_gate(INTR_TIMER,    (ulong) timer_entry,    SEG_KCODE, 3);
 	set_gate(INTR_KBD,      (ulong) kbd_entry,      SEG_KCODE, 3);
 	set_gate(INTR_SYSCALL,  (ulong) syscall_entry,  SEG_KCODE, 3);
-	set_gate(INTR_SCHEDULE, (ulong) schedule_entry, SEG_KCODE, 0);
 }

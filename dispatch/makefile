@@ -1,4 +1,4 @@
-objects = dispatch.o mem.o msg.o process.o signal.o time.o
+objects = dispatch.o mem.o process.o signal.o time.o
 clean = $(objects)
 
 all: $(objects)

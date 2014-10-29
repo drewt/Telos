@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <usr/test.h>
-
 static void strcmp_test(void)
 {
 	int error = 0;

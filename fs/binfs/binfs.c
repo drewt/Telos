@@ -33,12 +33,9 @@ extern PROGRAM(eventtest);
 extern PROGRAM(jmptest);
 extern PROGRAM(kbdtest);
 extern PROGRAM(memtest);
-extern PROGRAM(msgtest);
 extern PROGRAM(proctest);
 extern PROGRAM(sigtest);
 extern PROGRAM(strtest);
-extern PROGRAM(echoserver);
-extern PROGRAM(echoclient);
 extern PROGRAM(multi);
 
 extern PROGRAM(tsh);
@@ -72,12 +69,9 @@ static struct program progtab[] = {
 	BINENT(jmptest,     "jmptest"),
 	BINENT(kbdtest,     "kbdtest"),
 	BINENT(memtest,     "memtest"),
-	BINENT(msgtest,     "msgtest"),
 	BINENT(proctest,    "proctest"),
 	BINENT(sigtest,     "sigtest"),
 	BINENT(strtest,     "strtest"),
-	BINENT(echoserver,  "echoserver"),
-	BINENT(echoclient,  "echoclient"),
 	BINENT(multi,       "multi"),
 
 	BINENT(tsh,         "tsh"),

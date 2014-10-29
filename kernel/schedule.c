@@ -20,29 +20,53 @@
 #include <kernel/interrupt.h>
 #include <kernel/dispatch.h>
 
-/*
- * This function merely saves the current context on the stack, and then calls
- * _schedule().  This is accomplished with a software interrupt.  See
- * schedule_entry in entry.S for details.
- */
-void schedule(void)
+struct pcb *current = NULL;
+static LIST_HEAD(ready_queue);
+static LIST_HEAD(zombies);
+
+#define next() (list_dequeue(&ready_queue, struct pcb, chain))
+
+_Noreturn void kernel_start(void)
 {
-	void *esp = current->esp;
-	kprintf("saved esp=%p for %d\n", esp, current->pid);
-	asm volatile("int %[xnum]" : : [xnum] "i" (INTR_SCHEDULE) : );
-	kprintf("resetoring esp=%p\n", esp);
-	for(;;);
-	current->esp = esp;
+	current = next();
+	switch_to(current);
+}
+
+void ready(struct pcb *p)
+{
+	p->state = STATE_READY;
+	list_add_tail(&p->chain, &ready_queue);
+}
+
+void wake(struct pcb *p, long rc)
+{
+	p->rc = rc;
+	ready(p);
+}
+
+void zombie(struct pcb *p)
+{
+	p->state = STATE_ZOMBIE;
+	list_add_tail(&p->chain, &zombies);
+}
+
+static struct pcb *next_process(void)
+{
+	struct pcb *p = next();
+
+	// skip idle process if possible
+	if (p->pid == idle_pid && !list_empty(&ready_queue)) {
+		ready(p);
+		p = next();
+	}
+	return p;
 }
 
 /*
- * Choose a new process to run.
+ * Choose a new process to run.  This function is called from schedule()
+ * in entry.S.
  */
 struct pcb *_schedule(void)
 {
-	kprintf("new esp=%p for %d\n", current->esp, current->pid);
-	kprintf("eip=%p\n", (void*)((struct kcontext*)current->esp)->iret_eip);
-	new_process();
-	kprintf("switching to %d\n", current->pid);
-	return current;
+	return (current = next_process());
 }

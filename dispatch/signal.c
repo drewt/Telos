@@ -140,7 +140,7 @@ static void place_sig_frame(struct ucontext *sig_cx, int sig_no)
 		sig_cx->stack[9]  = info->si_band;
 		sig_cx->stack[10] = (ulong) info->si_value.sigval_ptr;
 	}
-	sig_cx->stack[11] = current->rc;
+	sig_cx->stack[11] = current->sig.mask;
 }
 
 static inline struct ucontext *frame_pos(ulong old_esp)
@@ -159,7 +159,6 @@ static int send_signal_user(int sig_no)
 
 	place_sig_frame(sig_frame, sig_no);
 
-	old_cx->reg.eax = current->sig.mask;
 	current->ifp = current->esp;
 	current->esp = sig_frame;
 	current->sig.mask = current->sig.mask & ~(act->sa_mask);
@@ -196,9 +195,9 @@ long sig_restore(struct ucontext *old_cx)
 	current->esp = old_cx;
 	current->ifp = old_cx + 1;
 
-	// restore old signal mask and return value
-	current->sig.mask = old_cx->reg.eax;
-	return frame_pos(old_cx->iret_esp)->stack[11];
+	// restore old signal mask
+	current->sig.mask = frame_pos(old_cx->iret_esp)->stack[11];
+	return 0;
 }
 
 /*-----------------------------------------------------------------------------
@@ -207,8 +206,7 @@ long sig_restore(struct ucontext *old_cx)
 long sys_sigwait(void)
 {
 	current->state = STATE_SIGWAIT;
-	new_process();
-	return 0;
+	return schedule();
 }
 
 static int verify_sigaction(struct sigaction *act)
@@ -299,17 +297,13 @@ void __kill(struct pcb *p, int sig_no)
 		p->sig.infos[sig_no].si_addr = (void*) cx->iret_eip;
 	}
 
-	/* ready process if it's blocked */
-	if (p->state == STATE_SIGWAIT) {
-		p->rc = sig_no;
-		ready(p);
-	} else if (p->state == STATE_BLOCKED) {
-		p->rc = -128;
-		ready(p);
-	} else if (p->state == STATE_SLEEPING) {
-		p->rc = ktimer_destroy(&p->t_sleep);
-		ready(p);
-	}
+	// wake process if it's blocked
+	if (p->state == STATE_SIGWAIT)
+		wake(p, sig_no);
+	else if (p->state == STATE_BLOCKED)
+		wake(p, -128);
+	else if (p->state == STATE_SLEEPING)
+		wake(p, ktimer_destroy(&p->t_sleep));
 }
 
 long sys_kill(pid_t pid, int sig)

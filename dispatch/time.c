@@ -63,9 +63,7 @@ static DEFINE_SLAB_CACHE(posix_timers_cachep, sizeof(struct posix_timer));
  */
 static void wake_action(void *data)
 {
-	struct pcb *p = (struct pcb*) data;
-	p->rc = 0;
-	ready(p);
+	wake(data, 0);
 }
 
 /*
@@ -85,8 +83,7 @@ long sys_sleep(unsigned long ticks)
 	current->state = STATE_SLEEPING;
 	ktimer_init(&current->t_sleep, wake_action, current, TF_STATIC);
 	ktimer_start(&current->t_sleep, ticks);
-	new_process();
-	return 0;
+	return schedule();
 }
 
 /*
@@ -326,7 +323,7 @@ void tick(void)
 	ktimers_tick();
 
 	/* choose new process to run */
-	ready(current);
-	new_process();
 	pic_eoi();
+	ready(current);
+	schedule();
 }

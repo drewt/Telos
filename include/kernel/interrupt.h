@@ -29,6 +29,5 @@
 #define EXN_FPE		EXN_DBZ
 #define EXN_ILL		EXN_ILLOP
 #define INTR_SYSCALL	0x80
-#define INTR_SCHEDULE   0x81
 
 #endif

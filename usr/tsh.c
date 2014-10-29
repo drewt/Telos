@@ -25,8 +25,6 @@
 #include <telos/process.h>
 #include <telos/console.h>
 
-#include <usr/test.h>
-
 #define IN_LEN   512
 #define MAX_ARGS 100
 
@@ -158,7 +156,6 @@ static int exec_with_prefix(const char *prefix, int argc, char *argv[])
 	strcpy(path, prefix);
 	strcat(path, argv[0]);
 	return execve(path, argv, NULL);
-	//return fcreate(path, argc, argv);
 }
 
 int main(int _argc, char *_argv[])
@@ -193,14 +190,8 @@ int main(int _argc, char *_argv[])
 			printf("tsh: %s: command not found\n", argv[0]);
 			exit(1);
 		}
-		/*if (fcreate(argv[0], argc, argv) > 0);
-		else if (exec_with_prefix("/bin/", argc, argv) > 0);
-		else {
-			printf("tsh: %s: command not found\n", argv[0]);
-			continue;
-		}*/
 
 		if (!bg)
-			for (sig = 0; sig != SIGCHLD; sig = sigwait());
+			while ((sig = sigwait()) != SIGCHLD);
 	}
 }

@@ -26,17 +26,7 @@ typedef long(*isr_t)();
 /* routines defined in other files */
 extern void tick(void);
 
-struct pcb *current = NULL;	/* the running process */
-static LIST_HEAD(ready_queue); 	/* queue of ready processes */
-
 const int NR_SYSCALLS = SYSCALL_MAX;
-
-#define next() (list_dequeue(&ready_queue, struct pcb, chain))
-
-struct sysaction {
-	isr_t func;
-	int nargs;
-};
 
 isr_t systab[SYSCALL_MAX] = {
 	[SYS_CREATE]		= (isr_t) sys_create,
@@ -71,9 +61,6 @@ isr_t systab[SYSCALL_MAX] = {
 	[SYS_UMOUNT]		= (isr_t) sys_umount,
 	[SYS_STAT]		= (isr_t) sys_stat,
 	[SYS_ALARM]		= (isr_t) sys_alarm,
-	[SYS_SEND]		= (isr_t) sys_send,
-	[SYS_RECV]		= (isr_t) sys_recv,
-	[SYS_REPLY]		= (isr_t) sys_reply,
 	[SYS_TIMER_CREATE]	= (isr_t) sys_timer_create,
 	[SYS_TIMER_DELETE]	= (isr_t) sys_timer_delete,
 	[SYS_TIMER_GETTIME]	= (isr_t) sys_timer_gettime,
@@ -84,33 +71,3 @@ isr_t systab[SYSCALL_MAX] = {
 	[SYS_CLOCK_SETTIME]	= (isr_t) sys_clock_settime,
 	[SYS_SBRK]		= (isr_t) sys_sbrk,
 };
-
-_Noreturn void kernel_start(void)
-{
-	current = next();
-	switch_to(current);
-}
-
-/*-----------------------------------------------------------------------------
- * Enqueues a process on the ready queue */
-//-----------------------------------------------------------------------------
-void ready(struct pcb *p)
-{
-	p->state = STATE_READY;
-	list_add_tail(&p->chain, &ready_queue);
-}
-
-/*-----------------------------------------------------------------------------
- * Selects a new process to run, choosing the idle process only if there are no
- * other processes ready to run */
-//-----------------------------------------------------------------------------
-void new_process(void)
-{
-	current = next();
-
-	/* skip idle process if possible */
-	if (current->pid == idle_pid && !list_empty(&ready_queue)) {
-		ready(current);
-		current = next();
-	}
-}

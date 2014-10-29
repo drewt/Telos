@@ -136,8 +136,7 @@ void int_keyboard(void)
 		goto end;
 
 	if ((con->flush = put_char(con, c)) && con->reading) {
-		con->reader->rc = send_to_reader(con);
-		ready(con->reader);
+		wake(con->reader, send_to_reader(con));
 
 		con->reader = list_dequeue(&con->work_q, struct pcb, chain);
 		if (con->reader) {
@@ -159,23 +158,20 @@ static ssize_t console_read(struct file *f, char *buf, size_t len)
 	if (con->reading) {
 		current->pbuf = (struct pbuf) { .buf = buf, .len = len };
 		list_add_tail(&current->chain, &con->work_q);
-		new_process();
-		return 0;
+	} else {
+		con->reader = current;
+		con->usr_buf = buf;
+		con->usr_buf_len = len;
+		con->usr_buf_next = 0;
+
+		/* data ready: copy to user */
+		if (con->flush)
+			return send_to_reader(con);
+
+		/* data not ready: block */
+		con->reading = true;
 	}
-
-	con->reader = current;
-	con->usr_buf = buf;
-	con->usr_buf_len = len;
-	con->usr_buf_next = 0;
-
-	/* data ready: copy to user */
-	if (con->flush)
-		return send_to_reader(con);
-
-	/* data not ready: block */
-	con->reading = true;
-	new_process();
-	return 0;
+	return schedule();
 }
 
 /*

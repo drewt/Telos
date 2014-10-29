@@ -39,8 +39,9 @@ extern int root_pid;
 _Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
 void ready(struct pcb *p);
-void new_process(void);
-void schedule(void);
+void zombie(struct pcb *p);
+void wake(struct pcb *p, long rc);
+long schedule(void);
 
 void __kill(struct pcb *p, int sig_no);
 
