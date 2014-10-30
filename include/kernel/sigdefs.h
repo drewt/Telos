@@ -18,14 +18,20 @@
 #ifndef _KERNEL_SIGDEFS_H_
 #define _KERNEL_SIGDEFS_H_
 
-#ifdef __KERNEL__
-#include <kernel/types.h>
-#else
-#include <stddef.h>
-typedef int pid_t;
-#endif
+#include <sys/type_macros.h>
 
-typedef unsigned long sigset_t;
+#ifndef _SIG_ATOMIC_T_DEFINED
+#define _SIG_ATOMIC_T_DEFINED
+typedef _SIG_ATOMIC_T_TYPE sig_atomic_t;
+#endif
+#ifndef _SIGSET_T_DEFINED
+#define _SIGSET_T_DEFINED
+typedef _SIGSET_T_TYPE sigset_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
 
 typedef struct sigstack {
 	int	ss_onstack;	// non-zero when signal stack is in use
@@ -61,12 +67,9 @@ struct sigaction {
 	union {
 		void(*sa_handler)(int);
 		void(*sa_sigaction)(int,siginfo_t*,void*);
-	} _u;
+	};
 	sigset_t	sa_mask;
 	int		sa_flags;
 };
-
-#define sa_handler   _u.sa_handler
-#define sa_sigaction _u.sa_sigaction
 
 #endif

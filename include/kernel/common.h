@@ -21,7 +21,7 @@
 #define __KERNEL__
 
 #include <stdarg.h>
-#include <kernel/types.h>
+#include <sys/types.h>
 #include <kernel/compiler.h>
 #include <errnodefs.h>
 

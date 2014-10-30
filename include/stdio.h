@@ -21,8 +21,28 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <sys/type_macros.h>
 
-#define EOF (-1)
+#ifndef EOF
+#define EOF _EOF_DEFN
+#endif
+
+#ifndef _FPOS_T_DEFINED
+#define _FPOS_T_DEFINED
+typedef _FPOS_T_TYPE fpos_t;
+#endif
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+typedef _OFF_T_TYPE off_t;
+#endif
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+typedef _SSIZE_T_TYPE ssize_t;
+#endif
 
 typedef struct {
 	int fd;

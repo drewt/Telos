@@ -20,8 +20,6 @@
 #define _TIME_H_
 
 #include <kernel/time.h>
-#include <stddef.h> /* NULL */
-#include <sys/types.h>
 
 struct sigevent;
 

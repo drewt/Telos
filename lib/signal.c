@@ -18,7 +18,8 @@
 #include <syscall.h>
 #include <signal.h>
 
-int sigaction(int sig, struct sigaction *act, struct sigaction *oact)
+int sigaction(int sig, struct sigaction *restrict act,
+		struct sigaction *restrict oact)
 {
 	return syscall3(SYS_SIGACTION, (void*) sig, act, oact);
 }

@@ -20,6 +20,12 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <sys/type_macros.h>
+
+#ifndef _LOCALE_T_DEFINED
+#define _LOCALE_T_DEFINED
+typedef _LOCALE_T_TYPE locale_t;
+#endif
 
 int memcmp(const void *s1, const void *s2, size_t n);
 void memcpy(void *restrict dest, const void *restrict src, size_t n);
