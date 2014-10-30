@@ -32,6 +32,18 @@
 
 extern void exit(int status);
 
+struct pcb proctab[PT_SIZE];
+
+static void proctab_init (void)
+{
+	for (int i = 0; i < PT_SIZE; i++) {
+		proctab[i].pid   = i - PT_SIZE;
+		proctab[i].state = PROC_DEAD;
+	}
+	proctab[0].pid = 0; // 0 is a reserved pid
+}
+EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
+
 #define STDIO_FILE(name) \
 	struct file name = { \
 		.f_count = 2, \
@@ -61,7 +73,7 @@ static inline struct pcb *get_free_pcb(void)
 	int i;
 	struct pcb *p;
 
-	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_DEAD; i++)
+	for (i = 0; i < PT_SIZE && proctab[i].state != PROC_DEAD; i++)
 		/* nothing */;
 	if (i == PT_SIZE)
 		return NULL;
@@ -70,7 +82,7 @@ static inline struct pcb *get_free_pcb(void)
 	p->t_alarm.flags = 0;
 	p->t_sleep.flags = 0;
 	p->timestamp = tick_count;
-	p->state = STATE_NASCENT;
+	p->state = PROC_NASCENT;
 	INIT_LIST_HEAD(&p->mm.map);
 	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->posix_timers);
@@ -79,6 +91,7 @@ static inline struct pcb *get_free_pcb(void)
 
 static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 {
+	struct pcb *pp;
 	sig_init(&p->sig);
 
 	/* init file data */
@@ -95,8 +108,7 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	p->parent_pid = parent;
 	p->flags = flags;
 
-	struct pcb *pp = &proctab[PT_INDEX(parent)];
-	if (pp->pid == parent) {
+	if ((pp = get_pcb(parent))) {
 		p->root = pp->root;
 		p->pwd = pp->pwd;
 	} else {
@@ -113,7 +125,6 @@ static struct pcb *pcb_clone(struct pcb *src)
 		return NULL;
 
 	p->esp = src->esp;
-	p->ksp = src->ksp;
 	p->ifp = src->ifp;
 
 	sig_clone(&p->sig, &src->sig);
@@ -294,7 +305,9 @@ void do_exit(struct pcb *p, int status)
 	struct mem_header *hit;
 
 	// TODO: see what POSIX requires vis-a-vis process data in handler
-	pit = &proctab[PT_INDEX(p->parent_pid)];
+	pit = get_pcb(p->parent_pid);
+	if (!pit)
+		panic("No parent for %d!\n", p->pid);
 	__kill(pit, SIGCHLD);
 
 	// free memory allocated to process

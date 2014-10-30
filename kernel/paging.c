@@ -518,7 +518,7 @@ static pmap_t kmap_page_table(ulong addr)
 		/* update process page direcories */
 		for (uint i = 0; i < PT_SIZE; i++) {
 			struct pcb *p = &proctab[i];
-			if (p->state != STATE_DEAD) {
+			if (p->state != PROC_DEAD) {
 				pmap_t pgdir = kmap_tmp_page((ulong)p->mm.pgdir);
 				pte_t *upde = addr_to_pde(pgdir, addr);
 				*upde = frame->addr | PE_P | PE_RW;

@@ -30,20 +30,7 @@
 pid_t idle_pid;
 pid_t root_pid;
 
-// TODO: find a more appropriate place for this
-struct pcb proctab[PT_SIZE];
-
 struct multiboot_info *mb_info;
-
-static void proctab_init (void)
-{
-	for (int i = 0; i < PT_SIZE; i++) {
-		proctab[i].pid   = i - PT_SIZE;
-		proctab[i].state = STATE_DEAD;
-	}
-	proctab[0].pid = 0; // 0 is a reserved pid
-}
-EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
 
 static void init_subsystems(void)
 {

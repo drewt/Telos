@@ -286,7 +286,7 @@ long sys_sigwait(sigset_t set, int *sig)
 		goto end;
 	}
 	for (;;) {
-		current->state = STATE_SIGWAIT;
+		current->state = PROC_SIGWAIT;
 		signo = schedule();
 		if (sigismember(&set, signo))
 			break;
@@ -305,7 +305,7 @@ long sys_sigsuspend(sigset_t mask)
 	current->sig.restore = current->sig.mask;
 	current->sig.mask = mask;
 
-	current->state = STATE_SIGSUSPEND;
+	current->state = PROC_SIGSUSPEND;
 	schedule();
 	return -EINTR;
 }
@@ -323,50 +323,46 @@ void __kill(struct pcb *p, int sig_no)
 
 	// we always wake a sigwaiting process; it will make the final
 	// determination as to whether it should return, or sleep again
-	if (p->state == STATE_SIGWAIT)
+	if (p->state == PROC_SIGWAIT)
 		wake(p, sig_no);
-	else if (p->state == STATE_SIGSUSPEND && signal_accepted(&p->sig, sig_no))
+	else if (p->state == PROC_SIGSUSPEND && signal_accepted(&p->sig, sig_no))
 		wake(p, sig_no);
 	// sleeping processes are only awoken if the signal is accepted
-	else if (p->state == STATE_SLEEPING && signal_accepted(&p->sig, sig_no))
+	else if (p->state == PROC_SLEEPING && signal_accepted(&p->sig, sig_no))
 		wake(p, ktimer_destroy(&p->t_sleep));
 }
 
 long sys_kill(pid_t pid, int sig)
 {
-	int i = PT_INDEX(pid);
+	struct pcb *p = get_pcb(pid);
 
-	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
+	if (!p)
 		return -ESRCH;
-
 	if (sig == 0)
 		return 0;
-
 	if (!signo_valid(sig))
 		return -EINVAL;
 
-	proctab[i].sig.infos[sig].si_code = SI_USER;
+	p->sig.infos[sig].si_code = SI_USER;
 
-	__kill(&proctab[i], sig);
+	__kill(p, sig);
 	return 0;
 }
 
 long sys_sigqueue(pid_t pid, int sig, const union sigval value)
 {
-	int i = PT_INDEX(pid);
+	struct pcb *p = get_pcb(pid);
 
-	if (i < 0 || i >= PT_SIZE || proctab[i].pid != pid)
+	if (!p)
 		return -ESRCH;
-
 	if (sig == 0)
 		return 0;
-
 	if (!signo_valid(sig))
 		return -EINVAL;
 
-	proctab[i].sig.infos[sig].si_value = value;
-	proctab[i].sig.infos[sig].si_code = SI_QUEUE;
+	p->sig.infos[sig].si_value = value;
+	p->sig.infos[sig].si_code = SI_QUEUE;
 
-	__kill(&proctab[i], sig);
+	__kill(p, sig);
 	return 0;
 }

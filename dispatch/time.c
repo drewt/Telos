@@ -80,7 +80,7 @@ static void alrm_action(void *data)
  */
 long sys_sleep(unsigned long ticks)
 {
-	current->state = STATE_SLEEPING;
+	current->state = PROC_SLEEPING;
 	ktimer_init(&current->t_sleep, wake_action, current, TF_STATIC);
 	ktimer_start(&current->t_sleep, ticks);
 	return schedule();
@@ -190,7 +190,9 @@ static struct posix_timer *get_timer_by_id(timer_t timerid)
 static void posix_timer_action(void *data)
 {
 	struct posix_timer *pt = data;
-	struct pcb *p = &proctab[PT_INDEX(pt->pid)];
+	struct pcb *p = get_pcb(pt->pid);
+	if (!p)
+		panic("POSIX timer expired for dead process %d\n", pt->pid);
 
 	current->sig.infos[pt->sev.sigev_signo].si_value =
 		pt->sev.sigev_value;

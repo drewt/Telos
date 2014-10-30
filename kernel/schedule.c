@@ -34,7 +34,7 @@ _Noreturn void kernel_start(void)
 
 void ready(struct pcb *p)
 {
-	p->state = STATE_READY;
+	p->state = PROC_READY;
 	list_add_tail(&p->chain, &ready_queue);
 }
 
@@ -46,7 +46,7 @@ void wake(struct pcb *p, long rc)
 
 void zombie(struct pcb *p)
 {
-	p->state = STATE_ZOMBIE;
+	p->state = PROC_ZOMBIE;
 	list_add_tail(&p->chain, &zombies);
 }
 
