@@ -43,19 +43,20 @@ static int read_proc(void *arg)
 	return 0;
 }
 
-static void sigchld_handler(int signo) {}
-
 int main(void)
 {
 	int sig;
+	sigset_t set;
 
-	signal(SIGCHLD, sigchld_handler);
+	sigemptyset(&set);
+	sigaddset(&set, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	syscreate(read_proc, NULL);
 	syscreate(read_proc, NULL);
 
-	for (sig = 0; sig != SIGCHLD; sig = sigwait());
-	for (sig = 0; sig != SIGCHLD; sig = sigwait());
+	while (sigwait(&set, &sig));
+	while (sigwait(&set, &sig));
 
 	printf("Enter any key to exit: ");
 	getchar(); puts("");

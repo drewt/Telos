@@ -71,7 +71,8 @@ long sys_sigaction(int sig, struct sigaction *act,
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset);
 long sys_kill(pid_t pid, int sig);
 long sys_sigqueue(pid_t pid, int sig, const union sigval value);
-long sys_sigwait(void);
+long sys_sigwait(sigset_t set, int *sig);
+long sys_sigsuspend(sigset_t mask);
 long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
 long sys_recv(int *src_pid, void *buffer, int length);
 long sys_reply(int src_pid, void *buffer, int length);

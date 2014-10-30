@@ -88,7 +88,8 @@ int sigqueue(pid_t pid, int signal_number, const union sigval value);
 int sigaction(int sig, struct sigaction *act, struct sigaction *oact);
 void(*signal(int sig, void(*func)(int)))(int);
 int sigprocmask(int how, sigset_t *set, sigset_t *oset);
-int sigwait(void);
+int sigwait(const sigset_t *restrict set, int *restrict sig);
+int sigsuspend(const sigset_t *sigmask);
 
 static inline int sigfillset(sigset_t *set)
 {
@@ -133,12 +134,28 @@ static inline int sigismember(const sigset_t *set, int signum)
 struct sig_struct {
 	sigset_t pending;
 	sigset_t mask;
+	sigset_t restore;
 	struct sigaction actions[_TELOS_SIGMAX];
 	struct siginfo infos[_TELOS_SIGMAX];
 };
 void sig_init(struct sig_struct *sig);
 void sig_clone(struct sig_struct *dst, struct sig_struct *src);
 void sig_exec(struct sig_struct *sig);
+
+static inline int signal_ignored(struct sig_struct *sig, int sig_no)
+{
+	return sig->actions[sig_no].sa_handler == SIG_IGN;
+}
+
+static inline int signal_blocked(struct sig_struct *sig, int sig_no)
+{
+	return !(sig->mask & (1 << sig_no));
+}
+
+static inline int signal_accepted(struct sig_struct *sig, int sig_no)
+{
+	return !signal_ignored(sig, sig_no) && !signal_blocked(sig, sig_no);
+}
 
 static inline int signo_valid(int signo)
 {

@@ -85,14 +85,16 @@ static void alarm_handler(int signo)
 
 static void alarm_test(void)
 {
-	int sig, rv;
+	sigset_t set;
 	signal(SIGALRM, alarm_handler);
 	printf("Testing alarm... alrm ?= ");
 	alarm(1);
-	if ((rv = alarm(1)) <= 0)
+	if (alarm(1) <= 0)
 		printf("error");
 	printf("al");
-	for (sig = sigwait(); sig != SIGALRM; sig = sigwait());
+	sigfillset(&set);
+	sigdelset(&set, SIGALRM);
+	sigsuspend(&set);
 	printf("Testing alarm(0)... ");
 	alarm(2);
 	if (alarm(0) > 0)

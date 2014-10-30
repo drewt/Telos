@@ -85,6 +85,7 @@ void sig_init(struct sig_struct *sig)
 {
 	sig->pending = 0;
 	sig->mask = ~0;
+	sig->restore = 0;
 	for (int i = 0; i < _TELOS_SIGMAX; i++)
 		sig_set_default(&sig->actions[i], i);
 }
@@ -93,6 +94,7 @@ void sig_clone(struct sig_struct *dst, struct sig_struct *src)
 {
 	dst->pending = 0;
 	dst->mask = src->mask;
+	dst->restore = src->restore;
 	for (int i = 0; i < _TELOS_SIGMAX; i++)
 		dst->actions[i] = src->actions[i];
 }
@@ -140,7 +142,13 @@ static void place_sig_frame(struct ucontext *sig_cx, int sig_no)
 		sig_cx->stack[9]  = info->si_band;
 		sig_cx->stack[10] = (ulong) info->si_value.sigval_ptr;
 	}
-	sig_cx->stack[11] = current->sig.mask;
+	// sigsuspend: save original signal mask on the stack
+	if (current->sig.restore) {
+		sig_cx->stack[11] = current->sig.restore;
+		current->sig.restore = 0;
+	} else {
+		sig_cx->stack[11] = current->sig.mask;
+	}
 }
 
 static inline struct ucontext *frame_pos(ulong old_esp)
@@ -200,15 +208,6 @@ long sig_restore(struct ucontext *old_cx)
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Wait for a signal */
-//-----------------------------------------------------------------------------
-long sys_sigwait(void)
-{
-	current->state = STATE_SIGWAIT;
-	return schedule();
-}
-
 static int verify_sigaction(struct sigaction *act)
 {
 	if (vm_verify(&current->mm, act, sizeof(*act), 0))
@@ -221,9 +220,6 @@ static int verify_sigaction(struct sigaction *act)
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Registers a signal action */
-//-----------------------------------------------------------------------------
 long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 {
 	struct sigaction *sap = &current->sig.actions[sig];
@@ -248,9 +244,6 @@ long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Alters the signal mask */
-//-----------------------------------------------------------------------------
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
 	if (set && vm_verify(&current->mm, set, sizeof(*set), 0))
@@ -280,14 +273,45 @@ long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Function to register that a signal has been sent to a process */
-//-----------------------------------------------------------------------------
+long sys_sigwait(sigset_t set, int *sig)
+{
+	int signo;
+
+	if (vm_verify(&current->mm, sig, sizeof(*sig), VM_WRITE))
+		return -EFAULT;
+
+	set &= ~SIG_NOIGNORE;
+	if (current->sig.pending & set) {
+		signo = fls(current->sig.pending & set) - 1;
+		goto end;
+	}
+	for (;;) {
+		current->state = STATE_SIGWAIT;
+		signo = schedule();
+		if (sigismember(&set, signo))
+			break;
+		if (signal_accepted(&current->sig, signo))
+			return -EINTR;
+	}
+end:
+	*sig = signo;
+	clear_bit(signo, &current->sig.pending);
+	return 0;
+}
+
+long sys_sigsuspend(sigset_t mask)
+{
+	mask = ~mask | SIG_NOIGNORE;
+	current->sig.restore = current->sig.mask;
+	current->sig.mask = mask;
+
+	current->state = STATE_SIGSUSPEND;
+	schedule();
+	return -EINTR;
+}
+
 void __kill(struct pcb *p, int sig_no)
 {
-	if (p->sig.actions[sig_no].sa_handler == SIG_IGN)
-		return;
-
 	set_bit(sig_no, &p->sig.pending);
 
 	if (p->sig.actions[sig_no].sa_flags & SA_SIGINFO) {
@@ -297,12 +321,14 @@ void __kill(struct pcb *p, int sig_no)
 		p->sig.infos[sig_no].si_addr = (void*) cx->iret_eip;
 	}
 
-	// wake process if it's blocked
+	// we always wake a sigwaiting process; it will make the final
+	// determination as to whether it should return, or sleep again
 	if (p->state == STATE_SIGWAIT)
 		wake(p, sig_no);
-	else if (p->state == STATE_BLOCKED)
-		wake(p, -128);
-	else if (p->state == STATE_SLEEPING)
+	else if (p->state == STATE_SIGSUSPEND && signal_accepted(&p->sig, sig_no))
+		wake(p, sig_no);
+	// sleeping processes are only awoken if the signal is accepted
+	else if (p->state == STATE_SLEEPING && signal_accepted(&p->sig, sig_no))
 		wake(p, ktimer_destroy(&p->t_sleep));
 }
 

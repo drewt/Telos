@@ -164,10 +164,13 @@ int main(int _argc, char *_argv[])
 	char in[IN_LEN];
 	char *argv[MAX_ARGS];
 	int argc;
-	int sig;
 	int bg;
+	int sig;
+	sigset_t set;
 
-	signal(SIGCHLD, sigchld_handler);
+	sigemptyset(&set);
+	sigaddset(&set, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	while (1) {
 		printf(PROMPT);
@@ -192,6 +195,6 @@ int main(int _argc, char *_argv[])
 		}
 
 		if (!bg)
-			while ((sig = sigwait()) != SIGCHLD);
+			while (sigwait(&set, &sig));
 	}
 }

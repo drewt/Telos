@@ -32,14 +32,17 @@ int dbz_proc(void *arg)
 	return 0;
 }
 
-void sigchld_handler(int sig) {}
-
 int main(int argc, char *argv[])
 {
-	signal(SIGCHLD, sigchld_handler);
+	int sig;
+	sigset_t set;
+
+	sigemptyset(&set);
+	sigaddset(&set, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	syscreate(dbz_proc, NULL);
-	for (int sig = 0; sig != SIGCHLD; sig = sigwait());
+	while (sigwait(&set, &sig));
 	printf("done.\n");
 	return 0;
 }

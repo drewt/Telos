@@ -33,8 +33,6 @@ int idle_proc()
 	return 0;
 }
 
-static void sigchld_handler(int signo) {}
-
 static _Noreturn void reboot(void)
 {
 	asm volatile(
@@ -108,13 +106,14 @@ static void fs_init(void)
 void root_proc()
 {
 	int sig;
+	sigset_t set;
 
 	fs_init();
 
-	signal(SIGCHLD, sigchld_handler);
-
 	fcreate("/bin/tsh");
-	for (sig = sigwait(); sig != SIGCHLD; sig = sigwait());
+	sigemptyset(&set);
+	sigaddset(&set, SIGCHLD);
+	while (sigwait(&set, &sig));
 
 	printf("\nPress any key to reboot");
 	getchar();
