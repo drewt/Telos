@@ -72,7 +72,7 @@ static void wake_action(void *data)
 static void alrm_action(void *data)
 {
 	struct pcb *p = (struct pcb*) data;
-	__kill(p, SIGALRM);
+	__kill(p, SIGALRM, 0);
 }
 
 /*
@@ -199,7 +199,7 @@ static void posix_timer_action(void *data)
 
 	switch (pt->sev.sigev_notify) {
 	case SIGEV_SIGNAL:
-		__kill(p, pt->sev.sigev_signo);
+		__kill(p, pt->sev.sigev_signo, SI_TIMER);
 		break;
 	default:
 		break;

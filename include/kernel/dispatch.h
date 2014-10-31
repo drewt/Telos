@@ -19,6 +19,7 @@
 #define _KERNEL_DISPATCH_H_
 
 #include <kernel/process.h>
+#include <sys/wait.h>
 #include <syscall.h>
 
 struct sigaction;
@@ -40,10 +41,11 @@ _Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
 void ready(struct pcb *p);
 void zombie(struct pcb *p);
+void reap(struct pcb *p);
 void wake(struct pcb *p, long rc);
 long schedule(void);
 
-void __kill(struct pcb *p, int sig_no);
+void __kill(struct pcb *p, int sig_no, int code);
 
 void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
 void kunmap_tmp_range(void *addrp, size_t len);
@@ -61,8 +63,10 @@ long sys_fcreate(const char *pathname);
 long sys_execve(const char *pathname, char **argv, char **envp);
 long sys_fork(void);
 long sys_yield(void);
+long sys_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
 long sys_exit(int status);
 long sys_getpid(void);
+long sys_getppid(void);
 long sys_sleep(unsigned long ms);
 long sys_alarm(unsigned long ms);
 long sig_restore(struct ucontext *cx);

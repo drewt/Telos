@@ -15,6 +15,10 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef __KERNEL__
+#undef __KERNEL__
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
@@ -23,14 +27,21 @@
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #include <kernel/major.h>
 #include <telos/process.h>
 
-int idle_proc()
+_Noreturn void idle_proc(void)
 {
-	asm volatile("halt: hlt\njmp halt");
-	return 0;
+	asm volatile("_halt: hlt\njmp _halt");
+	__builtin_unreachable();
+}
+
+_Noreturn void halt(void)
+{
+	printf("Halting.");
+	idle_proc();
 }
 
 static _Noreturn void reboot(void)
@@ -51,7 +62,7 @@ static _Noreturn void reboot(void)
 static _Noreturn void die(const char *msg)
 {
 	printf("%s\n", msg);
-	reboot();
+	halt();
 }
 
 #define TTY_MODE (S_IFCHR | S_IRUSR | S_IWUSR | S_IWGRP)
@@ -105,17 +116,15 @@ static void fs_init(void)
 
 void root_proc()
 {
-	int sig;
+	int status;
 	sigset_t set;
 
 	fs_init();
 
+	sigfillset(&set);
+	sigprocmask(SIG_SETMASK, &set, NULL);
 	fcreate("/bin/tsh");
-	sigemptyset(&set);
-	sigaddset(&set, SIGCHLD);
-	while (sigwait(&set, &sig));
-
-	printf("\nPress any key to reboot");
-	getchar();
-	reboot();
+	for (;;)
+		wait(&status);
+	halt();
 }

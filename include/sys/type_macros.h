@@ -37,6 +37,7 @@
 #define _NLINK_T_TYPE unsigned long
 #define _UID_T_TYPE unsigned long
 #define _GID_T_TYPE unsigned long
+#define _ID_T_TYPE unsigned long
 #define _OFF_T_TYPE long
 #define _BLKSIZE_T_TYPE unsigned long
 #define _BLKCNT_T_TYPE unsigned long

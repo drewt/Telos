@@ -16,13 +16,11 @@
  */
 
 #include <syscall.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include <telos/process.h>
 
-typedef int pid_t;
-
-/*-----------------------------------------------------------------------------
- * Create a process */
-//-----------------------------------------------------------------------------
 pid_t syscreate(int(*func)(void*), void *arg)
 {
 	return syscall2(SYS_CREATE, func, arg);
@@ -33,17 +31,48 @@ pid_t fcreate(const char *pathname)
 	return syscall1(SYS_FCREATE, (void*)pathname);
 }
 
-/*-----------------------------------------------------------------------------
- * Yield the processor */
-//-----------------------------------------------------------------------------
+pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+{
+	return syscall4(SYS_WAITID, (void*)idtype, (void*)id, infop,
+			(void*)options);
+}
+
+pid_t waitpid(pid_t pid, int *stat_loc, int options)
+{
+	siginfo_t info;
+	idtype_t type;
+	id_t id;
+
+	if (pid < -1) {
+		type = P_PGID;
+		id = -pid;
+	} else if (pid == -1) {
+		type = P_ALL;
+		id = 0;
+	} else if (pid == 0) {
+		type = P_PGID;
+		id = getpid(); // FIXME
+	} else {
+		type = P_PID;
+		id = pid;
+	}
+	if (waitid(type, id, &info, options | WEXITED) < 0)
+		return -1;
+	if (stat_loc)
+		*stat_loc = info.si_value.sigval_int;
+	return info.si_pid;
+}
+
+pid_t wait(int *stat_loc)
+{
+	return waitpid(-1, stat_loc, 0);
+}
+
 void sysyield(void)
 {
 	syscall0(SYS_YIELD);
 }
 
-/*-----------------------------------------------------------------------------
- * Terminate */
-//-----------------------------------------------------------------------------
 void exit(int status)
 {
 	syscall1(SYS_STOP, (void*) status);

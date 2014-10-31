@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #include <telos/process.h>
 #include <telos/console.h>
@@ -158,19 +159,24 @@ static int exec_with_prefix(const char *prefix, int argc, char *argv[])
 	return execve(path, argv, NULL);
 }
 
+static void reaper(int signo)
+{
+	int status;
+	wait(&status);
+}
+
 int main(int _argc, char *_argv[])
 {
 	funptr p;
 	char in[IN_LEN];
 	char *argv[MAX_ARGS];
 	int argc;
-	int bg;
-	int sig;
 	sigset_t set;
 
-	sigemptyset(&set);
-	sigaddset(&set, SIGCHLD);
-	sigprocmask(SIG_BLOCK, &set, NULL);
+	sigfillset(&set);
+	sigdelset(&set, SIGCHLD);
+	sigprocmask(SIG_SETMASK, &set, NULL);
+	signal(SIGCHLD, reaper);
 
 	while (1) {
 		printf(PROMPT);
@@ -179,7 +185,7 @@ int main(int _argc, char *_argv[])
 		if (*in == '\0')
 			continue;
 
-		bg = parse_input(in, &argv);
+		parse_input(in, &argv);
 		for (argc = 0; argv[argc]; argc++);
 		if ((p = builtin_lookup(argv[0]))) {
 			p(argc, argv);
@@ -194,7 +200,6 @@ int main(int _argc, char *_argv[])
 			exit(1);
 		}
 
-		if (!bg)
-			while (sigwait(&set, &sig));
+		sigsuspend(&set);
 	}
 }

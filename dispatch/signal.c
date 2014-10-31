@@ -310,12 +310,13 @@ long sys_sigsuspend(sigset_t mask)
 	return -EINTR;
 }
 
-void __kill(struct pcb *p, int sig_no)
+void __kill(struct pcb *p, int sig_no, int code)
 {
 	set_bit(sig_no, &p->sig.pending);
 
 	if (p->sig.actions[sig_no].sa_flags & SA_SIGINFO) {
 		struct ucontext *cx = p->esp;
+		p->sig.infos[sig_no].si_code = code;
 		p->sig.infos[sig_no].si_errno = 0;
 		p->sig.infos[sig_no].si_pid   = current->pid;
 		p->sig.infos[sig_no].si_addr = (void*) cx->iret_eip;
@@ -327,6 +328,9 @@ void __kill(struct pcb *p, int sig_no)
 		wake(p, sig_no);
 	else if (p->state == PROC_SIGSUSPEND && signal_accepted(&p->sig, sig_no))
 		wake(p, sig_no);
+	else if (p->state == PROC_WAITING &&
+			(sig_no == SIGCHLD || signal_accepted(&p->sig, sig_no)))
+		wake(p, sig_no);
 	// sleeping processes are only awoken if the signal is accepted
 	else if (p->state == PROC_SLEEPING && signal_accepted(&p->sig, sig_no))
 		wake(p, ktimer_destroy(&p->t_sleep));
@@ -335,34 +339,26 @@ void __kill(struct pcb *p, int sig_no)
 long sys_kill(pid_t pid, int sig)
 {
 	struct pcb *p = get_pcb(pid);
-
 	if (!p)
 		return -ESRCH;
 	if (sig == 0)
 		return 0;
 	if (!signo_valid(sig))
 		return -EINVAL;
-
-	p->sig.infos[sig].si_code = SI_USER;
-
-	__kill(p, sig);
+	__kill(p, sig, SI_USER);
 	return 0;
 }
 
 long sys_sigqueue(pid_t pid, int sig, const union sigval value)
 {
 	struct pcb *p = get_pcb(pid);
-
 	if (!p)
 		return -ESRCH;
 	if (sig == 0)
 		return 0;
 	if (!signo_valid(sig))
 		return -EINVAL;
-
 	p->sig.infos[sig].si_value = value;
-	p->sig.infos[sig].si_code = SI_QUEUE;
-
-	__kill(p, sig);
+	__kill(p, sig, SI_QUEUE);
 	return 0;
 }

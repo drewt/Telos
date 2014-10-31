@@ -29,10 +29,49 @@
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
 #include <kernel/drivers/console.h>
+#include <sys/wait.h>
 
 extern void exit(int status);
 
 struct pcb proctab[PT_SIZE];
+
+struct proc_status {
+	struct list_head chain;
+	pid_t pid;
+	int status;
+};
+DEFINE_SLAB_CACHE(proc_status_cachep, sizeof(struct proc_status));
+
+static inline int status_to_si_code(int status)
+{
+	switch (WHOW(status)) {
+	case _WCONTINUED: return CLD_CONTINUED;
+	case _WEXITED:    return CLD_EXITED;
+	case _WSIGNALED:  return CLD_KILLED;
+	case _WSTOPPED:   return CLD_STOPPED;
+	}
+	return 0;
+}
+
+static void assert_status(struct pcb *parent, struct proc_status *status)
+{
+	list_add_tail(&status->chain, &parent->child_stats);
+	__kill(parent, SIGCHLD, status_to_si_code(status->status));
+}
+
+void report_status(struct pcb *p, int how, int val)
+{
+	struct pcb *parent;
+	struct proc_status *status;
+
+	if (!(parent = get_pcb(p->parent_pid)))
+		panic("Process %d has no parent", p->pid);
+	if (!(status = slab_alloc(proc_status_cachep)))
+		return; // FIXME: do something
+	status->pid = p->pid;
+	status->status = make_status(how, val);
+	assert_status(parent, status);
+}
 
 static void proctab_init (void)
 {
@@ -85,6 +124,8 @@ static inline struct pcb *get_free_pcb(void)
 	p->state = PROC_NASCENT;
 	INIT_LIST_HEAD(&p->mm.map);
 	INIT_LIST_HEAD(&p->mm.kheap);
+	INIT_LIST_HEAD(&p->children);
+	INIT_LIST_HEAD(&p->child_stats);
 	INIT_LIST_HEAD(&p->posix_timers);
 	return p;
 }
@@ -111,6 +152,7 @@ static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
 	if ((pp = get_pcb(parent))) {
 		p->root = pp->root;
 		p->pwd = pp->pwd;
+		list_add_tail(&p->child_chain, &pp->children);
 	} else {
 		p->root = root_inode;
 		p->pwd = root_inode;
@@ -139,6 +181,8 @@ static struct pcb *pcb_clone(struct pcb *src)
 
 	p->root = src->root;
 	p->pwd = src->pwd;
+
+	list_add_tail(&p->child_chain, &src->children);
 	return p;
 }
 
@@ -302,13 +346,10 @@ long sys_yield(void)
 void do_exit(struct pcb *p, int status)
 {
 	struct pcb *pit;
+	struct proc_status *sit, *n;
 	struct mem_header *hit;
 
-	// TODO: see what POSIX requires vis-a-vis process data in handler
-	pit = get_pcb(p->parent_pid);
-	if (!pit)
-		panic("No parent for %d!\n", p->pid);
-	__kill(pit, SIGCHLD);
+	report_status(p, _WEXITED, status);
 
 	// free memory allocated to process
 	dequeue_iterate(hit, struct mem_header, chain, &current->mm.kheap)
@@ -317,6 +358,18 @@ void do_exit(struct pcb *p, int status)
 	for (int i = 0; i < NR_FILES; i++)
 		if (current->filp[i] != NULL)
 			sys_close(i);
+
+	// re-parent orphans to init
+	list_for_each_entry(pit, &current->children, child_chain) {
+		pit->parent_pid = 1;
+	}
+	// give status events to new parent
+	if (!(pit = get_pcb(1)))
+		panic("No init process");
+	list_for_each_entry_safe(sit, n, &current->child_stats, chain) {
+		list_del(&sit->chain);
+		assert_status(pit, sit);
+	}
 
 	del_pgdir(current->mm.pgdir);
 	mm_fini(&current->mm);
@@ -333,4 +386,82 @@ long sys_exit(int status)
 long sys_getpid(void)
 {
 	return current->pid;
+}
+
+long sys_getppid(void)
+{
+	return current->parent_pid;
+}
+
+static struct proc_status *get_status(idtype_t idtype, id_t id, int options)
+{
+	struct proc_status *s;
+	list_for_each_entry(s, &current->child_stats, chain) {
+		// TODO: P_PGID
+		if (idtype == P_PID && s->pid != (pid_t)id)
+			continue;
+		switch (WHOW(s->status)) {
+		case _WCONTINUED:
+			if (options & WCONTINUED)
+				return s;
+			break;
+		case _WEXITED:
+			if (options & WEXITED)
+				return s;
+			break;
+		case _WSTOPPED:
+			if (options & WSTOPPED)
+				return s;
+			break;
+		default:
+			return s;
+		}
+	}
+	return NULL;
+}
+
+long sys_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+{
+	int signo;
+	struct proc_status *s;
+
+	if (vm_verify(&current->mm, infop, sizeof(*infop), VM_WRITE))
+		return -EFAULT;
+	if (list_empty(&current->children))
+		return -ECHILD;
+	for (;;) {
+		if ((s = get_status(idtype, id, options)))
+			break;
+		if (options & WNOHANG) {
+			infop->si_signo = 0;
+			infop->si_pid = 0;
+			return 0;
+		}
+
+		current->state = PROC_WAITING;
+		if ((signo = schedule()) != SIGCHLD)
+			return -EINTR;
+		if (signal_from_user(current->sig.infos[signo].si_code))
+			return -EINTR;
+	}
+	infop->si_signo = SIGCHLD;
+	infop->si_code = status_to_si_code(s->status);
+	infop->si_errno = 0;
+	infop->si_pid = s->pid;
+	infop->si_uid = 0; // TODO
+	infop->si_status = WVALUE(s->status);
+	infop->si_value.sigval_int = s->status; // for wait[pid] wrapper
+
+	// reap zombie
+	if (WIFEXITED(s->status) || WIFSIGNALED(s->status)) {
+		struct pcb *p = get_pcb(s->pid);
+		if (!p)
+			panic("Tried to reap non-existant child");
+		list_del(&p->child_chain);
+		reap(p);
+	}
+
+	list_del(&s->chain);
+	slab_free(proc_status_cachep, s);
+	return 0;
 }

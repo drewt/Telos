@@ -108,20 +108,24 @@ static unsigned long get_error_code(void)
 
 void exn_page_fault(void)
 {
-	unsigned long error, addr;
 	struct vma *vma;
+	unsigned long error, addr;
+	int code = SEGV_ACCERR;
 
 	error = get_error_code();
 	MOV("cr2", addr);
 
 	// address not mapped in process address space
-	if (!(vma = vma_get(&current->mm, (void*)addr)))
+	if (!(vma = vma_get(&current->mm, (void*)addr))) {
+		code = SEGV_MAPERR;
 		goto segfault;
+	}
 
 	// page not present (demand paging)
 	if (!(error & PGF_PERM)) {
 		// FIXME: kernel has to be interruptable, or else page faults
 		//        will occur in-kernel and clobber the kernel stack
+		code = SEGV_MAPERR;
 		goto segfault;
 		/*struct pf_info *frame = kalloc_frame();
 		if (!frame)
@@ -140,7 +144,8 @@ void exn_page_fault(void)
 
 segfault:
 	print_cpu_context(current->esp);
-	__kill(current, SIGSEGV);
+	kprintf("Segmentation fault");
+	__kill(current, SIGSEGV, code);
 }
 
 static void exn_breakpoint(unsigned num, struct ucontext ctx)
@@ -156,13 +161,13 @@ static void exn_breakpoint(unsigned num, struct ucontext ctx)
 void exn_fpe(void)
 {
 	kprintf("Arithmetic error\n");
-	__kill(current, SIGFPE);
+	__kill(current, SIGFPE, FPE_INTDIV); // TODO: more codes
 }
 
 void exn_ill_instr(void)
 {
 	kprintf("Illegal instruction\n");
-	__kill(current, SIGILL);
+	__kill(current, SIGILL, ILL_ILLOPC); // FIXME: determine correct code
 }
 
 /* prints a nice message when something goes wrong */

@@ -38,6 +38,12 @@ void ready(struct pcb *p)
 	list_add_tail(&p->chain, &ready_queue);
 }
 
+void reap(struct pcb *p)
+{
+	p->state = PROC_DEAD;
+	list_del(&p->chain);
+}
+
 void wake(struct pcb *p, long rc)
 {
 	p->rc = rc;

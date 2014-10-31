@@ -68,11 +68,46 @@ enum {
 };
 
 enum {
+	ILL_ILLOPC,
+	ILL_ILLOPN,
+	ILL_ILLADR,
+	ILL_ILLTRP,
+	ILL_PRVOPC,
+	ILL_PRVREG,
+	ILL_COPROC,
+	ILL_BADSTK,
+	FPE_INTDIV,
+	FPE_INTOVF,
+	FPE_FLTDIV,
+	FPE_FLTOVF,
+	FPE_FLTUND,
+	FPE_FLTRES,
+	FPE_FLTINV,
+	FPE_FLTSUB,
+	SEGV_MAPERR,
+	SEGV_ACCERR,
+	BUS_ADRALN,
+	BUS_ADRERR,
+	BUS_OBJERR,
+	TRAP_BRKPT,
+	TRAP_TRACE,
+	CLD_EXITED,
+	CLD_KILLED,
+	CLD_DUMPED,
+	CLD_TRAPED,
+	CLD_STOPPED,
+	CLD_CONTINUED,
+	POLL_IN,
+	POLL_OUT,
+	POLL_MSG,
+	POLL_ERR,
+	POLL_PRI,
+	POLL_HUP,
 	SI_USER,
 	SI_QUEUE,
 	SI_TIMER,
 	SI_ASYNCIO,
-	SI_MESGQ
+	SI_MESGQ,
 };
 
 enum {
@@ -161,6 +196,12 @@ static inline int signal_blocked(struct sig_struct *sig, int sig_no)
 static inline int signal_accepted(struct sig_struct *sig, int sig_no)
 {
 	return !signal_ignored(sig, sig_no) && !signal_blocked(sig, sig_no);
+}
+
+static inline int signal_from_user(int code)
+{
+	return code == SI_USER || code == SI_QUEUE || code == SI_TIMER ||
+		code == SI_ASYNCIO || code == SI_MESGQ;
 }
 
 #endif /* __KERNEL__ */
