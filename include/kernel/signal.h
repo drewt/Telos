@@ -129,7 +129,7 @@ static inline int __signo_valid(int signo)
 
 static inline int sigfillset(sigset_t *set)
 {
-	*set = (1 << (_TELOS_SIGMAX - 1)) - 1;
+	*set = ~0;
 	return 0;
 }
 
@@ -145,7 +145,7 @@ static inline int sigaddset(sigset_t *set, int signum)
 	if (!__signo_valid(signum))
 		return -1;
 #endif
-	*set |= (1 << signum);
+	*set |= 1 << (signum-1);
 	return 0;
 }
 
@@ -155,7 +155,7 @@ static inline int sigdelset(sigset_t *set, int signum)
 	if (!__signo_valid(signum))
 		return -1;
 #endif
-	*set &= ~(1 << signum);
+	*set &= ~(1 << (signum-1));
 	return 0;
 }
 
@@ -165,7 +165,7 @@ static inline int sigismember(const sigset_t *set, int signum)
 	if (!__signo_valid(signum))
 		return -1;
 #endif
-	return *set & (1 << signum);
+	return *set & (1 << (signum-1));
 }
 
 #ifdef __KERNEL__

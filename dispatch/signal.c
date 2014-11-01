@@ -171,7 +171,7 @@ static int send_signal_user(int sig_no)
 	current->esp = sig_frame;
 	current->sig.mask = current->sig.mask & ~(act->sa_mask);
 end:
-	clear_bit(sig_no, &current->sig.pending);
+	clear_bit(sig_no-1, &current->sig.pending);
 	return 0;
 }
 
@@ -191,7 +191,7 @@ static int send_signal(struct pcb *p, int sig_no)
 void handle_signal(void)
 {
 	if (current->sig.pending & current->sig.mask)
-		send_signal(current, fls(current->sig.pending)-1);
+		send_signal(current, fls(current->sig.pending));
 }
 
 /*-----------------------------------------------------------------------------
@@ -238,7 +238,7 @@ long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 		*sap = *act;
 		if (act->sa_handler == SIG_DFL)
 			sig_set_default(sap, sig);
-		set_bit(sig, &current->sig.mask);
+		set_bit(sig-1, &current->sig.mask);
 	}
 
 	return 0;
@@ -282,7 +282,7 @@ long sys_sigwait(sigset_t set, int *sig)
 
 	set &= ~SIG_NOIGNORE;
 	if (current->sig.pending & set) {
-		signo = fls(current->sig.pending & set) - 1;
+		signo = fls(current->sig.pending & set);
 		goto end;
 	}
 	for (;;) {
@@ -295,7 +295,7 @@ long sys_sigwait(sigset_t set, int *sig)
 	}
 end:
 	*sig = signo;
-	clear_bit(signo, &current->sig.pending);
+	clear_bit(signo-1, &current->sig.pending);
 	return 0;
 }
 
@@ -312,7 +312,7 @@ long sys_sigsuspend(sigset_t mask)
 
 void __kill(struct pcb *p, int sig_no, int code)
 {
-	set_bit(sig_no, &p->sig.pending);
+	set_bit(sig_no-1, &p->sig.pending);
 
 	if (p->sig.actions[sig_no].sa_flags & SA_SIGINFO) {
 		struct ucontext *cx = p->esp;
