@@ -34,14 +34,14 @@ static inline int sig_unblockable(int signo)
 /* Handler for SIG_DFL Terminate action */
 static void sig_terminate(int sig_no)
 {
-	syscall1(SYS_STOP, (void*) -1);
+	syscall1(SYS_STOP, -1);
 }
 
 /* Handler for SIG_DFL Stop action */
 static void sig_stop(int sig_no)
 {
 	// FIXME: this kills the process
-	syscall1(SYS_STOP, (void*) -1);
+	syscall1(SYS_STOP, -1);
 }
 
 typedef void(*handler_t)(int);

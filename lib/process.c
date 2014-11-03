@@ -23,8 +23,7 @@
 
 pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 {
-	return syscall4(SYS_WAITID, (void*)idtype, (void*)id, infop,
-			(void*)options);
+	return syscall4(SYS_WAITID, idtype, id, infop, options);
 }
 
 pid_t waitpid(pid_t pid, int *stat_loc, int options)
@@ -65,5 +64,5 @@ void sched_yield(void)
 
 void exit(int status)
 {
-	syscall1(SYS_STOP, (void*) status);
+	syscall1(SYS_STOP, status);
 }

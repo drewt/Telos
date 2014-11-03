@@ -21,7 +21,7 @@
 int sigaction(int sig, struct sigaction *restrict act,
 		struct sigaction *restrict oact)
 {
-	return syscall3(SYS_SIGACTION, (void*) sig, act, oact);
+	return syscall3(SYS_SIGACTION, sig, act, oact);
 }
 
 void(*signal(int sig, void(*func)(int)))(int)
@@ -40,26 +40,25 @@ void(*signal(int sig, void(*func)(int)))(int)
 
 int sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
-	return syscall3(SYS_SIGMASK, (void*) how, set, oset);
+	return syscall3(SYS_SIGMASK, how, set, oset);
 }
 
 int kill(pid_t pid, int signal_number)
 {
-	return syscall2(SYS_KILL, (void*) pid, (void*) signal_number);
+	return syscall2(SYS_KILL, pid, signal_number);
 }
 
 int sigqueue(pid_t pid, int sig, const union sigval value)
 {
-	return syscall3(SYS_SIGQUEUE, (void*) pid, (void*) sig,
-			value.sigval_ptr);
+	return syscall3(SYS_SIGQUEUE, pid, sig, value.sigval_ptr);
 }
 
 int sigwait(const sigset_t *restrict set, int *restrict sig)
 {
-	return syscall2(SYS_SIGWAIT, (void*) *set, sig);
+	return syscall2(SYS_SIGWAIT, *set, sig);
 }
 
 int sigsuspend(const sigset_t *sigmask)
 {
-	return syscall1(SYS_SIGSUSPEND, (void*) *sigmask);
+	return syscall1(SYS_SIGSUSPEND, *sigmask);
 }

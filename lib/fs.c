@@ -75,7 +75,7 @@ long telldir(DIR *dirp)
 
 struct dirent *readdir(DIR *dirp)
 {
-	int rc = syscall3(SYS_READDIR, (void*)dirp->fd, &dirp->dirent, (void*)1);
+	int rc = syscall3(SYS_READDIR, dirp->fd, &dirp->dirent, 1);
 	if (rc)
 		return NULL;
 	return &dirp->dirent;
@@ -83,52 +83,51 @@ struct dirent *readdir(DIR *dirp)
 
 int mkdir(const char *path, mode_t mode)
 {
-	return syscall2(SYS_MKDIR, (void*)path, (void*)mode);
+	return syscall2(SYS_MKDIR, path, mode);
 }
 
 int mknod(const char *path, mode_t mode, dev_t dev)
 {
-	return syscall3(SYS_MKNOD, (void*)path, (void*)mode, (void*)dev);
+	return syscall3(SYS_MKNOD, path, mode, dev);
 }
 
 int mount(const char *dev_name, const char *dir_name, const char *type,
 		ulong new_flags, const void *data)
 {
-	return syscall5(SYS_MOUNT, (void*)dev_name, (void*)dir_name,
-			(void*)type, (void*)new_flags, (void*)data);
+	return syscall5(SYS_MOUNT, dev_name, dir_name, type, new_flags, data);
 }
 
 int umount(const char *target)
 {
-	return syscall1(SYS_UMOUNT, (void*)target);
+	return syscall1(SYS_UMOUNT, target);
 }
 
 int rmdir(const char *path)
 {
-	return syscall1(SYS_RMDIR, (void*)path);
+	return syscall1(SYS_RMDIR, path);
 }
 
 int chdir(const char *path)
 {
-	return syscall1(SYS_CHDIR, (void*)path);
+	return syscall1(SYS_CHDIR, path);
 }
 
 int unlink(const char *path)
 {
-	return syscall1(SYS_UNLINK, (void*)path);
+	return syscall1(SYS_UNLINK, path);
 }
 
 int link(const char *old, const char *new)
 {
-	return syscall2(SYS_LINK, (void*)old, (void*)new);
+	return syscall2(SYS_LINK, old, new);
 }
 
 int rename(const char *old, const char *new)
 {
-	return syscall2(SYS_RENAME, (void*)old, (void*)new);
+	return syscall2(SYS_RENAME, old, new);
 }
 
 int stat(const char *restrict path, struct stat *restrict stat)
 {
-	return syscall2(SYS_STAT, (void*)path, stat);
+	return syscall2(SYS_STAT, path, stat);
 }
