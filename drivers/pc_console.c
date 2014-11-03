@@ -19,6 +19,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/tty.h>
+#include <kernel/drivers/console.h>
 #include <kernel/drivers/keyboard.h>
 #include <sys/major.h>
 #include <string.h>
@@ -154,6 +155,21 @@ ssize_t console_write(struct tty *tty, const char *buf, size_t len)
 	return len;
 }
 
+int console_ioctl(struct tty *tty, unsigned int command, unsigned long arg)
+{
+	switch (command) {
+	case CONSOLE_IOCTL_SWITCH:
+		console_switch(tty->index);
+		break;
+	case CONSOLE_IOCTL_CLEAR:
+		console_clear(tty->index);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 void int_keyboard(void)
 {
 	unsigned s, c;
@@ -218,6 +234,7 @@ struct tty_operations console_tty_ops = {
 	.open = console_open,
 	.close = console_close,
 	.write = console_write,
+	.ioctl = console_ioctl,
 };
 
 struct tty_driver pc_console_driver = {

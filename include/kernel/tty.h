@@ -37,6 +37,7 @@ struct tty_operations {
 	int (*open)(struct tty *, struct file *);
 	int (*close)(struct tty *, struct file *);
 	ssize_t (*write)(struct tty *, const char *buf, size_t len);
+	int (*ioctl)(struct tty *, unsigned int, unsigned long);
 };
 
 struct tty_driver {

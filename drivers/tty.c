@@ -183,11 +183,25 @@ static int tty_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int tty_ioctl(struct inode *inode, struct file *file,
+		unsigned int command, unsigned long arg)
+{
+	struct tty *tty = file_tty(file);
+	switch (command) {
+	// TODO: generic tty ioctls
+	default:
+		if (tty->driver->op->ioctl)
+			return tty->driver->op->ioctl(tty, command, arg);
+	}
+	return -EINVAL;
+}
+
 struct file_operations tty_fops = {
 	.read = tty_read,
 	.write = tty_write,
 	.open = tty_open,
 	.release = tty_release,
+	.ioctl = tty_ioctl,
 };
 
 struct inode_operations tty_iops = {
