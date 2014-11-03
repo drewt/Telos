@@ -19,17 +19,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <telos/process.h>
-
-pid_t syscreate(int(*func)(void*), void *arg)
-{
-	return syscall2(SYS_CREATE, func, arg);
-}
-
-pid_t fcreate(const char *pathname)
-{
-	return syscall1(SYS_FCREATE, (void*)pathname);
-}
+#include <sched.h>
 
 pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 {
@@ -68,7 +58,7 @@ pid_t wait(int *stat_loc)
 	return waitpid(-1, stat_loc, 0);
 }
 
-void sysyield(void)
+void sched_yield(void)
 {
 	syscall0(SYS_YIELD);
 }

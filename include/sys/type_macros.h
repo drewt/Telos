@@ -51,4 +51,8 @@
 		long tv_nsec; \
 	};
 
+#define _MAKEDEV_DEFN(maj, min) (((maj) << 8) | ((min) & 0xFF))
+#define _MAJOR_DEFN(dev) ((dev) >> 8)
+#define _MINOR_DEFN(dev) ((dev) & 0xFF)
+
 #endif

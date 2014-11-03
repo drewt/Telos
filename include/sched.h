@@ -15,11 +15,24 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_PROCESS_H_
-#define _TELOS_PROCESS_H_
+#ifndef _SCHED_H_
+#define _SCHED_H_
 
-pid_t syscreate(int(*func)(void*), void *arg);
-pid_t fcreate(const char *pathname);
-void sysyield(void);
+#include <sys/type_macros.h>
+
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
+
+void sched_yield(void);
 
 #endif

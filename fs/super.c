@@ -6,8 +6,8 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <kernel/major.h>
 #include <kernel/stat.h>
+#include <sys/major.h>
 #include <string.h>
 
 #define SBT_SIZE 100
@@ -192,15 +192,15 @@ long sys_umount(const char * name)
 		dummy_inode.i_dev = dev;
 		inode = &dummy_inode;
 	}
-	if (MAJOR(dev) >= MAX_BLKDEV) {
+	if (major(dev) >= MAX_BLKDEV) {
 		iput(inode);
 		return -ENXIO;
 	}
 	if (!(retval = do_umount(dev)) && dev != ROOT_DEV) {
-		fops = get_blkfops(MAJOR(dev));
+		fops = get_blkfops(major(dev));
 		if (fops && fops->release)
 			fops->release(inode,NULL);
-		if (MAJOR(dev) == UNNAMED_MAJOR)
+		if (major(dev) == UNNAMED_MAJOR)
 			put_unnamed_dev(dev);
 	}
 	if (inode != &dummy_inode)
@@ -327,7 +327,7 @@ long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
 			return -EMFILE;
 		inode = NULL;
 	}
-	fops = get_blkfops(MAJOR(dev));
+	fops = get_blkfops(major(dev));
 	if (fops && fops->open) {
 		if ((retval = fops->open(inode, NULL))) {
 			iput(inode);

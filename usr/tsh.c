@@ -18,12 +18,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <sys/wait.h>
 
-#include <telos/process.h>
 #include <telos/console.h>
 
 #define IN_LEN   512
@@ -83,7 +83,7 @@ static ssize_t read_line(char *buf, size_t len)
 	size_t pos = 0;
 
 	len--;
-	while ((c = getchar()) != '\n' && pos < len) {
+	while ((c = getchar()) != '\n' && pos < len-1) {
 		if (c == EOF)
 			return EOF;
 		else
@@ -153,7 +153,7 @@ static int parse_input(char *in, char *(*args)[])
 
 static int exec_with_prefix(const char *prefix, int argc, char *argv[])
 {
-	char path[256];
+	char path[IN_LEN + 16];
 	strcpy(path, prefix);
 	strcat(path, argv[0]);
 	return execve(path, argv, NULL);
@@ -175,7 +175,6 @@ int main(int _argc, char *_argv[])
 
 	sigfillset(&set);
 	sigdelset(&set, SIGCHLD);
-	sigprocmask(SIG_SETMASK, &set, NULL);
 	signal(SIGCHLD, reaper);
 
 	while (1) {

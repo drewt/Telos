@@ -26,12 +26,10 @@ extern PROGRAM(uunlink);
 extern PROGRAM(urename);
 extern PROGRAM(ustat);
 
-extern PROGRAM(consoletest);
 extern PROGRAM(exectest);
 extern PROGRAM(exntest);
 extern PROGRAM(eventtest);
 extern PROGRAM(jmptest);
-extern PROGRAM(kbdtest);
 extern PROGRAM(memtest);
 extern PROGRAM(proctest);
 extern PROGRAM(sigtest);
@@ -62,12 +60,10 @@ static struct program progtab[] = {
 	BINENT(uumount,     "umount"),
 	BINENT(uunlink,     "unlink"),
 
-	BINENT(consoletest, "consoletest"),
 	BINENT(exectest,    "exectest"),
 	BINENT(exntest,     "exntest"),
 	BINENT(eventtest,   "eventtest"),
 	BINENT(jmptest,     "jmptest"),
-	BINENT(kbdtest,     "kbdtest"),
 	BINENT(memtest,     "memtest"),
 	BINENT(proctest,    "proctest"),
 	BINENT(sigtest,     "sigtest"),

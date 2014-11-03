@@ -22,7 +22,6 @@
 #include <kernel/mmap.h>
 #include <kernel/list.h>
 #include <kernel/fs.h>
-#include <kernel/major.h>
 #include <kernel/signal.h>
 #include <kernel/stat.h>
 #include <kernel/mm/kmalloc.h>
@@ -83,41 +82,8 @@ static void proctab_init (void)
 }
 EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
 
-#define STDIO_FILE(name) \
-	struct file name = { \
-		.f_count = 2, \
-	}
-
-STDIO_FILE(stdin_file);
-STDIO_FILE(stdout_file);
-STDIO_FILE(stderr_file);
-
-static void stdio_sysinit(void)
+static struct pcb *pcb_common_init(struct pcb *p)
 {
-	struct file_operations *fops = get_chrfops(TTY_MAJOR);
-
-	stdin_file.f_op = fops;
-	stdin_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-
-	stdout_file.f_op = fops;
-	stdout_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-
-	stderr_file.f_op = fops;
-	stderr_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-}
-EXPORT_KINIT(stdio, SUB_PROCESS, stdio_sysinit);
-
-static inline struct pcb *get_free_pcb(void)
-{
-	int i;
-	struct pcb *p;
-
-	for (i = 0; i < PT_SIZE && proctab[i].state != PROC_DEAD; i++)
-		/* nothing */;
-	if (i == PT_SIZE)
-		return NULL;
-
-	p = &proctab[i];
 	p->t_alarm.flags = 0;
 	p->t_sleep.flags = 0;
 	p->timestamp = tick_count;
@@ -130,33 +96,12 @@ static inline struct pcb *get_free_pcb(void)
 	return p;
 }
 
-static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
+static struct pcb *get_free_pcb(void)
 {
-	struct pcb *pp;
-	sig_init(&p->sig);
-
-	/* init file data */
-	p->filp[0] = &stdin_file;
-	p->filp[1] = &stdout_file;
-	p->filp[2] = &stderr_file;
-	stdin_file.f_count++;
-	stdout_file.f_count++;
-	stderr_file.f_count++;
-	for (int i = 3; i < NR_FILES; i++)
-		p->filp[i] = NULL;
-
-	p->pid += PT_SIZE;
-	p->parent_pid = parent;
-	p->flags = flags;
-
-	if ((pp = get_pcb(parent))) {
-		p->root = pp->root;
-		p->pwd = pp->pwd;
-		list_add_tail(&p->child_chain, &pp->children);
-	} else {
-		p->root = root_inode;
-		p->pwd = root_inode;
-	}
+	for (int i = 0; i < PT_SIZE; i++)
+		if (proctab[i].state == PROC_DEAD)
+			return pcb_common_init(&proctab[i]);
+	return NULL;
 }
 
 static struct pcb *pcb_clone(struct pcb *src)
@@ -194,7 +139,14 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 
 	if (!(p = get_free_pcb()))
 		return -EAGAIN;
-	pcb_init(p, 0, flags | PFLAG_SUPER);
+	sig_init(&p->sig);
+	for (int i = 0; i < NR_FILES; i++)
+		p->filp[i] = NULL;
+	p->pid += PT_SIZE;
+	p->parent_pid = 1;
+	p->flags = flags | PFLAG_SUPER;
+	p->root = root_inode;
+	p->pwd = root_inode;
 
 	if ((error = mm_kinit(&p->mm)) < 0)
 		return error;
@@ -211,20 +163,26 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	return p->pid;
 }
 
-int create_user_process(void(*func)(void*), void *arg, ulong flags)
+void create_init(void(*func)(void*))
 {
 	int error;
-	ulong esp;
+	long esp;
 	ulong *args;
 	void *frame;
 	struct pcb *p;
 
-	if ((p = get_free_pcb()) == NULL)
-		return -EAGAIN;
-	pcb_init(p, current->pid, flags);
+	p = pcb_common_init(&proctab[1]);
+	sig_init(&p->sig);
+	for (int i = 0; i < NR_FILES; i++)
+		p->filp[i] = NULL;
+	p->pid = 1;
+	p->parent_pid = 1;
+	p->flags = 0;
+	p->root = root_inode;
+	p->pwd = root_inode;
 
 	if ((error = mm_init(&p->mm)) < 0)
-		return error;
+		panic("mm_init failed with error %d", error);
 
 	p->ifp = (char*)p->mm.kernel_stack->end - 16;
 	p->esp = (char*)p->ifp - sizeof(struct ucontext);
@@ -234,35 +192,12 @@ int create_user_process(void(*func)(void*), void *arg, ulong flags)
 	put_iret_uframe(frame, (ulong)func, esp);
 	kunmap_tmp_range(frame, sizeof(struct ucontext));
 
-	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 2);
+	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong));
 	args[0] = (ulong) exit;
-	args[1] = (ulong) arg;
-	kunmap_tmp_range(args, sizeof(ulong) * 2);
+	kunmap_tmp_range(args, sizeof(ulong));
 
 	ready(p);
-	return p->pid;
-}
 
-long sys_create(void(*func)(void*), void *arg)
-{
-	if (vm_verify(&current->mm, func, sizeof(*func), 0))
-		return -EFAULT;
-	return create_user_process(func, arg, 0);
-}
-
-long sys_fcreate(const char *pathname)
-{
-	int error;
-	struct inode *inode;
-
-	// TODO: verify pathname addr
-	error = namei(pathname, &inode);
-	if (error)
-		return error;
-	if (!S_ISFUN(inode->i_mode))
-		return -EINVAL;
-
-	return create_user_process(inode->i_private, NULL, 0);
 }
 
 #define ARG_MAX 32

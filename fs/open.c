@@ -18,8 +18,8 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/fcntl.h>
-#include <kernel/major.h>
 #include <kernel/stat.h>
+#include <sys/major.h>
 #include <string.h>
 
 long sys_chdir(const char *pathname)

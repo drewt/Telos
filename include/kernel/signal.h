@@ -170,6 +170,8 @@ static inline int sigismember(const sigset_t *set, int signum)
 
 #ifdef __KERNEL__
 
+#include <kernel/bitops.h>
+
 #define signo_valid __signo_valid
 
 struct sig_struct {
@@ -182,6 +184,16 @@ struct sig_struct {
 void sig_init(struct sig_struct *sig);
 void sig_clone(struct sig_struct *dst, struct sig_struct *src);
 void sig_exec(struct sig_struct *sig);
+
+static inline int signal_pending(struct sig_struct *sig)
+{
+	return sig->pending & sig->mask;
+}
+
+static inline int pending_signal(struct sig_struct *sig)
+{
+	return fls(sig->pending & sig->mask);
+}
 
 static inline int signal_ignored(struct sig_struct *sig, int sig_no)
 {

@@ -38,7 +38,7 @@
 #define USHRT_MAX ((u16)(~0U))
 #define SHRT_MAX ((s16)(USHRT_MAX>>1))
 
-void clear_console(void);
+void console_clear(unsigned int index);
 int _kvprintf(unsigned char attr, const char *fmt, va_list ap) __printf(2,0);
 int _kprintf(unsigned char attr, const char *fmt, ...) __printf(2,3);
 

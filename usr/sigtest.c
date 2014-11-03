@@ -22,8 +22,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <telos/process.h>
-
 /* half-assed "test" of sigqueue--verifies that it's substitutable for kill */
 #if 0
 #define kill(a,b) sigqueue(a,b,(union sigval)0)
@@ -61,13 +59,13 @@ static void sigusr1_handler(int signo)
 	puts("c");
 }
 
-static int sig_proc(void *arg)
+static _Noreturn void sig_proc(void)
 {
 	sleep(1);
 	kill(sigtest_pid, SIGUSR1);
 	sleep(1);
 	kill(sigtest_pid, SIGUSR2);
-	return 0;
+	exit(0);
 }
 
 static void kill_test(void)
@@ -98,7 +96,8 @@ static void priority_test(void)
 	printf("Testing signal priority... abc ?= ");
 	signal(SIGUSR1, sigusr1_handler);
 	signal(SIGUSR2, sigusr2_handler);
-	syscreate(sig_proc, NULL);
+	if (!fork())
+		sig_proc();
 	sigfillset(&set);
 	sigdelset(&set, SIGUSR1);
 	sigsuspend(&set);

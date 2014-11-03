@@ -28,8 +28,6 @@ const int NR_SYSCALLS = SYSCALL_MAX;
 
 typedef long(*syscall_t)();
 syscall_t systab[SYSCALL_MAX] = {
-	[SYS_CREATE]        = sys_create,
-	[SYS_FCREATE]       = sys_fcreate,
 	[SYS_EXECVE]        = sys_execve,
 	[SYS_FORK]          = sys_fork,
 	[SYS_YIELD]         = sys_yield,

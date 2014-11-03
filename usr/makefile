@@ -1,11 +1,11 @@
 UCFLAGS = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-	  -Wno-attributes -fno-builtin -ffreestanding -std=gnu99 -I $(incdir)
+	  -Wno-attributes -fno-builtin -ffreestanding -std=gnu99 -I $(incdir) \
+	  -fno-pic -nostdlib
 
 submakes = multi
-objects = cat.o consoletest.o echo.o eventtest.o \
-	  kbdtest.o memtest.o umkdir.o proctest.o sigtest.o strtest.o \
-	  exntest.o jmptest.o tsh.o date.o ulink.o uls.o urename.o urmdir.o \
-	  ustat.o uunlink.o uumount.o mount_ramfs.o exectest.o \
+objects = cat.o echo.o eventtest.o memtest.o umkdir.o proctest.o sigtest.o \
+	  strtest.o exntest.o jmptest.o tsh.o date.o ulink.o uls.o urename.o \
+	  urmdir.o ustat.o uunlink.o uumount.o mount_ramfs.o exectest.o init.o \
 	  $(foreach var,$(submakes),$(var)/telos_obj.o )
 targets = usr.a
 clean = $(objects) $(targets)

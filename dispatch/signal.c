@@ -190,8 +190,10 @@ static int send_signal(struct pcb *p, int sig_no)
 
 void handle_signal(void)
 {
-	if (current->sig.pending & current->sig.mask)
-		send_signal(current, fls(current->sig.pending));
+	if (signal_pending(&current->sig))
+		send_signal(current, pending_signal(&current->sig));
+	//if (current->sig.pending & current->sig.mask)
+		//send_signal(current, fls(current->sig.pending));
 }
 
 /*-----------------------------------------------------------------------------

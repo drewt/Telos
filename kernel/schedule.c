@@ -20,14 +20,26 @@
 #include <kernel/interrupt.h>
 #include <kernel/dispatch.h>
 
+pid_t idle_pid;
+extern void init(void*);
+extern void create_init(void(*func)(void*));
+
 struct pcb *current = NULL;
 static LIST_HEAD(ready_queue);
 static LIST_HEAD(zombies);
 
 #define next() (list_dequeue(&ready_queue, struct pcb, chain))
 
-_Noreturn void kernel_start(void)
+static _Noreturn void idle_proc(void *unused)
 {
+	asm volatile("_halt: hlt\njmp _halt");
+	__builtin_unreachable();
+}
+
+_Noreturn void sched_start(void)
+{
+	idle_pid = create_kernel_process(idle_proc, NULL, 0);
+	create_init(init);
 	current = next();
 	switch_to(current);
 }

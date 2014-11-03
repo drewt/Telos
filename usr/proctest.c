@@ -22,8 +22,6 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-#include <telos/process.h>
-
 static void fork_test(void)
 {
 	pid_t child, parent = getpid();

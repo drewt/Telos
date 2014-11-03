@@ -35,9 +35,7 @@ struct ucontext;
 extern struct pcb *current;
 
 extern int idle_pid;
-extern int root_pid;
 
-_Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
 void ready(struct pcb *p);
 void zombie(struct pcb *p);
@@ -58,8 +56,6 @@ void int_keyboard(void);
 
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
-long sys_create(void(*func)(void*), void *arg);
-long sys_fcreate(const char *pathname);
 long sys_execve(const char *pathname, char **argv, char **envp);
 long sys_fork(void);
 long sys_yield(void);

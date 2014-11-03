@@ -15,34 +15,14 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
+#ifndef _DRIVERS_KEYBOARD_H_
+#define _DRIVERS_KEYBOARD_H_
 
-int _dbz_ = 0;
+#define KEYBOARD_DATA_PORT    0x60
+#define KEYBOARD_COMMAND_PORT 0x64
 
-static _Noreturn void dbz_proc(void)
-{
-	printf("Dividing by zero... ");
-	_dbz_ = 1 / _dbz_;
-	printf("error\n");
-	exit(1);
-}
+#define NOCHAR 256
 
-int main(int argc, char *argv[])
-{
-	int sig;
-	sigset_t set;
+unsigned int kbtoa(unsigned char code);
 
-	sigemptyset(&set);
-	sigaddset(&set, SIGCHLD);
-	sigprocmask(SIG_BLOCK, &set, NULL);
-
-	if (!fork())
-		dbz_proc();
-	while (sigwait(&set, &sig));
-	printf("done.\n");
-	return 0;
-}
+#endif

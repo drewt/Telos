@@ -87,6 +87,16 @@ typedef _BLKCNT_T_TYPE blkcnt_t;
 typedef _DEV_T_TYPE dev_t;
 #endif
 
+#ifndef makedev
+#define makedev _MAKEDEV_DEFN
+#endif
+#ifndef major
+#define major _MAJOR_DEFN
+#endif
+#ifndef minor
+#define minor _MINOR_DEFN
+#endif
+
 #ifdef __KERNEL__
 
 #define BITS_PER_LONG 32

@@ -19,10 +19,9 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <klib.h>
-
-#define WRITE_SIZE 200
 
 int vfprintf(FILE *stream, const char *fmt, va_list ap)
 {
@@ -59,8 +58,11 @@ int printf(const char *fmt, ...)
 int puts(const char *s)
 {
 	int rv;
-	while ((rv = write(STDOUT_FILENO, s, WRITE_SIZE)) != 0)
+	size_t len = strlen(s);
+	while ((rv = write(STDOUT_FILENO, s, len)) != 0) {
 		s += rv;
+		len -= rv;
+	}
 	write(STDOUT_FILENO, "\n", 1);
 	return 1;
 }

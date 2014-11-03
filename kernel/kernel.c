@@ -27,10 +27,8 @@
 
 #include <string.h>
 
-pid_t idle_pid;
-pid_t root_pid;
-
 struct multiboot_info *mb_info;
+extern _Noreturn void sched_start(void);
 
 static void init_subsystems(void)
 {
@@ -58,11 +56,10 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 
 	mb_info = info;
 
-	/* initialize console so we can print boot status */
-	console_early_init();
-	clear_console();
+	// initialize console so we can print boot status
+	console_clear(0);
 
-	/* check multiboot magic number */
+	// check multiboot magic number
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
 		kprintf("Invalid Multiboot magic number\n");
 		return;
@@ -89,9 +86,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	mount_root();
 
 	bprintf("Starting Telos...\n\n");
-	idle_pid = create_kernel_process(idle_proc, NULL, 0);
-	root_pid = create_kernel_process(root_proc, NULL, 0);
-	kernel_start();
+	sched_start();
 
 	#undef bprintf
 }

@@ -15,12 +15,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
-
-#include <telos/process.h>
 
 #define TIMESPEC_INIT(s, ns)	\
 	{			\
@@ -45,37 +44,22 @@ static const TIMESPEC(less_than_one, 0, HALFSEC_NSEC);
 static const TIMESPEC(less_than_two, 1, HALFSEC_NSEC);
 static const TIMESPEC(less_than_three, 2, HALFSEC_NSEC);
 
-static int sleep_proc(void *arg)
+static _Noreturn void nanosleep_proc(const struct timespec *how_long, char c)
 {
-	int sec = (unsigned long)arg == 2 ? 1 : 2;
-	sleep(sec);
-	printf("%d ", (unsigned long) arg);
-	return 0;
-}
-
-static int nanosleep_proc(void *arg)
-{
-	const struct timespec *spec = (unsigned long)arg == 1 ? &less_than_one : &less_than_two;
-	printf("NANO");
-	nanosleep(spec, NULL);
-	printf("%d ", (unsigned long) arg);
-	return 0;
+	nanosleep(how_long, NULL);
+	printf("%c", c);
+	exit(0);
 }
 
 static void sleep_test(void)
 {
-	printf("Testing sleep...\nVerify ascending: ");
-	printf("A");
-	syscreate(nanosleep_proc, (void*)1);
-	printf("A");
-	syscreate(sleep_proc, (void*)2);
-	printf("A");
-	syscreate(sleep_proc, (void*)4);
-	printf("A");
-	syscreate(nanosleep_proc, (void*)3);
-	printf("A");
+	printf("Testing sleep... abc ?= ");
+	if (!fork())
+		nanosleep_proc(&less_than_two, 'b');
+	if (!fork())
+		nanosleep_proc(&less_than_one, 'a');
 	nanosleep(&less_than_three, NULL);
-	puts("");
+	puts("c");
 }
 
 static void alarm_handler(int signo)
@@ -158,8 +142,7 @@ static void clock_test(void)
 #include <stdlib.h>
 int main(int argc, char *argv[])
 {
-	//if (fork()) exit(0);
-	//sleep_test();
+	sleep_test();
 	alarm_test();
 	timer_test();
 	clock_test();
