@@ -29,6 +29,8 @@ struct timespec;
 struct itimerspec;
 
 struct stat;
+struct mount;
+struct exec_args;
 
 struct ucontext;
 
@@ -48,6 +50,15 @@ void __kill(struct pcb *p, int sig_no, int code);
 void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
 void kunmap_tmp_range(void *addrp, size_t len);
 
+static inline int verify_user_string(const char *str, size_t len)
+{
+	if (vm_verify(&current->mm, str, len, 0))
+		return -EFAULT;
+	if (str[len] != '\0')
+		return -EINVAL;
+	return 0;
+}
+
 void exn_page_fault(void);
 void exn_fpe(void);
 void exn_ill_instr(void);
@@ -56,7 +67,7 @@ void int_keyboard(void);
 
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
-long sys_execve(const char *pathname, char **argv, char **envp);
+long sys_execve(struct exec_args *args);
 long sys_fork(void);
 long sys_yield(void);
 long sys_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
@@ -73,27 +84,25 @@ long sys_kill(pid_t pid, int sig);
 long sys_sigqueue(pid_t pid, int sig, const union sigval value);
 long sys_sigwait(sigset_t set, int *sig);
 long sys_sigsuspend(sigset_t mask);
-long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-long sys_recv(int *src_pid, void *buffer, int length);
-long sys_reply(int src_pid, void *buffer, int length);
-long sys_open(const char *pathname, int flags, int mode);
+long sys_open(const char *pathname, size_t name_len, int flags, int mode);
 long sys_close(unsigned int fd);
 long sys_read(unsigned int fd, char *buf, size_t nbyte);
 long sys_write(unsigned int fd, char *buf, size_t nbyte);
 long sys_lseek(unsigned int fd, off_t offset, unsigned int whence);
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count);
 long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
-long sys_mknod(const char *filename, int mode, dev_t dev);
-long sys_mkdir(const char *pathname, int mode);
-long sys_rmdir(const char *pathname);
-long sys_chdir(const char *pathname);
-long sys_link(const char *oldname, const char *newname);
-long sys_unlink(const char *pathname);
-long sys_rename(const char *oldname, const char *newname);
-long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
-		void *data);
-long sys_umount(const char *name);
-long sys_stat(const char *pathname, struct stat *s);
+long sys_mknod(const char *filename, size_t name_len, int mode, dev_t dev);
+long sys_mkdir(const char *pathname, size_t name_len, int mode);
+long sys_rmdir(const char *pathname, size_t name_len);
+long sys_chdir(const char *pathname, size_t name_len);
+long sys_link(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len);
+long sys_unlink(const char *pathname, size_t name_len);
+long sys_rename(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len);
+long sys_mount(const struct mount *mount);
+long sys_umount(const char *name, size_t name_len);
+long sys_stat(const char *pathname, size_t name_len, struct stat *s);
 long sys_time(time_t *t);
 long sys_clock_getres(clockid_t clockid, struct timespec *res);
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp);

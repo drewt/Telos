@@ -1,7 +1,25 @@
+/*  Copyright 2013 Drew Thoreson
+ *
+ *  This file is part of the Telos C Library.
+ *
+ *  Telos is free software: you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, version 2 of the License.
+ *
+ *  Telos is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ *  details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
+#include <string.h>
 #include <dirent.h>
 #include <syscall.h>
 #include <unistd.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 
 #define NR_DIRS 8
@@ -83,51 +101,67 @@ struct dirent *readdir(DIR *dirp)
 
 int mkdir(const char *path, mode_t mode)
 {
-	return syscall2(SYS_MKDIR, path, mode);
+	return syscall3(SYS_MKDIR, path, strlen(path), mode);
 }
 
 int mknod(const char *path, mode_t mode, dev_t dev)
 {
-	return syscall3(SYS_MKNOD, path, mode, dev);
+	return syscall4(SYS_MKNOD, path, strlen(path), mode, dev);
 }
 
 int mount(const char *dev_name, const char *dir_name, const char *type,
-		ulong new_flags, const void *data)
+		unsigned long flags, const void *data)
 {
-	return syscall5(SYS_MOUNT, dev_name, dir_name, type, new_flags, data);
+	struct mount mnt = {
+		.dev = {
+			.str = dev_name,
+			.len = dev_name ? strlen(dev_name) : 0,
+		},
+		.dir = {
+			.str = dir_name,
+			.len = strlen(dir_name),
+		},
+		.type = {
+			.str = type,
+			.len = strlen(type),
+		},
+		.flags = flags,
+		.data = data,
+	};
+	return syscall1(SYS_MOUNT, &mnt);
 }
 
 int umount(const char *target)
 {
-	return syscall1(SYS_UMOUNT, target);
+	return syscall2(SYS_UMOUNT, target, strlen(target));
 }
 
 int rmdir(const char *path)
 {
-	return syscall1(SYS_RMDIR, path);
+	return syscall2(SYS_RMDIR, path, strlen(path));
 }
 
 int chdir(const char *path)
 {
-	return syscall1(SYS_CHDIR, path);
+	return syscall2(SYS_CHDIR, path, strlen(path));
 }
 
 int unlink(const char *path)
 {
-	return syscall1(SYS_UNLINK, path);
+	return syscall2(SYS_UNLINK, path, strlen(path));
 }
 
 int link(const char *old, const char *new)
 {
-	return syscall2(SYS_LINK, old, new);
+	return syscall4(SYS_LINK, old, strlen(old), new, strlen(new));
 }
 
 int rename(const char *old, const char *new)
 {
-	return syscall2(SYS_RENAME, old, new);
+	return syscall4(SYS_RENAME, old, strlen(old), new, strlen(new));
 }
 
 int stat(const char *restrict path, struct stat *restrict stat)
 {
-	return syscall2(SYS_STAT, path, stat);
+	return syscall3(SYS_STAT, path, strlen(path), stat);
 }

@@ -80,8 +80,10 @@ int main(void)
 	sigprocmask(SIG_SETMASK, &set, NULL);
 
 	if (!fork()) {
+		char *argv[] = { "/bin/tsh", NULL };
+		char *envp[] = { NULL };
 		sigprocmask(SIG_UNBLOCK, &set, NULL);
-		execve("/bin/tsh", NULL, 0);
+		execve("/bin/tsh", argv, envp);
 	}
 
 	for (;;)

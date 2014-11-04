@@ -66,6 +66,11 @@ static inline struct vma *vma_get(const struct mm_struct *mm, const void *addr)
 	return (vma && vma_contains(vma, addr)) ? vma : NULL;
 }
 
+static inline size_t vma_size(const struct vma *vma)
+{
+	return vma->end - vma->start;
+}
+
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,

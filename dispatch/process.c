@@ -28,7 +28,9 @@
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
 #include <kernel/drivers/console.h>
+#include <sys/exec.h>
 #include <sys/wait.h>
+#include <string.h>
 
 extern void exit(int status);
 
@@ -200,55 +202,130 @@ void create_init(void(*func)(void*))
 
 }
 
-#define ARG_MAX 32
-#include <string.h>
-static int copy_args(char **argv)
+static int verify_exec_args(struct exec_args *args)
 {
-	int argc;
-	ulong addr = current->mm.heap->start + (ARG_MAX * sizeof(char*));
-	char **uargv = (char**) current->mm.heap->start;
+	int error;
 
-	if (!argv)
-		return 0;
-
-	for (argc = 0; argc < ARG_MAX && argv[argc]; argc++, addr += 128) {
-		uargv[argc] = (char*) addr;
-		memcpy((void*)addr, argv[argc], 128);
+	if (vm_verify(&current->mm, args, sizeof(*args), 0))
+		return -EFAULT;
+	if (vm_verify(&current->mm, args->argv,
+				sizeof(*(args->argv)) * args->argc, 0))
+		return -EFAULT;
+	if (vm_verify(&current->mm, args->envp,
+				sizeof(*(args->envp)) * args->envc, 0))
+		return -EFAULT;
+	error = verify_user_string(args->pathname.str, args->pathname.len);
+	if (error)
+		return error;
+	for (size_t i = 0; i < args->argc; i++) {
+		error = verify_user_string(args->argv[i].str, args->argv[i].len);
+		if (error)
+			return error;
 	}
-	return argc;
+	for (size_t i = 0; i < args->envc; i++) {
+		error = verify_user_string(args->envp[i].str, args->envp[i].len);
+		if (error)
+			return error;
+	}
+	return 0;
 }
 
-long sys_execve(const char *pathname, char **argv, char **envp)
+static size_t exec_mem_needed(struct exec_args *args)
 {
-	int error, argc;
-	ulong esp;
-	ulong *args;
-	void *frame;
+	size_t size = 0;
+	size += (args->argc + 1) * sizeof(char*);
+	size += (args->envc + 1) * sizeof(char*);
+	for (size_t i = 0; i < args->argc; i++)
+		size += args->argv[i].len + 1;
+	for (size_t i = 0; i < args->envc; i++)
+		size += args->envp[i].len + 1;
+	return size;
+}
+
+static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
+{
+	int error;
+	char *mem, *kmem;
+	char **argv;
+	char **envp;
+	size_t size = exec_mem_needed(args);
+	ssize_t diff = size - vma_size(current->mm.heap);
+
+	// need more memory in heap
+	if (diff > 0) {
+		error = vma_grow_up(current->mm.heap, diff, current->mm.heap->flags);
+		if (error)
+			return error;
+	}
+
+	// copy args/env into kernel memory
+	kmem = kmalloc(size);
+	if (!kmem)
+		return -ENOMEM;
+	mem = (char*) ((char**) kmem + args->argc + args->envc + 2);
+	for (size_t i = 0; i < args->argc; i++) {
+		memcpy(mem, args->argv[i].str, args->argv[i].len + 1);
+		mem += args->argv[i].len + 1;
+	}
+	for (size_t i = 0; i < args->envc; i++) {
+		memcpy(mem, args->envp[i].str, args->envp[i].len + 1);
+		mem += args->envp[i].len + 1;
+	}
+
+	// copy back into user memory and populate argv/envp
+	memcpy((void*) current->mm.heap->start, kmem, size);
+	argv = (char**) current->mm.heap->start;
+	envp = argv + args->argc + 1;
+	mem = (char*) (envp + args->envc + 1);
+	for (size_t i = 0; i < args->argc; i++) {
+		argv[i] = mem;
+		mem += args->argv[i].len + 1;
+	}
+	argv[args->argc] = NULL;
+	for (size_t i = 0; i < args->envc; i++) {
+		envp[i] = mem;
+		mem += args->envp[i].len + 1;
+	}
+	envp[args->envc] = NULL;
+
+	*argv_loc = argv;
+	*envp_loc = envp;
+	kfree(kmem);
+	return 0;
+}
+
+long sys_execve(struct exec_args *args)
+{
+	int error;
+	void *argv, *envp;
+	unsigned long esp;
+	unsigned long *main_args;
 	struct inode *inode;
 
-	// TODO: verify addresses
-	error = namei(pathname, &inode);
+	error = verify_exec_args(args);
+	if (error)
+		return error;
+	error = namei(args->pathname.str, &inode);
 	if (error)
 		return error;
 	if (!S_ISFUN(inode->i_mode))
 		return -EACCES;
+	error = execve_copy(args, &argv, &envp);
+	if (error)
+		return error;
 
-	argc = copy_args(argv);
 	sig_exec(&current->sig);
+	current->ifp = (char*) current->mm.kernel_stack->end - 16;
+	current->esp = (char*) current->ifp - sizeof(struct ucontext);
 
-	current->ifp = (char*)current->mm.kernel_stack->end - 16;
-	current->esp = (char*)current->ifp - sizeof(struct ucontext);
-
-	frame = kmap_tmp_range(current->mm.pgdir, (ulong)current->esp, sizeof(struct ucontext));
 	esp = current->mm.stack->end - 16;
-	put_iret_uframe(frame, (ulong)inode->i_private, esp);
-	kunmap_tmp_range(frame, sizeof(struct ucontext));
+	put_iret_uframe(current->esp, (ulong)inode->i_private, esp);
 
-	args = kmap_tmp_range(current->mm.pgdir, esp, sizeof(ulong) * 3);
-	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = current->mm.heap->start;
-	kunmap_tmp_range(args, sizeof(ulong) * 3);
+	main_args = (unsigned long*) esp;
+	main_args[0] = (unsigned long) exit;
+	main_args[1] = args->argc;
+	main_args[2] = (unsigned long) argv;
+	main_args[3] = (unsigned long) envp;
 
 	return 0;
 }

@@ -15,21 +15,19 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SYS_MOUNT_H_
-#define _SYS_MOUNT_H_
+#ifndef _SYS_STRING_H_
+#define _SYS_STRING_H_
 
-#include <sys/string.h>
+#include <sys/type_macros.h>
 
-struct mount {
-	const struct _String dev;
-	const struct _String dir;
-	const struct _String type;
-	unsigned long flags;
-	const void *data;
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
+
+struct _String {
+	size_t len;
+	const char *str;
 };
-
-int mount(const char *dev_name, const char *dir_name, const char *type,
-		unsigned long new_flags, const void *data);
-int umount(const char *target);
 
 #endif

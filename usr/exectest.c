@@ -20,20 +20,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int newproc(int argc, char *argv[])
-{
-	printf("OK\n");
-	return 0;
-}
-
 int main(void)
 {
-	char *argv[] = { "/bin/ls", "/bin" };
-	if (!fork()) {
-		printf("Testing execve... ");
-		execve("/bin/ls", argv, NULL);
-	}
-	sleep(1);
-	printf("Exiting in parent\n");
-	return 0;
+	char *argv[] = { "echo", "test", "successful!", NULL };
+	char *envp[] = { NULL };
+
+	printf("Testing execve... ");
+	execve("/bin/echo", argv, envp);
+	printf("test failed!\n");
+	return 1;
 }

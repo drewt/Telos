@@ -51,6 +51,25 @@
 		long tv_nsec; \
 	};
 
+#define _UNION_SIGVAL_DEFN \
+	union sigval { \
+		int  sigval_int; \
+		void *sigval_ptr; \
+	};
+
+#define _SIGINFO_T_DEFN \
+	typedef struct siginfo { \
+		int          si_signo; \
+		int          si_code; \
+		int          si_errno; \
+		pid_t        si_pid; \
+		uid_t        si_uid; \
+		void         *si_addr; \
+		int          si_status; \
+		int          si_band; \
+		union sigval si_value; \
+	} siginfo_t;
+
 #define _MAKEDEV_DEFN(maj, min) (((maj) << 8) | ((min) & 0xFF))
 #define _MAJOR_DEFN(dev) ((dev) >> 8)
 #define _MINOR_DEFN(dev) ((dev) & 0xFF)

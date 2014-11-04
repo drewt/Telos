@@ -19,6 +19,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <syscall.h>
+#include <string.h>
+#include <sys/exec.h>
 
 pid_t fork(void)
 {
@@ -28,9 +30,41 @@ pid_t fork(void)
 	return rc;
 }
 
+static int _execve(const char *pathname, char *const argv[], char *const envp[],
+		size_t argc, size_t envc)
+{
+	struct _String s_argv[argc];
+	struct _String s_envp[envc];
+	struct exec_args e_args = {
+		.pathname = {
+			.str = pathname,
+			.len = strlen(pathname),
+		},
+		.argv = s_argv,
+		.envp = s_envp,
+		.argc = argc,
+		.envc = envc,
+	};
+
+	for (size_t i = 0; i < argc; i++) {
+		s_argv[i].str = argv[i];
+		s_argv[i].len = strlen(argv[i]);
+	}
+
+	for (size_t i = 0; i < envc; i++) {
+		s_envp[i].str = envp[i];
+		s_envp[i].len = strlen(envp[i]);
+	}
+
+	return syscall1(SYS_EXECVE, &e_args);
+}
+
 int execve(const char *pathname, char *const argv[], char *const envp[])
 {
-	return syscall3(SYS_EXECVE, pathname, argv, envp);
+	size_t argc, envc;
+	for (argc = 0; argv[argc]; argc++);
+	for (envc = 0; envp[envc]; envc++);
+	return _execve(pathname, argv, envp, argc, envc);
 }
 
 unsigned int alarm(unsigned int seconds)
@@ -58,7 +92,7 @@ int open(const char *pathname, int flags, ...)
 	va_start(ap, flags);
 	mode = va_arg(ap, unsigned long);
 	va_end(ap);
-	rv = syscall3(SYS_OPEN, pathname, flags, mode);
+	rv = syscall4(SYS_OPEN, pathname, strlen(pathname), flags, mode);
 	if (rv < 0)
 		return -1;
 	return rv;

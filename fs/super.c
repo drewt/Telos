@@ -8,6 +8,7 @@
 #include <kernel/fs.h>
 #include <kernel/stat.h>
 #include <sys/major.h>
+#include <sys/mount.h>
 #include <string.h>
 
 #define SBT_SIZE 100
@@ -49,7 +50,7 @@ void put_super(dev_t dev)
 		sb->s_op->put_super(sb);
 }
 
-static struct super_block *read_super(dev_t dev, char *name, int flags,
+static struct super_block *read_super(dev_t dev, const char *name, int flags,
         void *data, int silent)
 {
 	struct super_block *sb;
@@ -159,14 +160,17 @@ static int do_umount(dev_t dev)
  * functions, they should be faked here.  -- jrs
  */
 
-long sys_umount(const char * name)
+long sys_umount(const char *name, size_t name_len)
 {
 	struct inode * inode;
 	dev_t dev;
-	int retval;
+	int retval, error;
 	struct inode dummy_inode;
 	struct file_operations * fops;
 
+	error = verify_user_string(name, name_len);
+	if (error)
+		return error;
 	//if (!suser())
 	//	return -EPERM;
 	retval = namei(name,&inode);
@@ -220,7 +224,7 @@ long sys_umount(const char * name)
  * We also have to flush all inode-data for this device, as the new mount
  * might need new info.
  */
-static int do_mount(dev_t dev, const char * dir, char * type, int flags, void * data)
+static int do_mount(dev_t dev, const char * dir, const char * type, int flags, void * data)
 {
 	struct inode *dir_i;
 	struct super_block *sb;
@@ -306,8 +310,8 @@ static int do_remount(const char *dir,int flags,char *data)
  * version that didn't understand them.
  */
 
-long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
-		void *data)
+static long unpacked_mount(const char *dev_name, const char *dir_name,
+		const char *type, unsigned long new_flags, const void *data)
 {
 	struct file_system_type *fstype;
 	struct inode *inode;
@@ -340,6 +344,26 @@ long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
 		fops->release(inode, NULL);
 	iput(inode);
 	return retval;
+}
+
+long sys_mount(const struct mount *mount)
+{
+	int error;
+	if (vm_verify(&current->mm, mount, sizeof(*mount), 0))
+		return -EFAULT;
+	if (mount->dev.str) {
+		error = verify_user_string(mount->dev.str, mount->dev.len);
+		if (error)
+			return error;
+	}
+	error = verify_user_string(mount->dir.str, mount->dir.len);
+	if (error)
+		return error;
+	error = verify_user_string(mount->type.str, mount->type.len);
+	if (error)
+		return error;
+	return unpacked_mount(mount->dev.str, mount->dir.str, mount->type.str,
+			mount->flags, mount->data);
 }
 
 void mount_root(void)

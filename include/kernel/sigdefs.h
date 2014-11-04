@@ -52,6 +52,14 @@ typedef _TIME_T_TYPE time_t;
 #define _STRUCT_TIMESPEC_DEFINED
 _STRUCT_TIMESPEC_DEFN
 #endif
+#ifndef _UNION_SIGVAL_DEFINED
+#define _UNION_SIGVAL_DEFINED
+_UNION_SIGVAL_DEFN
+#endif
+#ifndef _SIGINFO_T_DEFINED
+#define _SIGINFO_T_DEFINED
+_SIGINFO_T_DEFN
+#endif
 
 typedef struct sigstack {
 	int	ss_onstack;	// non-zero when signal stack is in use
@@ -60,29 +68,12 @@ typedef struct sigstack {
 	int	ss_flags;	// flags
 } stack_t;
 
-union sigval {
-	int  sigval_int;
-	void *sigval_ptr;
-};
-
 struct sigevent {
 	int		sigev_notify;
 	int		sigev_signo;
 	union sigval	sigev_value;
 	void(*sigev_notify_function)(union sigval);
 };
-
-typedef struct siginfo {
-	int          si_signo;  // signal number
-	int          si_code;   // signal code
-	int          si_errno;  // errno value associated with this signal
-	pid_t        si_pid;    // sending process ID
-	uid_t        si_uid;    // real user ID of sending process
-	void         *si_addr;  // address of faulting instruction
-	int          si_status; // exit value or signal
-	int          si_band;   // band event for SIGPOLL
-	union sigval si_value;  // signal value
-} siginfo_t;
 
 struct sigaction {
 	union {

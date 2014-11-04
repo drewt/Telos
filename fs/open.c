@@ -22,11 +22,14 @@
 #include <sys/major.h>
 #include <string.h>
 
-long sys_chdir(const char *pathname)
+long sys_chdir(const char *pathname, size_t name_len)
 {
 	struct inode *inode;
 	int error;
 
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
 	error = namei(pathname, &inode);
 	if (error)
 		return error;
@@ -43,12 +46,15 @@ long sys_chdir(const char *pathname)
 	return 0;
 }
 
-long sys_open(const char *pathname, int flags, int mode)
+long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 {
 	int flag, fd, error;
 	struct inode *inode;
 	struct file *filp;
 
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
 	for (fd = 0; fd < NR_FILES; fd++)
 		if (!current->filp[fd])
 			break;

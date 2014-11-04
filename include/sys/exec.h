@@ -15,21 +15,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SYS_MOUNT_H_
-#define _SYS_MOUNT_H_
+#ifndef _SYS_EXEC_H_
+#define _SYS_EXEC_H_
 
 #include <sys/string.h>
 
-struct mount {
-	const struct _String dev;
-	const struct _String dir;
-	const struct _String type;
-	unsigned long flags;
-	const void *data;
+struct exec_args {
+	struct _String pathname;
+	struct _String *argv;
+	struct _String *envp;
+	size_t argc;
+	size_t envc;
 };
-
-int mount(const char *dev_name, const char *dir_name, const char *type,
-		unsigned long new_flags, const void *data);
-int umount(const char *target);
 
 #endif

@@ -151,12 +151,12 @@ static int parse_input(char *in, char *(*args)[])
 	return bg;
 }
 
-static int exec_with_prefix(const char *prefix, int argc, char *argv[])
+static int exec_with_prefix(const char *prefix, char *argv[], char *envp[])
 {
 	char path[IN_LEN + 16];
 	strcpy(path, prefix);
 	strcat(path, argv[0]);
-	return execve(path, argv, NULL);
+	return execve(path, argv, envp);
 }
 
 static void reaper(int signo)
@@ -193,8 +193,9 @@ int main(int _argc, char *_argv[])
 
 		// FIXME: fork/exec seems to cause stack corruption in some cases
 		if (!fork()) {
-			execve(argv[0], argv, NULL);
-			exec_with_prefix("/bin/", argc, argv);
+			char *envp[] = { NULL };
+			execve(argv[0], argv, envp);
+			exec_with_prefix("/bin/", argv, envp);
 			printf("tsh: %s: command not found\n", argv[0]);
 			exit(1);
 		}

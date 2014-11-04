@@ -28,6 +28,14 @@ typedef _ID_T_TYPE id_t;
 #define _PID_T_DEFINED
 typedef _PID_T_TYPE pid_t;
 #endif
+#ifndef _UNION_SIGVAL_DEFINED
+#define _UNION_SIGVAL_DEFINED
+_UNION_SIGVAL_DEFN
+#endif
+#ifndef _SIGINFO_T_DEFINED
+#define _SIGINFO_T_DEFINED
+_SIGINFO_T_DEFN
+#endif
 
 #define WCONTINUED 1
 #define WEXITED    2
