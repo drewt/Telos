@@ -18,7 +18,64 @@
 #ifndef _KERNEL_ELF_H_
 #define _KERNEL_ELF_H_
 
-/* elf section header types */
+#include <stdint.h>
+
+#define EI_NIDENT 16
+
+/* ELF object types */
+enum {
+	ELF_TYPE_NONE	= 0,
+	ELF_TYPE_REL	= 1,
+	ELF_TYPE_EXEC	= 2,
+	ELF_TYPE_DYN	= 3,
+	ELF_TYPE_CORE	= 4,
+	ELF_TYPE_LOPROC	= 0xFF00,
+	ELF_TYPE_HIPROC = 0xFFFF
+};
+
+struct elf32_hdr {
+	unsigned char e_ident[EI_NIDENT];
+	uint16_t type;
+	uint16_t machine;
+	uint32_t version;
+	uint32_t entry;
+	uint32_t phoff;
+	uint32_t shoff;
+	uint32_t flags;
+	uint16_t ehsize;
+	uint16_t phentsize;
+	uint16_t phnum;
+	uint16_t shentsize;
+	uint16_t shnum;
+	uint16_t shstrndx;
+} __attribute__((packed));
+
+/* ELF program header types */
+enum {
+	ELF_PHTYPE_NULL		= 0,
+	ELF_PHTYPE_LOAD		= 1,
+	ELF_PHTYPE_DYNAMIC	= 2,
+	ELF_PHTYPE_INTERP	= 3,
+	ELF_PHTYPE_NOTE		= 4,
+	ELF_PHTYPE_SHLIB	= 5,
+	ELF_PHTYPE_PHDR		= 6,
+	ELF_PHTYPE_LOPROC	= 0x70000000,
+	ELF_PHTYPE_HIPROC	= 0x7FFFFFFF
+};
+
+/* ELF program header entry */
+struct elf32_phdr {
+	uint32_t type;
+	uint32_t offset;
+	uint32_t vaddr;
+	uint32_t paddr;
+	uint32_t filesz;
+	uint32_t memsz;
+	uint32_t flags;
+	uint32_t align;
+} __attribute__((packed));
+
+/* ELF section header types */
 enum {
 	ELF_SHTYPE_NULL		= 0,
 	ELF_SHTYPE_PROGBITS	= 1,
@@ -38,7 +95,7 @@ enum {
 	ELF_SHTYPE_HIUSER	= 0xFFFFFFFF
 };
 
-/* elf section header flags */
+/* ELF section header flags */
 enum {
 	ELF_SHFLAG_WRITE	= 0x1,
 	ELF_SHFLAG_ALLOC	= 0x2,
@@ -46,28 +103,78 @@ enum {
 	ELF_SHFLAG_MASKPROC	= 0xF0000000
 };
 
-/* elf section header entry */
+/* ELF section header entry */
 struct elf32_shdr {
-	unsigned long sh_name;
-	unsigned long sh_type;
-	unsigned long sh_flags;
-	unsigned long sh_addr;
-	unsigned long sh_offset;
-	unsigned long sh_size;
-	unsigned long sh_link;
-	unsigned long sh_info;
-	unsigned long sh_addralign;
-	unsigned long sh_entsize;
-};
+	uint32_t name;
+	uint32_t type;
+	uint32_t flags;
+	uint32_t addr;
+	uint32_t offset;
+	uint32_t size;
+	uint32_t link;
+	uint32_t info;
+	uint32_t addralign;
+	uint32_t entsize;
+} __attribute__((packed));
+
+static inline struct elf32_phdr *elf32_get_phtab(struct elf32_hdr *hdr)
+{
+	return (struct elf32_phdr*) ((uint32_t) hdr + hdr->phoff);
+}
+
+static inline struct elf32_shdr *elf32_get_shtab(struct elf32_hdr *hdr)
+{
+	return (struct elf32_shdr*) ((uint32_t) hdr + hdr->shoff);
+}
+
+static inline struct elf32_phdr *elf32_next_phdr(struct elf32_phdr *phdr,
+		struct elf32_hdr *hdr)
+{
+	return (struct elf32_phdr*) ((ulong) phdr + hdr->phentsize);
+}
+
+static inline struct elf32_shdr *elf32_next_shdr(struct elf32_shdr *shdr,
+		struct elf32_hdr *hdr)
+{
+	return (struct elf32_shdr*) ((ulong) shdr + hdr->shentsize);
+}
+
+static inline struct elf32_phdr *elf32_get_phdr(struct elf32_hdr *hdr,
+		unsigned idx)
+{
+	return (void*) ((ulong) elf32_get_phtab(hdr) + hdr->phentsize * idx);
+}
+
+static inline struct elf32_shdr *elf32_get_shdr(struct elf32_hdr *hdr,
+		unsigned idx)
+{
+	return (void*) ((ulong) elf32_get_shtab(hdr) + hdr->shentsize * idx);
+}
+
+static inline char *elf32_get_strtab(struct elf32_hdr *hdr)
+{
+	struct elf32_shdr *strhdr = elf32_get_shdr(hdr, hdr->shstrndx);
+	return (char*) ((ulong) hdr + strhdr->offset);
+}
 
 /*
  * elf_shdr_iterate(tab,ent,size)
  *
  *	Generates a for loop, setting ent to
- *	each entry in the elf section header
+ *	each entry in the ELF section header
  *	table in turn.
  */
 #define elf_shdr_iterate(tab,ent,size) \
 	for ((ent)=&(tab)[1]; (ent)-(tab) < (signed) size; ent++)
+
+#define elf32_for_each_phdr(pos, i, hdr) \
+	for (pos = elf32_get_phtab(hdr), i = 0; \
+			i < (hdr)->phnum; \
+			pos = elf32_next_phdr(pos, hdr), i++)
+
+#define elf32_for_each_shdr(pos, i, hdr) \
+	for (pos = elf32_get_shtab(hdr), i = 0; \
+			i < (hdr)->shnum; \
+			pos = elf32_next_shdr(pos, hdr), i++)
 
 #endif
