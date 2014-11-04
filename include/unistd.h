@@ -18,10 +18,38 @@
 #ifndef _UNISTD_H_
 #define _UNISTD_H_
 
-#include <sys/types.h>
+#include <sys/type_macros.h>
 
 #ifndef NULL
-#define NULL ((void*)0)
+#define NULL _NULL_DEFN
+#endif
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+typedef _SSIZE_T_TYPE ssize_t;
+#endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
+#ifndef _GID_T_DEFINED
+#define _GID_T_DEFINED
+typedef _GID_T_TYPE gid_t;
+#endif
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+typedef _OFF_T_TYPE off_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _INTPTR_T_DEFINED
+#define _INTPTR_T_DEFINED
+typedef _INTPTR_T_TYPE intptr_t;
 #endif
 
 enum {

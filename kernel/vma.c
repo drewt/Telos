@@ -16,9 +16,11 @@
  */
 
 #include <kernel/list.h>
+#include <kernel/mmap.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vma.h>
+#include <string.h>
 
 static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 
@@ -31,6 +33,8 @@ static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE (FRAME_SIZE*4)
 
+#define DATA_FLAGS   (VM_WRITE | VM_NOALLOC)
+#define RODATA_FLAGS (VM_NOALLOC)
 #define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
 #define USTACK_FLAGS (VM_WRITE | VM_EXEC | VM_ZERO)
 #define KSTACK_FLAGS USTACK_FLAGS
@@ -48,20 +52,44 @@ static struct vma *new_vma(ulong start, ulong end, ulong flags)
 
 int mm_init(struct mm_struct *mm)
 {
+	struct vma *vma;
+
 	if (!(mm->pgdir = new_pgdir()))
 		return -ENOMEM;
 
 	mm->brk = HEAP_START + FRAME_SIZE;
-	mm->heap = vma_map(mm, (void*)HEAP_START, FRAME_SIZE, HEAP_FLAGS);
+	mm->heap = vma_map(mm, HEAP_START, FRAME_SIZE, HEAP_FLAGS);
 	if (!mm->heap)
 		goto abort;
-
-	mm->stack = vma_map(mm, (void*)STACK_START, STACK_SIZE, USTACK_FLAGS);
+	mm->stack = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
 	if (!mm->stack)
 		goto abort;
-
-	mm->kernel_stack = vma_map(mm, (void*)KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
+	mm->kernel_stack = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
 	if (!mm->kernel_stack)
+		goto abort;
+	vma = vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS);
+	if (!vma)
+		goto abort;
+	vma = vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS);
+	if (!vma)
+		goto abort;
+
+	return 0;
+abort:
+	del_pgdir(mm->pgdir);
+	return -ENOMEM;
+}
+
+int mm_kinit(struct mm_struct *mm)
+{
+	int error;
+	struct vma *vma;
+
+	if ((error = mm_init(mm)))
+		return error;
+
+	vma = vma_map(mm, krostart, kroend - krostart, RODATA_FLAGS);
+	if (!vma)
 		goto abort;
 
 	return 0;
@@ -101,7 +129,7 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 	return 0;
 }
 
-struct vma *vma_find(struct mm_struct *mm, void *addr)
+struct vma *vma_find(const struct mm_struct *mm, const void *addr)
 {
 	struct vma *area;
 
@@ -118,7 +146,7 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 	unsigned nr_pages = pages_in_range(vma->end, amount);
 
 	if (flags != vma->flags) {
-		if (vma_map(vma->mmap, (void*)vma->end, amount, flags) == NULL)
+		if (vma_map(vma->mmap, vma->end, amount, flags) == NULL)
 			return -ENOMEM;
 		return 0;
 	}
@@ -218,21 +246,81 @@ int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
 	return 0;
 }
 
-struct vma *vma_map(struct mm_struct *mm, void *dstp, size_t len, ulong flags)
+struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags)
 {
 	struct vma *vma;
-	ulong dst = page_base((ulong)dstp);
-	unsigned nr_pages = pages_in_range((ulong)dstp, len);
+	unsigned nr_pages = pages_in_range(dst, len);
+	dst = page_base(dst);
 
 	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
 	// TODO: demand paging
-	if (map_pages(mm->pgdir, dst, nr_pages, flags)) {
+	if (!(flags & VM_NOALLOC) && map_pages(mm->pgdir, dst, nr_pages, flags)) {
 		free_vma(vma);
 		return NULL;
 	}
 
 	vma_insert(mm, vma);
 	return vma;
+}
+
+int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
+		ulong flags)
+{
+	struct vma *vma;
+
+	if (!(vma = vma_get(mm, start))) {
+		kprintf("%p not mapped!\n", start);
+		return -1; // not mapped
+	}
+	if ((vma->flags & flags) != flags) {
+		kprintf("%p bad access!\n", start);
+		return -1; // bad access
+	}
+	if ((ulong)start - vma->start < len) {
+		kprintf("%p bad length!\n", start);
+		return -1; // invalid length
+	}
+	return 0;
+}
+
+int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
+		size_t len)
+{
+	void *addr;
+	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)src, len)))
+		return -1;
+	memcpy(dst, addr, len);
+	kunmap_tmp_range(addr, len);
+	return 0;
+}
+
+int vm_copy_to(const struct mm_struct *mm, void *dst, const void *src,
+		size_t len)
+{
+	void *addr;
+	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)dst, len)))
+		return -1;
+	memcpy(addr, src, len);
+	kunmap_tmp_range(addr, len);
+	return 0;
+}
+
+int vm_copy_through(const struct mm_struct *dst_mm,
+		const struct mm_struct *src_mm, void *dst, const void *src,
+		size_t len)
+{
+	void *dst_addr, *src_addr;
+
+	if (!(dst_addr = kmap_tmp_range(dst_mm->pgdir, (ulong) dst, len)))
+		return -1;
+	if (!(src_addr = kmap_tmp_range(src_mm->pgdir, (ulong) src, len))) {
+		kunmap_tmp_range(dst_addr, len);
+		return -1;
+	}
+	memcpy(dst_addr, src_addr, len);
+	kunmap_tmp_range(dst_addr, len);
+	kunmap_tmp_range(src_addr, len);
+	return 0;
 }

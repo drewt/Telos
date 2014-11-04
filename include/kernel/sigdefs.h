@@ -18,14 +18,48 @@
 #ifndef _KERNEL_SIGDEFS_H_
 #define _KERNEL_SIGDEFS_H_
 
-#ifdef __KERNEL__
-#include <kernel/types.h>
-#else
-#include <stddef.h>
-typedef int pid_t;
-#endif
+#include <sys/type_macros.h>
 
-typedef unsigned long sigset_t;
+#ifndef _PTHREAD_T_DEFINED
+#define _PTHREAD_T_DEFINED
+//typedef _PTHREAD_T_TYPE pthread_t;
+#endif
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
+#ifndef _SIG_ATOMIC_T_DEFINED
+#define _SIG_ATOMIC_T_DEFINED
+typedef _SIG_ATOMIC_T_TYPE sig_atomic_t;
+#endif
+#ifndef _SIGSET_T_DEFINED
+#define _SIGSET_T_DEFINED
+typedef _SIGSET_T_TYPE sigset_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
+#ifndef _UNION_SIGVAL_DEFINED
+#define _UNION_SIGVAL_DEFINED
+_UNION_SIGVAL_DEFN
+#endif
+#ifndef _SIGINFO_T_DEFINED
+#define _SIGINFO_T_DEFINED
+_SIGINFO_T_DEFN
+#endif
 
 typedef struct sigstack {
 	int	ss_onstack;	// non-zero when signal stack is in use
@@ -34,11 +68,6 @@ typedef struct sigstack {
 	int	ss_flags;	// flags
 } stack_t;
 
-union sigval {
-	int  sigval_int;
-	void *sigval_ptr;
-};
-
 struct sigevent {
 	int		sigev_notify;
 	int		sigev_signo;
@@ -46,27 +75,13 @@ struct sigevent {
 	void(*sigev_notify_function)(union sigval);
 };
 
-typedef struct siginfo {
-	int		si_signo;	// signal number
-	int		si_errno;	// errno value associated with this signal
-	int		si_code;	// signal code
-	pid_t		si_pid;		// sending process ID
-	void		*si_addr;	// address of faulting instruction
-	int		si_status;	// exit value or signal
-	int		si_band;	// band event for SIGPOLL
-	union sigval	si_value;	// signal value
-} siginfo_t;
-
 struct sigaction {
 	union {
 		void(*sa_handler)(int);
 		void(*sa_sigaction)(int,siginfo_t*,void*);
-	} _u;
+	};
 	sigset_t	sa_mask;
 	int		sa_flags;
 };
-
-#define sa_handler   _u.sa_handler
-#define sa_sigaction _u.sa_sigaction
 
 #endif

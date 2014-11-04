@@ -51,27 +51,63 @@ enum sig_nums {
 	SIGURG,
 	SIGVTALRM,
 	SIGXCPU,
+	SIGXFSZ,
 	SIGSTOP,
 	SIGKILL,
 	_TELOS_SIGMAX
 };
 
 enum {
-	SA_NOCLDSTOP	= 1,
-	SA_ONSTACK	= 1 << 1,
-	SA_RESETHAND	= 1 << 2,
-	SA_RESTART	= 1 << 3,
-	SA_SIGINFO	= 1 << 4,
-	SA_NOCLDWAIT	= 1 << 5,
-	SA_NODEFER	= 1 << 6
+	SA_NOCLDSTOP = 1,
+	SA_ONSTACK   = 1 << 1,
+	SA_RESETHAND = 1 << 2,
+	SA_RESTART   = 1 << 3,
+	SA_SIGINFO   = 1 << 4,
+	SA_NOCLDWAIT = 1 << 5,
+	SA_NODEFER   = 1 << 6,
 };
 
 enum {
+	ILL_ILLOPC,
+	ILL_ILLOPN,
+	ILL_ILLADR,
+	ILL_ILLTRP,
+	ILL_PRVOPC,
+	ILL_PRVREG,
+	ILL_COPROC,
+	ILL_BADSTK,
+	FPE_INTDIV,
+	FPE_INTOVF,
+	FPE_FLTDIV,
+	FPE_FLTOVF,
+	FPE_FLTUND,
+	FPE_FLTRES,
+	FPE_FLTINV,
+	FPE_FLTSUB,
+	SEGV_MAPERR,
+	SEGV_ACCERR,
+	BUS_ADRALN,
+	BUS_ADRERR,
+	BUS_OBJERR,
+	TRAP_BRKPT,
+	TRAP_TRACE,
+	CLD_EXITED,
+	CLD_KILLED,
+	CLD_DUMPED,
+	CLD_TRAPED,
+	CLD_STOPPED,
+	CLD_CONTINUED,
+	POLL_IN,
+	POLL_OUT,
+	POLL_MSG,
+	POLL_ERR,
+	POLL_PRI,
+	POLL_HUP,
 	SI_USER,
 	SI_QUEUE,
 	SI_TIMER,
 	SI_ASYNCIO,
-	SI_MESGQ
+	SI_MESGQ,
 };
 
 enum {
@@ -80,18 +116,20 @@ enum {
 	SIGEV_THREAD,
 };
 
-enum sigprocmask_flags { SIG_BLOCK, SIG_SETMASK, SIG_UNBLOCK };
+enum {
+	SIG_BLOCK,
+	SIG_SETMASK,
+	SIG_UNBLOCK,
+};
 
-int kill(pid_t pid, int signal_number);
-int sigqueue(pid_t pid, int signal_number, const union sigval value);
-int sigaction(int sig, struct sigaction *act, struct sigaction *oact);
-void(*signal(int sig, void(*func)(int)))(int);
-int sigprocmask(int how, sigset_t *set, sigset_t *oset);
-int sigwait(void);
+static inline int __signo_valid(int signo)
+{
+	return signo > 0 && signo < _TELOS_SIGMAX;
+}
 
 static inline int sigfillset(sigset_t *set)
 {
-	*set = (1 << (_TELOS_SIGMAX - 1)) - 1;
+	*set = ~0;
 	return 0;
 }
 
@@ -103,35 +141,79 @@ static inline int sigemptyset(sigset_t *set)
 
 static inline int sigaddset(sigset_t *set, int signum)
 {
-	if (signum >= _TELOS_SIGMAX)
+#ifndef __KERNEL__
+	if (!__signo_valid(signum))
 		return -1;
-
-	*set |= (1 << signum);
+#endif
+	*set |= 1 << (signum-1);
 	return 0;
 }
 
 static inline int sigdelset(sigset_t *set, int signum)
 {
-	if (signum >= _TELOS_SIGMAX)
+#ifndef __KERNEL__
+	if (!__signo_valid(signum))
 		return -1;
-
-	*set &= ~(1 << signum);
+#endif
+	*set &= ~(1 << (signum-1));
 	return 0;
 }
 
 static inline int sigismember(const sigset_t *set, int signum)
 {
-	if (signum >= _TELOS_SIGMAX)
+#ifndef __KERNEL__
+	if (!__signo_valid(signum))
 		return -1;
-
-	return *set & (1 << signum);
+#endif
+	return *set & (1 << (signum-1));
 }
 
 #ifdef __KERNEL__
 
-static inline int signo_valid(int signo)
+#include <kernel/bitops.h>
+
+#define signo_valid __signo_valid
+
+struct sig_struct {
+	sigset_t pending;
+	sigset_t mask;
+	sigset_t restore;
+	struct sigaction actions[_TELOS_SIGMAX];
+	struct siginfo infos[_TELOS_SIGMAX];
+};
+void sig_init(struct sig_struct *sig);
+void sig_clone(struct sig_struct *dst, struct sig_struct *src);
+void sig_exec(struct sig_struct *sig);
+
+static inline int signal_pending(struct sig_struct *sig)
 {
-	return signo > 0 && signo < _TELOS_SIGMAX;
+	return sig->pending & sig->mask;
+}
+
+static inline int pending_signal(struct sig_struct *sig)
+{
+	return fls(sig->pending & sig->mask);
+}
+
+static inline int signal_ignored(struct sig_struct *sig, int sig_no)
+{
+	return sig->actions[sig_no].sa_handler == SIG_IGN;
+}
+
+static inline int signal_blocked(struct sig_struct *sig, int sig_no)
+{
+	return !sigismember(&sig->mask, sig_no);
+}
+
+static inline int signal_accepted(struct sig_struct *sig, int sig_no)
+{
+	return !signal_ignored(sig, sig_no) && !signal_blocked(sig, sig_no);
+}
+
+static inline int signal_from_user(int code)
+{
+	return code == SI_USER || code == SI_QUEUE || code == SI_TIMER ||
+		code == SI_ASYNCIO || code == SI_MESGQ;
 }
 
 #endif /* __KERNEL__ */

@@ -19,13 +19,15 @@
 #ifndef _STDDEF_H_
 #define _STDDEF_H_
 
+#include <sys/type_macros.h>
+
 #ifndef NULL
-#define NULL ((void*)0)
+#define NULL _NULL_DEFN
 #endif
 
-#ifndef _SIZE_T
-#define _SIZE_T
-typedef unsigned int size_t;
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
 #endif
 
 #define offsetof(t,m) ((size_t)&((t*)0)->m)

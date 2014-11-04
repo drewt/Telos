@@ -83,6 +83,7 @@ struct file {
 	unsigned long f_pos;
 	unsigned short f_flags;
 	unsigned short f_count;
+	void *f_private;
 	struct file_operations *f_op;
 };
 
@@ -205,6 +206,5 @@ int register_chrdev(unsigned int major, const char * name, struct file_operation
 int register_blkdev(unsigned int major, const char * name, struct file_operations *fops);
 int unregister_chrdev(unsigned int major, const char * name);
 int unregister_blkdev(unsigned int major, const char * name);
-struct inode *devfs_geti(dev_t dev);
 
 #endif

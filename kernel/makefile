@@ -1,5 +1,5 @@
 objects = entry.o gdt.o inthandlers.o intr.o kernel.o mem.o pic.o paging.o \
-	  rtc.o sighandlers.o slab.o sysproc.o timer.o vma.o
+	  rtc.o schedule.o slab.o timer.o vma.o
 clean = $(objects)
 
 all: $(objects)

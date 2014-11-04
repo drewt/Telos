@@ -18,14 +18,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/wait.h>
 
-#include <telos/process.h>
 #include <telos/console.h>
-
-#include <usr/test.h>
 
 #define IN_LEN   512
 #define MAX_ARGS 100
@@ -84,7 +83,7 @@ static ssize_t read_line(char *buf, size_t len)
 	size_t pos = 0;
 
 	len--;
-	while ((c = getchar()) != '\n' && pos < len) {
+	while ((c = getchar()) != '\n' && pos < len-1) {
 		if (c == EOF)
 			return EOF;
 		else
@@ -152,13 +151,18 @@ static int parse_input(char *in, char *(*args)[])
 	return bg;
 }
 
-static int exec_with_prefix(const char *prefix, int argc, char *argv[])
+static int exec_with_prefix(const char *prefix, char *argv[], char *envp[])
 {
-	char path[256];
+	char path[IN_LEN + 16];
 	strcpy(path, prefix);
 	strcat(path, argv[0]);
-	return execve(path, argv, NULL);
-	//return fcreate(path, argc, argv);
+	return execve(path, argv, envp);
+}
+
+static void reaper(int signo)
+{
+	int status;
+	wait(&status);
 }
 
 int main(int _argc, char *_argv[])
@@ -167,10 +171,11 @@ int main(int _argc, char *_argv[])
 	char in[IN_LEN];
 	char *argv[MAX_ARGS];
 	int argc;
-	int sig;
-	int bg;
+	sigset_t set;
 
-	signal(SIGCHLD, sigchld_handler);
+	sigfillset(&set);
+	sigdelset(&set, SIGCHLD);
+	signal(SIGCHLD, reaper);
 
 	while (1) {
 		printf(PROMPT);
@@ -179,7 +184,7 @@ int main(int _argc, char *_argv[])
 		if (*in == '\0')
 			continue;
 
-		bg = parse_input(in, &argv);
+		parse_input(in, &argv);
 		for (argc = 0; argv[argc]; argc++);
 		if ((p = builtin_lookup(argv[0]))) {
 			p(argc, argv);
@@ -188,19 +193,13 @@ int main(int _argc, char *_argv[])
 
 		// FIXME: fork/exec seems to cause stack corruption in some cases
 		if (!fork()) {
-			execve(argv[0], argv, NULL);
-			exec_with_prefix("/bin/", argc, argv);
+			char *envp[] = { NULL };
+			execve(argv[0], argv, envp);
+			exec_with_prefix("/bin/", argv, envp);
 			printf("tsh: %s: command not found\n", argv[0]);
 			exit(1);
 		}
-		/*if (fcreate(argv[0], argc, argv) > 0);
-		else if (exec_with_prefix("/bin/", argc, argv) > 0);
-		else {
-			printf("tsh: %s: command not found\n", argv[0]);
-			continue;
-		}*/
 
-		if (!bg)
-			for (sig = 0; sig != SIGCHLD; sig = sigwait());
+		sigsuspend(&set);
 	}
 }

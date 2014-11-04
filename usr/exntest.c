@@ -19,27 +19,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
-
-#include <telos/process.h>
+#include <unistd.h>
 
 int _dbz_ = 0;
 
-int dbz_proc()
+static _Noreturn void dbz_proc(void)
 {
 	printf("Dividing by zero... ");
 	_dbz_ = 1 / _dbz_;
 	printf("error\n");
-	return 0;
+	exit(1);
 }
-
-void sigchld_handler(int sig) {}
 
 int main(int argc, char *argv[])
 {
-	signal(SIGCHLD, sigchld_handler);
+	int sig;
+	sigset_t set;
 
-	syscreate(dbz_proc, 0, 0);
-	for (int sig = 0; sig != SIGCHLD; sig = sigwait());
+	sigemptyset(&set);
+	sigaddset(&set, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &set, NULL);
+
+	if (!fork())
+		dbz_proc();
+	while (sigwait(&set, &sig));
 	printf("done.\n");
 	return 0;
 }

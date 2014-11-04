@@ -22,95 +22,88 @@
 #include <kernel/mmap.h>
 #include <kernel/list.h>
 #include <kernel/fs.h>
-#include <kernel/major.h>
 #include <kernel/signal.h>
 #include <kernel/stat.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
 #include <kernel/drivers/console.h>
+#include <sys/exec.h>
+#include <sys/wait.h>
+#include <string.h>
 
 extern void exit(int status);
 
-#define STDIO_FILE(name) \
-	struct file name = { \
-		.f_count = 2, \
+struct pcb proctab[PT_SIZE];
+
+struct proc_status {
+	struct list_head chain;
+	pid_t pid;
+	int status;
+};
+DEFINE_SLAB_CACHE(proc_status_cachep, sizeof(struct proc_status));
+
+static inline int status_to_si_code(int status)
+{
+	switch (WHOW(status)) {
+	case _WCONTINUED: return CLD_CONTINUED;
+	case _WEXITED:    return CLD_EXITED;
+	case _WSIGNALED:  return CLD_KILLED;
+	case _WSTOPPED:   return CLD_STOPPED;
 	}
-
-STDIO_FILE(stdin_file);
-STDIO_FILE(stdout_file);
-STDIO_FILE(stderr_file);
-
-static void stdio_sysinit(void)
-{
-	struct file_operations *fops = get_chrfops(TTY_MAJOR);
-
-	stdin_file.f_op = fops;
-	stdin_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-
-	stdout_file.f_op = fops;
-	stdout_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-
-	stderr_file.f_op = fops;
-	stderr_file.f_inode = devfs_geti(DEVICE(TTY_MAJOR, 0));
-}
-EXPORT_KINIT(stdio, SUB_PROCESS, stdio_sysinit);
-
-static inline struct pcb *get_free_pcb(void)
-{
-	int i;
-	for (i = 0; i < PT_SIZE && proctab[i].state != STATE_STOPPED; i++)
-		/* nothing */;
-	return (i == PT_SIZE) ? NULL : &proctab[i];
+	return 0;
 }
 
-static void pcb_init(struct pcb *p, pid_t parent, ulong flags)
+static void assert_status(struct pcb *parent, struct proc_status *status)
 {
-	/* init signal data */
-	p->sig_pending = 0;
-	p->sig_accept  = 0;
-	p->sig_ignore  = ~0;
-	for (int i = 0; i < _TELOS_SIGMAX; i++) {
-		p->sigactions[i] = default_sigactions[i];
-		if (default_sigactions[i].sa_handler != SIG_IGN)
-			p->sig_accept |= 1 << i;
+	list_add_tail(&status->chain, &parent->child_stats);
+	__kill(parent, SIGCHLD, status_to_si_code(status->status));
+}
+
+void report_status(struct pcb *p, int how, int val)
+{
+	struct pcb *parent;
+	struct proc_status *status;
+
+	if (!(parent = get_pcb(p->parent_pid)))
+		panic("Process %d has no parent", p->pid);
+	if (!(status = slab_alloc(proc_status_cachep)))
+		return; // FIXME: do something
+	status->pid = p->pid;
+	status->status = make_status(how, val);
+	assert_status(parent, status);
+}
+
+static void proctab_init (void)
+{
+	for (int i = 0; i < PT_SIZE; i++) {
+		proctab[i].pid   = i - PT_SIZE;
+		proctab[i].state = PROC_DEAD;
 	}
+	proctab[0].pid = 0; // 0 is a reserved pid
+}
+EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
 
-	/* init file data */
-	p->filp[0] = &stdin_file;
-	p->filp[1] = &stdout_file;
-	p->filp[2] = &stderr_file;
-	stdin_file.f_count++;
-	stdout_file.f_count++;
-	stderr_file.f_count++;
-	for (int i = 3; i < NR_FILES; i++)
-		p->filp[i] = NULL;
-
-	/* init lists */
-	INIT_LIST_HEAD(&p->send_q);
-	INIT_LIST_HEAD(&p->recv_q);
-	INIT_LIST_HEAD(&p->repl_q);
-	INIT_LIST_HEAD(&p->mm.map);
-	INIT_LIST_HEAD(&p->mm.kheap);
-	INIT_LIST_HEAD(&p->posix_timers);
-
+static struct pcb *pcb_common_init(struct pcb *p)
+{
 	p->t_alarm.flags = 0;
 	p->t_sleep.flags = 0;
-
 	p->timestamp = tick_count;
-	p->pid += PT_SIZE;
-	p->parent_pid = parent;
-	p->flags = flags;
-	p->state = STATE_NASCENT;
+	p->state = PROC_NASCENT;
+	INIT_LIST_HEAD(&p->mm.map);
+	INIT_LIST_HEAD(&p->mm.kheap);
+	INIT_LIST_HEAD(&p->children);
+	INIT_LIST_HEAD(&p->child_stats);
+	INIT_LIST_HEAD(&p->posix_timers);
+	return p;
+}
 
-	struct pcb *pp = &proctab[PT_INDEX(parent)];
-	if (pp->pid == parent) {
-		p->root = pp->root;
-		p->pwd = pp->pwd;
-	} else {
-		p->root = root_inode;
-		p->pwd = root_inode;
-	}
+static struct pcb *get_free_pcb(void)
+{
+	for (int i = 0; i < PT_SIZE; i++)
+		if (proctab[i].state == PROC_DEAD)
+			return pcb_common_init(&proctab[i]);
+	return NULL;
 }
 
 static struct pcb *pcb_clone(struct pcb *src)
@@ -121,203 +114,219 @@ static struct pcb *pcb_clone(struct pcb *src)
 		return NULL;
 
 	p->esp = src->esp;
-	p->ksp = src->ksp;
 	p->ifp = src->ifp;
 
-	p->sig_pending = 0;
-	p->sig_accept = src->sig_accept;
-	p->sig_ignore = src->sig_ignore;
-	for (int i = 0; i < _TELOS_SIGMAX; i++)
-		p->sigactions[i] = src->sigactions[i];
+	sig_clone(&p->sig, &src->sig);
 
 	for (int i = 0; i < NR_FILES; i++)
 		if ((p->filp[i] = src->filp[i]))
 			p->filp[i]->f_count++;
 
-	INIT_LIST_HEAD(&p->send_q);
-	INIT_LIST_HEAD(&p->recv_q);
-	INIT_LIST_HEAD(&p->repl_q);
-	INIT_LIST_HEAD(&p->mm.map);
-	INIT_LIST_HEAD(&p->mm.kheap);
-	INIT_LIST_HEAD(&p->posix_timers);
-
-	p->t_alarm.flags = 0;
-	p->t_sleep.flags = 0;
-
-	p->timestamp = tick_count;
 	p->pid += PT_SIZE;
 	p->parent_pid = src->pid;
 	p->flags = src->flags;
-	p->state = STATE_NASCENT;
 
 	p->root = src->root;
 	p->pwd = src->pwd;
-	return p;
-}
 
-long sys_create(void(*func)(int,char*), int argc, char **argv)
-{
-	return create_user_process(func, argc, argv, 0);
+	list_add_tail(&p->child_chain, &src->children);
+	return p;
 }
 
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 {
-	int rc;
+	int error;
+	struct kcontext *frame;
 	struct pcb *p;
-	void *frame;
-	ulong *args;
 
-	if ((p = get_free_pcb()) == NULL)
+	if (!(p = get_free_pcb()))
 		return -EAGAIN;
+	sig_init(&p->sig);
+	for (int i = 0; i < NR_FILES; i++)
+		p->filp[i] = NULL;
+	p->pid += PT_SIZE;
+	p->parent_pid = 1;
+	p->flags = flags | PFLAG_SUPER;
+	p->root = root_inode;
+	p->pwd = root_inode;
 
-	pcb_init(p, 0, flags | PFLAG_SUPER);
+	if ((error = mm_kinit(&p->mm)) < 0)
+		return error;
 
-	if ((rc = mm_init(&p->mm)) < 0)
-		return rc;
-
-	p->ksp = (void*)p->mm.kernel_stack->end;
-	p->esp = ((char*)p->mm.stack->end - sizeof(struct kcontext) - 128);
+	p->esp = ((char*)p->mm.kernel_stack->end - sizeof(struct kcontext) - 16);
 
 	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct kcontext) + 16);
-	put_iret_kframe((void*)frame, (ulong)func);
-
-	args = (ulong*) ((ulong)frame + sizeof(struct kcontext));
-	args[0] = (ulong) exit;
-	args[1] = (ulong) arg;
-	kunmap_tmp_range(frame, sizeof(struct kcontext) + 16);
+	put_iret_kframe(frame, (ulong)func);
+	frame->stack[0] = (ulong) exit;
+	frame->stack[1] = (ulong) arg;
+	kunmap_tmp_range(frame, sizeof(struct kcontext));
 
 	ready(p);
 	return p->pid;
 }
 
-/* TODO: something better than this crap */
-static void copy_args(struct pcb *p, int argc, char **argv)
-{
-	char *kargv[argc];
-	char **uargv;
-	ulong arg_addr;
-
-	copy_from_current(kargv, argv, sizeof(char*) * argc);
-
-	arg_addr = p->mm.heap->start + 128;
-	uargv = kmap_tmp_range(p->mm.pgdir, p->mm.heap->start, 128);
-	for (int i = 0; i < argc; i++, arg_addr += 128) {
-		uargv[i] = (char*) arg_addr;
-		copy_string_through_user(p, current, (void*) arg_addr,
-				kargv[i], 128);
-	}
-	kunmap_tmp_range(uargv, 128);
-}
-
-int create_user_process(void(*func)(int,char*), int argc, char **argv,
-		ulong flags)
-{
-	int rc;
-	struct pcb	*p;
-	ulong		esp;
-	ulong		*args;
-	void		*v_frame;
-	void		*p_frame;
-
-	if ((p = get_free_pcb()) == NULL)
-		return -EAGAIN;
-
-	pcb_init(p, current->pid, flags);
-
-	if ((rc = mm_init(&p->mm)) < 0)
-		return rc;
-
-	p->ksp = (char*)p->mm.kernel_stack->end;
-
-	copy_args(p, argc, argv);
-
-	/* set up iret frame */
-	v_frame = (void*) (p->mm.stack->start + 32 * sizeof(struct ucontext));
-	p_frame = kmap_tmp_range(p->mm.pgdir, (ulong) v_frame,
-			sizeof(struct ucontext));
-	esp = p->mm.stack->end - 128;
-	put_iret_uframe(p_frame, (ulong) func, esp);
-	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
-
-	/* set up stack for main() */
-	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong) * 3);
-	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = p->mm.heap->start;
-	kunmap_tmp_range(args, sizeof(ulong) * 3);
-
-	p->esp = v_frame;
-	p->ifp = (void*) ((ulong) p->esp + sizeof(struct ucontext));
-
-	ready(p);
-	return p->pid;
-}
-
-long sys_fcreate(const char *pathname, int argc, char **argv)
+void create_init(void(*func)(void*))
 {
 	int error;
-	struct inode *inode;
-
-	error = namei(pathname, &inode);
-	if (error)
-		return error;
-	if (!S_ISFUN(inode->i_mode))
-		return -EINVAL;
-
-	return create_user_process(inode->i_private, argc, argv, 0);
-}
-
-#define ARG_MAX 32
-#include <string.h>
-static int _copy_args(char **argv)
-{
-	int argc;
-	ulong addr = current->mm.heap->start + (ARG_MAX * sizeof(char*));
-	char **uargv = (char**) current->mm.heap->start;
-
-	if (!argv)
-		return 0;
-
-	for (argc = 0; argc < ARG_MAX && argv[argc]; argc++, addr += 128) {
-		uargv[argc] = (char*) addr;
-		memcpy((void*)addr, argv[argc], 128);
-	}
-	return argc;
-}
-
-long sys_execve(const char *pathname, char **argv, char **envp)
-{
-	int error, argc;
-	ulong esp;
+	long esp;
 	ulong *args;
-	void *v_frame, *p_frame;
+	void *frame;
+	struct pcb *p;
+
+	p = pcb_common_init(&proctab[1]);
+	sig_init(&p->sig);
+	for (int i = 0; i < NR_FILES; i++)
+		p->filp[i] = NULL;
+	p->pid = 1;
+	p->parent_pid = 1;
+	p->flags = 0;
+	p->root = root_inode;
+	p->pwd = root_inode;
+
+	if ((error = mm_init(&p->mm)) < 0)
+		panic("mm_init failed with error %d", error);
+
+	p->ifp = (char*)p->mm.kernel_stack->end - 16;
+	p->esp = (char*)p->ifp - sizeof(struct ucontext);
+
+	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct ucontext));
+	esp = p->mm.stack->end - 16;
+	put_iret_uframe(frame, (ulong)func, esp);
+	kunmap_tmp_range(frame, sizeof(struct ucontext));
+
+	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong));
+	args[0] = (ulong) exit;
+	kunmap_tmp_range(args, sizeof(ulong));
+
+	ready(p);
+
+}
+
+static int verify_exec_args(struct exec_args *args)
+{
+	int error;
+
+	if (vm_verify(&current->mm, args, sizeof(*args), 0))
+		return -EFAULT;
+	if (vm_verify(&current->mm, args->argv,
+				sizeof(*(args->argv)) * args->argc, 0))
+		return -EFAULT;
+	if (vm_verify(&current->mm, args->envp,
+				sizeof(*(args->envp)) * args->envc, 0))
+		return -EFAULT;
+	error = verify_user_string(args->pathname.str, args->pathname.len);
+	if (error)
+		return error;
+	for (size_t i = 0; i < args->argc; i++) {
+		error = verify_user_string(args->argv[i].str, args->argv[i].len);
+		if (error)
+			return error;
+	}
+	for (size_t i = 0; i < args->envc; i++) {
+		error = verify_user_string(args->envp[i].str, args->envp[i].len);
+		if (error)
+			return error;
+	}
+	return 0;
+}
+
+static size_t exec_mem_needed(struct exec_args *args)
+{
+	size_t size = 0;
+	size += (args->argc + 1) * sizeof(char*);
+	size += (args->envc + 1) * sizeof(char*);
+	for (size_t i = 0; i < args->argc; i++)
+		size += args->argv[i].len + 1;
+	for (size_t i = 0; i < args->envc; i++)
+		size += args->envp[i].len + 1;
+	return size;
+}
+
+static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
+{
+	int error;
+	char *mem, *kmem;
+	char **argv;
+	char **envp;
+	size_t size = exec_mem_needed(args);
+	ssize_t diff = size - vma_size(current->mm.heap);
+
+	// need more memory in heap
+	if (diff > 0) {
+		error = vma_grow_up(current->mm.heap, diff, current->mm.heap->flags);
+		if (error)
+			return error;
+	}
+
+	// copy args/env into kernel memory
+	kmem = kmalloc(size);
+	if (!kmem)
+		return -ENOMEM;
+	mem = (char*) ((char**) kmem + args->argc + args->envc + 2);
+	for (size_t i = 0; i < args->argc; i++) {
+		memcpy(mem, args->argv[i].str, args->argv[i].len + 1);
+		mem += args->argv[i].len + 1;
+	}
+	for (size_t i = 0; i < args->envc; i++) {
+		memcpy(mem, args->envp[i].str, args->envp[i].len + 1);
+		mem += args->envp[i].len + 1;
+	}
+
+	// copy back into user memory and populate argv/envp
+	memcpy((void*) current->mm.heap->start, kmem, size);
+	argv = (char**) current->mm.heap->start;
+	envp = argv + args->argc + 1;
+	mem = (char*) (envp + args->envc + 1);
+	for (size_t i = 0; i < args->argc; i++) {
+		argv[i] = mem;
+		mem += args->argv[i].len + 1;
+	}
+	argv[args->argc] = NULL;
+	for (size_t i = 0; i < args->envc; i++) {
+		envp[i] = mem;
+		mem += args->envp[i].len + 1;
+	}
+	envp[args->envc] = NULL;
+
+	*argv_loc = argv;
+	*envp_loc = envp;
+	kfree(kmem);
+	return 0;
+}
+
+long sys_execve(struct exec_args *args)
+{
+	int error;
+	void *argv, *envp;
+	unsigned long esp;
+	unsigned long *main_args;
 	struct inode *inode;
 
-	error = namei(pathname, &inode);
+	error = verify_exec_args(args);
+	if (error)
+		return error;
+	error = namei(args->pathname.str, &inode);
 	if (error)
 		return error;
 	if (!S_ISFUN(inode->i_mode))
-		return -EINVAL;
+		return -EACCES;
+	error = execve_copy(args, &argv, &envp);
+	if (error)
+		return error;
 
-	argc = _copy_args(argv);
+	sig_exec(&current->sig);
+	current->ifp = (char*) current->mm.kernel_stack->end - 16;
+	current->esp = (char*) current->ifp - sizeof(struct ucontext);
 
-	/* set up iret frame */
-	v_frame = (void*) (current->mm.stack->start + 32 * sizeof(struct ucontext));
-	p_frame = kmap_tmp_range(current->mm.pgdir, (ulong)v_frame,
-			sizeof(struct ucontext));
-	esp = current->mm.stack->end - 128;
-	put_iret_uframe(p_frame, (ulong)inode->i_private, esp);
-	kunmap_tmp_range(p_frame, sizeof(struct ucontext));
+	esp = current->mm.stack->end - 16;
+	put_iret_uframe(current->esp, (ulong)inode->i_private, esp);
 
-	/* set up stack for main() */
-	args = kmap_tmp_range(current->mm.pgdir, esp, sizeof(ulong) * 3);
-	args[0] = (ulong) exit;
-	args[1] = (ulong) argc;
-	args[2] = current->mm.heap->start;
-	kunmap_tmp_range(args, sizeof(ulong) * 3);
+	main_args = (unsigned long*) esp;
+	main_args[0] = (unsigned long) exit;
+	main_args[1] = args->argc;
+	main_args[2] = (unsigned long) argv;
+	main_args[3] = (unsigned long) envp;
 
-	current->esp = v_frame;
-	current->ifp = (void*) ((ulong)current->esp + sizeof(struct ucontext));
 	return 0;
 }
 
@@ -326,69 +335,145 @@ long sys_fork(void)
 	int rc;
 	struct pcb *p;
 
+	// set return value to zero for child
+	((struct ucontext*)current->esp)->reg.eax = 0;
+
 	if (!(p = pcb_clone(current)))
 		return -EAGAIN;
 
 	if ((rc = mm_clone(&p->mm, &current->mm)) < 0)
 		return rc;
 
-	p->rc = 0;
 	ready(p);
 	return p->pid;
 }
 
-/*-----------------------------------------------------------------------------
- * Yeild control to another process */
-//-----------------------------------------------------------------------------
 long sys_yield(void)
 {
 	ready(current);
-	new_process();
+	schedule();
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Stop the current process and free all resources associated with it */
-//-----------------------------------------------------------------------------
-long sys_exit(int status)
+void do_exit(struct pcb *p, int status)
 {
-	struct pcb		*pit;
-	struct mem_header	*hit;
+	struct pcb *pit;
+	struct proc_status *sit, *n;
+	struct mem_header *hit;
 
-	// TODO: see what POSIX requires vis-a-vis process data in handler
-	pit = &proctab[PT_INDEX(current->parent_pid)];
-	__kill(pit, SIGCHLD);
+	report_status(p, _WEXITED, status);
 
-	/* free memory allocated to process */
-	dequeue_iterate (hit, struct mem_header, chain, &current->mm.kheap)
+	// free memory allocated to process
+	dequeue_iterate(hit, struct mem_header, chain, &current->mm.kheap)
 		kfree(hit->data);
-
-	current->state = STATE_STOPPED;
-
-	#define CLEAR_MSG_QUEUE(q)			\
-	dequeue_iterate (pit, struct pcb, chain, (q)) {	\
-		pit->rc = SYSERR;			\
-		ready(pit);				\
-	}
-	CLEAR_MSG_QUEUE(&current->send_q)
-	CLEAR_MSG_QUEUE(&current->recv_q)
-	CLEAR_MSG_QUEUE(&current->repl_q)
 
 	for (int i = 0; i < NR_FILES; i++)
 		if (current->filp[i] != NULL)
 			sys_close(i);
 
+	// re-parent orphans to init
+	list_for_each_entry(pit, &current->children, child_chain) {
+		pit->parent_pid = 1;
+	}
+	// give status events to new parent
+	if (!(pit = get_pcb(1)))
+		panic("No init process");
+	list_for_each_entry_safe(sit, n, &current->child_stats, chain) {
+		list_del(&sit->chain);
+		assert_status(pit, sit);
+	}
+
 	del_pgdir(current->mm.pgdir);
 	mm_fini(&current->mm);
+	zombie(p);
+}
 
-	new_process();
+long sys_exit(int status)
+{
+	do_exit(current, status);
+	schedule();
 	return 0;
 }
 
-/*-----------------------------------------------------------------------------
- * Return the current process's pid */
-//-----------------------------------------------------------------------------
 long sys_getpid(void)
 {
 	return current->pid;
+}
+
+long sys_getppid(void)
+{
+	return current->parent_pid;
+}
+
+static struct proc_status *get_status(idtype_t idtype, id_t id, int options)
+{
+	struct proc_status *s;
+	list_for_each_entry(s, &current->child_stats, chain) {
+		// TODO: P_PGID
+		if (idtype == P_PID && s->pid != (pid_t)id)
+			continue;
+		switch (WHOW(s->status)) {
+		case _WCONTINUED:
+			if (options & WCONTINUED)
+				return s;
+			break;
+		case _WEXITED:
+			if (options & WEXITED)
+				return s;
+			break;
+		case _WSTOPPED:
+			if (options & WSTOPPED)
+				return s;
+			break;
+		default:
+			return s;
+		}
+	}
+	return NULL;
+}
+
+long sys_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
+{
+	int signo;
+	struct proc_status *s;
+
+	if (vm_verify(&current->mm, infop, sizeof(*infop), VM_WRITE))
+		return -EFAULT;
+	if (list_empty(&current->children))
+		return -ECHILD;
+	for (;;) {
+		if ((s = get_status(idtype, id, options)))
+			break;
+		if (options & WNOHANG) {
+			infop->si_signo = 0;
+			infop->si_pid = 0;
+			return 0;
+		}
+
+		current->state = PROC_WAITING;
+		if ((signo = schedule()) != SIGCHLD)
+			return -EINTR;
+		if (signal_from_user(current->sig.infos[signo].si_code))
+			return -EINTR;
+	}
+	infop->si_signo = SIGCHLD;
+	infop->si_code = status_to_si_code(s->status);
+	infop->si_errno = 0;
+	infop->si_pid = s->pid;
+	infop->si_uid = 0; // TODO
+	infop->si_status = WVALUE(s->status);
+	infop->si_value.sigval_int = s->status; // for wait[pid] wrapper
+
+	// reap zombie
+	if (WIFEXITED(s->status) || WIFSIGNALED(s->status)) {
+		struct pcb *p = get_pcb(s->pid);
+		if (!p)
+			panic("Tried to reap non-existant child");
+		list_del(&p->child_chain);
+		reap(p);
+	}
+
+	list_del(&s->chain);
+	slab_free(proc_status_cachep, s);
+	return 0;
 }

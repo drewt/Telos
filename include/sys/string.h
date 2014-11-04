@@ -15,32 +15,19 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
+#ifndef _SYS_STRING_H_
+#define _SYS_STRING_H_
 
-#include <telos/msg.h>
-#include <telos/process.h>
+#include <sys/type_macros.h>
 
-int main(int argc, char *argv[])
-{
-	char reply_blk;
-	pid_t server_pid;
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
 
-	if (argc < 3) {
-		puts("usage: echoclient <server-pid> <string>");
-		return -1;
-	}
+struct _String {
+	size_t len;
+	const char *str;
+};
 
-	server_pid = atoi(argv[1]);
-
-	for (int i = 2; argv[i] != NULL; i++) {
-		if (send(server_pid, argv[i], strlen(argv[i])+1, &reply_blk, 1) == -1)
-			puts("echoclient: send error");
-		else
-			putchar(' ');
-	}
-	putchar(' ');
-	return 0;
-}
+#endif

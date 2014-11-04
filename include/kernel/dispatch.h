@@ -19,6 +19,7 @@
 #define _KERNEL_DISPATCH_H_
 
 #include <kernel/process.h>
+#include <sys/wait.h>
 #include <syscall.h>
 
 struct sigaction;
@@ -28,34 +29,35 @@ struct timespec;
 struct itimerspec;
 
 struct stat;
+struct mount;
+struct exec_args;
+
+struct ucontext;
 
 extern struct pcb *current;
 
 extern int idle_pid;
-extern int root_pid;
 
-_Noreturn void kernel_start(void);
 _Noreturn void switch_to(struct pcb *p);
-void dispatch(ulong call, struct sys_args *args);
 void ready(struct pcb *p);
-void new_process(void);
+void zombie(struct pcb *p);
+void reap(struct pcb *p);
+void wake(struct pcb *p, long rc);
+long schedule(void);
 
-void __kill(struct pcb *p, int sig_no);
+void __kill(struct pcb *p, int sig_no, int code);
 
-int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len);
-int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len);
-int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len);
-int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len);
 void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
 void kunmap_tmp_range(void *addrp, size_t len);
 
-#define copy_to_current(dst, src, len) \
-	copy_to_user(current, dst, src, len)
-
-#define copy_from_current(dst, src, len) \
-	copy_from_user(current, dst, src, len)
+static inline int verify_user_string(const char *str, size_t len)
+{
+	if (vm_verify(&current->mm, str, len, 0))
+		return -EFAULT;
+	if (str[len] != '\0')
+		return -EINVAL;
+	return 0;
+}
 
 void exn_page_fault(void);
 void exn_fpe(void);
@@ -65,44 +67,42 @@ void int_keyboard(void);
 
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
-long sys_create(void(*func)(int,char*), int argc, char **argv);
-long sys_fcreate(const char *pathname, int argc, char **argv);
-long sys_execve(const char *pathname, char **argv, char **envp);
+long sys_execve(struct exec_args *args);
 long sys_fork(void);
 long sys_yield(void);
+long sys_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
 long sys_exit(int status);
 long sys_getpid(void);
+long sys_getppid(void);
 long sys_sleep(unsigned long ms);
 long sys_alarm(unsigned long ms);
-long sig_restore(void *osp);
+long sig_restore(struct ucontext *cx);
 long sys_sigaction(int sig, struct sigaction *act,
 		struct sigaction *oact);
-long sys_signal(int sig, void(*func)(int));
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset);
 long sys_kill(pid_t pid, int sig);
 long sys_sigqueue(pid_t pid, int sig, const union sigval value);
-long sys_sigwait(void);
-long sys_send(int dest_pid, void *obuf, int olen, void *ibuf, int ilen);
-long sys_recv(int *src_pid, void *buffer, int length);
-long sys_reply(int src_pid, void *buffer, int length);
-long sys_open(const char *pathname, int flags, int mode);
+long sys_sigwait(sigset_t set, int *sig);
+long sys_sigsuspend(sigset_t mask);
+long sys_open(const char *pathname, size_t name_len, int flags, int mode);
 long sys_close(unsigned int fd);
 long sys_read(unsigned int fd, char *buf, size_t nbyte);
 long sys_write(unsigned int fd, char *buf, size_t nbyte);
 long sys_lseek(unsigned int fd, off_t offset, unsigned int whence);
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count);
 long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
-long sys_mknod(const char *filename, int mode, dev_t dev);
-long sys_mkdir(const char *pathname, int mode);
-long sys_rmdir(const char *pathname);
-long sys_chdir(const char *pathname);
-long sys_link(const char *oldname, const char *newname);
-long sys_unlink(const char *pathname);
-long sys_rename(const char *oldname, const char *newname);
-long sys_mount(char *dev_name, char *dir_name, char *type, ulong new_flags,
-		void *data);
-long sys_umount(const char *name);
-long sys_stat(const char *pathname, struct stat *s);
+long sys_mknod(const char *filename, size_t name_len, int mode, dev_t dev);
+long sys_mkdir(const char *pathname, size_t name_len, int mode);
+long sys_rmdir(const char *pathname, size_t name_len);
+long sys_chdir(const char *pathname, size_t name_len);
+long sys_link(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len);
+long sys_unlink(const char *pathname, size_t name_len);
+long sys_rename(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len);
+long sys_mount(const struct mount *mount);
+long sys_umount(const char *name, size_t name_len);
+long sys_stat(const char *pathname, size_t name_len, struct stat *s);
 long sys_time(time_t *t);
 long sys_clock_getres(clockid_t clockid, struct timespec *res);
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp);

@@ -7,7 +7,6 @@
 #define _LINUX_HASHTABLE_H
 
 #include <kernel/list.h>
-#include <kernel/types.h>
 #include <kernel/log2.h>
 #include <kernel/hash.h>
 

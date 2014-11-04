@@ -15,19 +15,17 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _USR_TEST_H_
-#define _USR_TEST_H_
+#ifndef _SYS_EXEC_H_
+#define _SYS_EXEC_H_
 
-int exntest(int argc, char *argv[]);
-int msgtest(int argc, char *argv[]);
-int sigtest(int argc, char *argv[]);
-int kbdtest(int argc, char *argv[]);
-int strtest(int argc, char *argv[]);
-int proctest(int argc, char *argv[]);
-int eventtest(int argc, char *argv[]);
-int memtest(int argc, char *argv[]);
-int consoletest(int argc, char *argv[]);
-int jmptest(int argc, char *argv[]);
-int date(int argc, char *argv[]);
+#include <sys/string.h>
+
+struct exec_args {
+	struct _String pathname;
+	struct _String *argv;
+	struct _String *envp;
+	size_t argc;
+	size_t envc;
+};
 
 #endif

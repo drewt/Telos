@@ -20,45 +20,42 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/wait.h>
 
-#include <telos/process.h>
-
-static int print_proc(int argc, char *argv[])
+static void fork_test(void)
 {
-	printf("%s", (char*) argv[0]);
-	return 0;
+	pid_t child, parent = getpid();
+	printf("Testing fork()... ");
+	if ((child = fork()) < 0)
+		printf("error: fork returned %d\n", child);
+	else if (!child) {
+		if (getpid() == parent)
+			printf("error: getpid() returned parent pid in child\n");
+		exit(0);
+	}
+	putchar('\n');
 }
 
-static int stop_proc()
+static void wait_test(void)
 {
-	exit(0);
-	printf("FAIL");
-	return 0;
+	int status;
+	pid_t child, r;
+	printf("Testing waitpid()... ");
+	if (!(child = fork()))
+		exit(2);
+	r = waitpid(child, &status, 0);
+	if (r != child)
+		printf("error: wrong return value from waitpid(): %d\n", r);
+	if (!WIFEXITED(status))
+		printf("error: wrong reason in status\n");
+	if (WEXITSTATUS(status) != 2)
+		printf("error: wrong exit status: %d\n", WEXITSTATUS(status));
+	putchar('\n');
 }
 
 int main(void)
 {
-	sigset_t mask;
-	char *a = "a", *s = "s", *d = "d", *f = "f";
-
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGCHLD);
-	sigprocmask(SIG_BLOCK, &mask, NULL);
-
-	printf("Testing syscreate... asdf ?= ");
-	syscreate(print_proc, 1, &a);
-	sleep(1);
-	syscreate(print_proc, 1, &s);
-	sleep(1);
-	syscreate(print_proc, 1, &d);
-	sleep(1);
-	syscreate(print_proc, 1, &f);
-	sleep(1);
-	puts("");
-
-	printf("Testing sysstop...");
-	syscreate(stop_proc, 0, NULL);
-	sleep(1);
-	puts("");
+	fork_test();
+	wait_test();
 	return 0;
 }

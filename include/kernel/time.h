@@ -18,7 +18,39 @@
 #ifndef _KERNEL_TIME_H_
 #define _KERNEL_TIME_H_
 
-#include <kernel/types.h>
+#include <sys/type_macros.h>
+
+#ifndef NULL
+#define NULL _NULL_DEFN
+#endif
+#ifndef _CLOCK_T_DEFINED
+#define _CLOCK_T_DEFINED
+typedef _CLOCK_T_TYPE clock_t;
+#endif
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef _SIZE_T_TYPE size_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+#ifndef _CLOCKID_T_DEFINED
+#define _CLOCKID_T_DEFINED
+typedef _CLOCKID_T_TYPE clockid_t;
+#endif
+#ifndef _TIMER_T_DEFINED
+#define _TIMER_T_DEFINED
+typedef _TIMER_T_TYPE timer_t;
+#endif
+#ifndef _LOCALE_T_DEFINED
+#define _LOCALE_T_DEFINED
+typedef _LOCALE_T_TYPE locale_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
 
 #define __TICKS_PER_SEC 100
 #define __NSEC_PER_TICK 10000000
@@ -29,10 +61,10 @@ enum {
 	__NR_CLOCKS
 };
 
-struct timespec {
-	time_t tv_sec;
-	long tv_nsec;
-};
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
 
 struct itimerspec {
 	struct timespec it_interval;

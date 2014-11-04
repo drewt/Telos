@@ -27,23 +27,8 @@
 
 #include <string.h>
 
-pid_t idle_pid;
-pid_t root_pid;
-
-// TODO: find a more appropriate place for this
-struct pcb proctab[PT_SIZE];
-
 struct multiboot_info *mb_info;
-
-static void proctab_init (void)
-{
-	for (int i = 0; i < PT_SIZE; i++) {
-		proctab[i].pid   = i - PT_SIZE;
-		proctab[i].state = STATE_STOPPED;
-	}
-	proctab[0].pid = 0; // 0 is a reserved pid
-}
-EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
+extern _Noreturn void sched_start(void);
 
 static void init_subsystems(void)
 {
@@ -71,11 +56,10 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 
 	mb_info = info;
 
-	/* initialize console so we can print boot status */
-	console_early_init();
-	clear_console();
+	// initialize console so we can print boot status
+	console_clear(0);
 
-	/* check multiboot magic number */
+	// check multiboot magic number
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
 		kprintf("Invalid Multiboot magic number\n");
 		return;
@@ -102,9 +86,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	mount_root();
 
 	bprintf("Starting Telos...\n\n");
-	idle_pid = create_kernel_process(idle_proc, NULL, 0);
-	root_pid = create_kernel_process(root_proc, NULL, 0);
-	kernel_start();
+	sched_start();
 
 	#undef bprintf
 }

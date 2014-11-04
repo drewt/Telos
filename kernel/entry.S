@@ -4,14 +4,6 @@
 #include <kernel/interrupt.h>
 #include <kernel/process.h>
 
-#define ISR_ENTRY(entry, ident) 	\
-	.global entry;			\
-	entry:	 			\
-		SAVE_ALL;		\
-		mov   %eax,   %edx;	\
-		movl  $ident, %eax;	\
-		jmp   common_isr
-
 #define SET_SEGS(val, reg)	\
 	movw $val, reg;		\
 	movw reg, %ds;		\
@@ -20,6 +12,10 @@
 	movw reg, %gs
 
 #define SAVE_ALL	\
+	pushl %gs;	\
+	pushl %fs;	\
+	pushl %es;	\
+	pushl %ds;	\
 	pushl %ebp;	\
 	pushl %ebp;	\
 	pushl %eax;	\
@@ -27,7 +23,7 @@
 	pushl %edi;	\
 	pushl %edx;	\
 	pushl %ecx;	\
-	pushl %ebx;	\
+	pushl %ebx
 
 #define RESTORE_ALL	\
 	popl %ebx;	\
@@ -38,59 +34,70 @@
 	popl %eax;	\
 	popl %ebp;	\
 	popl %ebp;	\
+	popl %ds;	\
+	popl %es;	\
+	popl %fs;	\
+	popl %gs
 
-#.set EAX, 0x1C
 .set EAX, 0x14
 
-.global switch_to
-.global syscall_entry
+#define isr_entry(entry, handler)		\
+.global entry;					\
+entry:	SAVE_ALL;				\
+	SET_SEGS(SEG_KDATA, %bx);		\
+	movl current,       %ebx;		\
+	movl %esp,          PCB_ESP(%ebx);	\
+	call handler;				\
+	jmp  return_to_user
 
-ISR_ENTRY(pgf_entry,   EXN_PF)
-ISR_ENTRY(fpe_entry,   EXN_FPE)
-ISR_ENTRY(ill_entry,   EXN_ILL)
-ISR_ENTRY(timer_entry, INTR_TIMER)
-ISR_ENTRY(kbd_entry,   INTR_KBD)
+isr_entry(pgf_entry,   exn_page_fault)
+isr_entry(fpe_entry,   exn_fpe)
+isr_entry(ill_entry,   exn_ill_instr)
+isr_entry(timer_entry, tick)
+isr_entry(kbd_entry,   int_keyboard)
+
+.global syscall_entry
 syscall_entry:
 	SAVE_ALL
-common_isr:
 	SET_SEGS(SEG_KDATA, %bx)
-	movl %esp,          %ecx
 	movl current,       %ebx
-	movl PCB_KSP(%ebx), %esp
-	movl PCB_PID(%ebx), %edi
-	movl %edx,          PCB_RC(%ebx)
-	movl %ecx,          PCB_ESP(%ebx)
-	subl $8,            %esp
-	movl %ecx,          4(%esp)
-	movl %eax,          (%esp)
-	call dispatch
-	movl current,       %eax
-	movl PCB_PID(%eax), %esi
-	cmp  %edi,          %esi
-	je   __switch_to
-_switch_to:
-	movl PCB_PGD(%eax), %ebx
-	movl %ebx,          %cr3
-__switch_to:
-	movl PCB_IFP(%eax), %ebx
-	movl PCB_ESP(%eax), %ecx
-	movl PCB_RC(%eax),  %edx
-	movl PCB_FLG(%eax), %eax
-	and  $PFLAG_SUPER,  %eax
-
-	movl %ecx,          %esp
-	movl %edx,          EAX(%esp)
-	movl $(tss + 4),    %ecx
-	movl %ebx,          (%ecx)
-
-	cmp  $0,            %eax
-	jne  skip_seg_set
-	SET_SEGS(SEG_UDATA | 3, %ax)
-skip_seg_set:
+	movl $-1,           EAX(%esp)
+	cmpl NR_SYSCALLS,   %eax
+	jae  return_to_user
+	movl %esp,          PCB_ESP(%ebx)
+	call *systab(,%eax,4)
+	movl %eax,          EAX(%esp)
+return_to_user:
+	call handle_signal
+_return_to_user:
+	movl PCB_ESP(%ebx), %esp
+	movl PCB_IFP(%ebx), %ebx
+	movl %ebx,          (tss + 4)
 	RESTORE_ALL
 	iret
 
-# for C
+.global switch_to
 switch_to:
-	movl 0x4(%esp), %eax
-	jmp  _switch_to
+	movl 0x4(%esp),     %ebx
+_switch_to:
+	movl PCB_PGD(%ebx), %eax
+	movl %eax,          %cr3
+	jmp _return_to_user
+
+.global schedule
+schedule:
+	movl current, %eax
+	movl PCB_ESP(%eax), %ecx
+	pushfl
+	pushl %cs
+	pushl $schedule_return
+	SAVE_ALL
+	movl %esp, PCB_ESP(%eax)
+	call _schedule
+	movl %eax, %ebx
+	jmp _switch_to
+schedule_return:
+	movl current, %eax
+	movl %ecx, PCB_ESP(%eax)
+	movl PCB_RC(%eax), %eax
+	ret

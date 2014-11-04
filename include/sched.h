@@ -15,36 +15,24 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
+#ifndef _SCHED_H_
+#define _SCHED_H_
 
-#include <telos/msg.h>
-#include <telos/process.h>
+#include <sys/type_macros.h>
 
-#define BUF_LEN 100
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
 
-static void die(const char *reason)
-{
-	printf("echoserver: %s\n", reason);
-	exit(-1);
-}
+void sched_yield(void);
 
-int main(int argc, char *argv[])
-{
-	printf("%d\n", getpid());
-
-	for (;;) {
-		int rv;
-		pid_t pid = 0;
-		char buf[BUF_LEN];
-
-		if ((rv = recv(&pid, buf, BUF_LEN)) == -1)
-			die("recv error");
-		if (write(STDOUT_FILENO, buf, rv) == -1)
-			die("write error");
-		if (reply(pid, NULL, 0) == -1)
-			die("reply error");
-	}
-}
+#endif

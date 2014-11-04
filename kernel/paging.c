@@ -288,80 +288,6 @@ void kunmap_tmp_range(void *addrp, size_t len)
 	}
 }
 
-int copy_from_user(struct pcb *p, void *dst, const void *src, size_t len)
-{
-	void *addr;
-	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) src, len)) == 0)
-		return -1;
-
-	memcpy(dst, addr, len);
-	kunmap_tmp_range(addr, len);
-
-	return 0;
-}
-
-int copy_to_user(struct pcb *p, void *dst, const void *src, size_t len)
-{
-	void *addr;
-	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) dst, len)) == 0)
-		return -1;
-
-	memcpy(addr, src, len);
-	kunmap_tmp_range(addr, len);
-
-	return 0;
-}
-
-int copy_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len)
-{
-	void *dst_addr, *src_addr;
-
-	if ((dst_addr = kmap_tmp_range(dst_p->mm.pgdir, (ulong) dst, len)) == 0)
-		return -1;
-
-	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
-		kunmap_tmp_range(dst_addr, len);
-		return -1;
-	}
-
-	memcpy(dst_addr, src_addr, len);
-	kunmap_tmp_range(dst_addr, len);
-	kunmap_tmp_range(src_addr, len);
-
-	return 0;
-}
-
-int copy_string_through_user(struct pcb *dst_p, struct pcb *src_p, void *dst,
-		const void *src, size_t len)
-{
-	void *dst_addr, *src_addr;
-
-	if ((dst_addr = kmap_tmp_range(dst_p->mm.pgdir, (ulong) dst, len)) == 0)
-		return -1;
-
-	if ((src_addr = kmap_tmp_range(src_p->mm.pgdir, (ulong) src, len)) == 0) {
-		kunmap_tmp_range(dst_addr, len);
-		return -1;
-	}
-
-	strncpy(dst_addr, src_addr, len);
-	kunmap_tmp_range(dst_addr, len);
-	kunmap_tmp_range(src_addr, len);
-
-	return 0;
-}
-
-int copy_user_string(struct pcb *p, char *dst, const char *src, size_t len)
-{
-	void *addr;
-	if ((addr = kmap_tmp_range(p->mm.pgdir, (ulong) src, len)) == 0)
-		return -1;
-
-	strncpy(dst, addr, len);
-	return 0;
-}
-
 #define kernel_pdi addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET)
 
 static ulong clone_page(ulong phys_page)
@@ -592,7 +518,7 @@ static pmap_t kmap_page_table(ulong addr)
 		/* update process page direcories */
 		for (uint i = 0; i < PT_SIZE; i++) {
 			struct pcb *p = &proctab[i];
-			if (p->state != STATE_STOPPED) {
+			if (p->state != PROC_DEAD) {
 				pmap_t pgdir = kmap_tmp_page((ulong)p->mm.pgdir);
 				pte_t *upde = addr_to_pde(pgdir, addr);
 				*upde = frame->addr | PE_P | PE_RW;

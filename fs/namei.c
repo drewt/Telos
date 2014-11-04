@@ -197,12 +197,15 @@ int open_namei(const char *pathname, int flag, int mode,
 	return 0;
 }
 
-long sys_mknod(const char *filename, int mode, dev_t dev)
+long sys_mknod(const char *filename, size_t name_len, int mode, dev_t dev)
 {
 	const char *basename;
 	int namelen, error;
 	struct inode *dir;
 
+	error = verify_user_string(filename, name_len);
+	if (error)
+		return error;
 	if (S_ISDIR(mode))
 		return -EPERM;
 	switch (mode & S_IFMT) {
@@ -237,12 +240,15 @@ long sys_mknod(const char *filename, int mode, dev_t dev)
 	return dir->i_op->mknod(dir, basename, namelen, mode, dev);
 }
 
-long sys_mkdir(const char *pathname, int mode)
+long sys_mkdir(const char *pathname, size_t name_len, int mode)
 {
 	const char *basename;
 	int namelen, error;
 	struct inode *dir;
 
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
 	error = dir_namei(pathname, &namelen, &basename, NULL, &dir);
 	if (error)
 		return error;
@@ -265,12 +271,15 @@ long sys_mkdir(const char *pathname, int mode)
 	return dir->i_op->mkdir(dir, basename, namelen, mode);
 }
 
-long sys_rmdir(const char *pathname)
+long sys_rmdir(const char *pathname, size_t name_len)
 {
 	const char *basename;
 	int namelen, error;
 	struct inode *dir;
 
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
 	error = dir_namei(pathname, &namelen, &basename, NULL, &dir);
 	if (error)
 		return error;
@@ -293,12 +302,15 @@ long sys_rmdir(const char *pathname)
 	return dir->i_op->rmdir(dir, basename, namelen);
 }
 
-long sys_unlink(const char *pathname)
+long sys_unlink(const char *pathname, size_t name_len)
 {
 	const char *basename;
 	int namelen, error;
 	struct inode *dir;
 
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
 	error = dir_namei(pathname, &namelen, &basename, NULL, &dir);
 	if (error)
 		return error;
@@ -321,12 +333,19 @@ long sys_unlink(const char *pathname)
 	return dir->i_op->unlink(dir, basename, namelen);
 }
 
-long sys_link(const char *oldname, const char *newname)
+long sys_link(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len)
 {
 	const char *basename;
 	int namelen, error;
 	struct inode *dir, *oldinode;
 
+	error = verify_user_string(oldname, oldname_len);
+	if (error)
+		return error;
+	error = verify_user_string(newname, newname_len);
+	if (error)
+		return error;
 	error = namei(oldname, &oldinode);
 	if (error)
 		return error;
@@ -369,12 +388,19 @@ static inline int is_dotlink(const char *name, int len)
 	return name[0] == '.' && (len == 1 || (name[1] == '.' && len == 2));
 }
 
-long sys_rename(const char *oldname, const char *newname)
+long sys_rename(const char *oldname, size_t oldname_len, const char *newname,
+		size_t newname_len)
 {
 	const char *old_base, *new_base;
 	int old_len, new_len, error;
 	struct inode *old_dir, *new_dir;
 
+	error = verify_user_string(oldname, oldname_len);
+	if (error)
+		return error;
+	error = verify_user_string(newname, newname_len);
+	if (error)
+		return error;
 	error = dir_namei(oldname, &old_len, &old_base, NULL, &old_dir);
 	if (error)
 		return error;

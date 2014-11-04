@@ -19,7 +19,8 @@
 #define _ERRNODEFS_H_
 
 enum errno_values {
-	E2BIG = 1,
+	ENOSYS = 1,
+	E2BIG,
 	EACCES,
 	EADDRINUSE,
 	EADDRNOTAVAIL,
@@ -73,7 +74,6 @@ enum errno_values {
 	ENOSPC,
 	ENOSR,
 	ENOSTR,
-	ENOSYS,
 	ENOTCONN,
 	ENOTDIR,
 	ENOTEMPTY,

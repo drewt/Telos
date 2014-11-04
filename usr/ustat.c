@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	printf("%s:\n"
 			"\tdev   = %u\n"
 			"\tino   = %lu\n"
-			"\tmode  = %lu\n"
+			"\tmode  = %lx\n"
 			"\tnlink = %lu\n"
 			"\tuid   = %lu\n"
 			"\tgid   = %lu\n"

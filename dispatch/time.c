@@ -22,6 +22,7 @@
 #include <kernel/signal.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
+#include <kernel/mm/vma.h>
 
 #include <kernel/hashtable.h>
 
@@ -62,9 +63,7 @@ static DEFINE_SLAB_CACHE(posix_timers_cachep, sizeof(struct posix_timer));
  */
 static void wake_action(void *data)
 {
-	struct pcb *p = (struct pcb*) data;
-	p->rc = 0;
-	ready(p);
+	wake(data, 0);
 }
 
 /*
@@ -73,7 +72,7 @@ static void wake_action(void *data)
 static void alrm_action(void *data)
 {
 	struct pcb *p = (struct pcb*) data;
-	__kill(p, SIGALRM);
+	__kill(p, SIGALRM, 0);
 }
 
 /*
@@ -81,11 +80,10 @@ static void alrm_action(void *data)
  */
 long sys_sleep(unsigned long ticks)
 {
-	current->state = STATE_SLEEPING;
-	ktimer_init(&current->t_sleep, wake_action, current, TF_ALWAYS | TF_STATIC);
+	current->state = PROC_SLEEPING;
+	ktimer_init(&current->t_sleep, wake_action, current, TF_STATIC);
 	ktimer_start(&current->t_sleep, ticks);
-	new_process();
-	return 0;
+	return schedule();
 }
 
 /*
@@ -112,9 +110,11 @@ long sys_alarm(unsigned long ticks)
 
 long sys_time(time_t *t)
 {
-	/* FIXME: check address */
-	if (t != NULL)
-		copy_to_current(t, &system_clock, sizeof(time_t));
+	if (t != NULL) {
+		if (vm_verify(&current->mm, t, sizeof (*t), VM_WRITE))
+			return -EFAULT;
+		*t = system_clock;
+	}
 
 	return system_clock;
 }
@@ -148,39 +148,31 @@ long sys_clock_getres(clockid_t clockid, struct timespec *res)
 {
 	if (!clock_valid(clockid))
 		return -EINVAL;
-
-	/* FIXME: check address */
-	copy_to_current(res, &posix_clocks[clockid], sizeof(*res));
+	if (vm_verify(&current->mm, res, sizeof(*res), VM_WRITE))
+		return -EFAULT;
+	*res = posix_clocks[clockid].res;
 	return 0;
 }
 
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp)
 {
-	struct timespec spec;
-
 	if (!clock_valid(clockid))
 		return -EINVAL;
-
-	posix_clocks[clockid].get(&spec);
-
-	/* FIXME: check address */
-	copy_to_current(tp, &spec, sizeof(*tp));
+	if (vm_verify(&current->mm, tp, sizeof(*tp), VM_WRITE))
+		return -EFAULT;
+	posix_clocks[clockid].get(tp);
 	return 0;
 }
 
 long sys_clock_settime(clockid_t clockid, struct timespec *tp)
 {
-	struct timespec spec;
-
 	if (!clock_valid(clockid))
 		return -EINVAL;
-
 	if (posix_clocks[clockid].set == NULL)
 		return -EPERM;
-
-	/* FIXME: check address */
-	copy_from_current(&spec, tp, sizeof(spec));
-	posix_clocks[clockid].set(&spec);
+	if (vm_verify(&current->mm, tp, sizeof(*tp), 0))
+		return -EFAULT;
+	posix_clocks[clockid].set(tp);
 	return 0;
 }
 
@@ -198,14 +190,16 @@ static struct posix_timer *get_timer_by_id(timer_t timerid)
 static void posix_timer_action(void *data)
 {
 	struct posix_timer *pt = data;
-	struct pcb *p = &proctab[PT_INDEX(pt->pid)];
+	struct pcb *p = get_pcb(pt->pid);
+	if (!p)
+		panic("POSIX timer expired for dead process %d\n", pt->pid);
 
-	current->siginfos[pt->sev.sigev_signo].si_value =
+	current->sig.infos[pt->sev.sigev_signo].si_value =
 		pt->sev.sigev_value;
 
 	switch (pt->sev.sigev_notify) {
 	case SIGEV_SIGNAL:
-		__kill(p, pt->sev.sigev_signo);
+		__kill(p, pt->sev.sigev_signo, SI_TIMER);
 		break;
 	default:
 		break;
@@ -236,7 +230,10 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 
 	if (clockid != CLOCK_MONOTONIC)
 		return -ENOTSUP;
-
+	if (sevp && vm_verify(&current->mm, sevp, sizeof(*sevp), 0))
+		return -EFAULT;
+	if (vm_verify(&current->mm, timerid, sizeof(*timerid), VM_WRITE))
+		return -EFAULT;
 	if ((pt = get_posix_timer()) == NULL)
 		return -ENOMEM;
 
@@ -248,7 +245,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 		pt->sev.sigev_signo = SIGALRM;
 		pt->sev.sigev_value.sigval_int = pt->timerid;
 	} else {
-		copy_from_current(&pt->sev, sevp, sizeof(*sevp));
+		pt->sev = *sevp;
 		if (!sigev_valid(&pt->sev)) {
 			error = -EINVAL;
 			goto err0;
@@ -260,7 +257,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 	list_add_tail(&pt->chain, &current->posix_timers);
 	hash_add(posix_timers, &pt->t_hash, pt->timerid);
 
-	copy_to_current(timerid, &pt->timerid, sizeof(*timerid));
+	*timerid = pt->timerid;
 	return 0;
 err0:
 	free_posix_timer(pt);
@@ -288,12 +285,14 @@ long sys_timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 
 	if (pt == NULL)
 		return -EINVAL;
+	if (vm_verify(&current->mm, curr_value, sizeof(*curr_value), VM_WRITE))
+		return -EFAULT;
 
 	ticks = pt->timer.expires - tick_count;
 	pt->spec.it_value.tv_sec = (ticks % 100) ? ticks/100 + 1 : ticks/100;
 	pt->spec.it_value.tv_nsec = 0;
 
-	copy_to_current(curr_value, &pt->spec, sizeof(*curr_value));
+	*curr_value = pt->spec;
 	return 0;
 }
 
@@ -306,9 +305,10 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	if (pt == NULL)
 		return -EINVAL;
+	if (vm_verify(&current->mm, new_value, sizeof(*new_value), 0))
+		return -EFAULT;
 
-	copy_from_current(v, new_value, sizeof(*new_value));
-
+	*v = *new_value;
 	ktimer_start(&pt->timer, __timespec_to_ticks(&v->it_value));
 	return 0;
 }
@@ -325,7 +325,7 @@ void tick(void)
 	ktimers_tick();
 
 	/* choose new process to run */
-	ready(current);
-	new_process();
 	pic_eoi();
+	ready(current);
+	schedule();
 }

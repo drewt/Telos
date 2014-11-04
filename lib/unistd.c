@@ -19,6 +19,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <syscall.h>
+#include <string.h>
+#include <sys/exec.h>
 
 pid_t fork(void)
 {
@@ -28,101 +30,116 @@ pid_t fork(void)
 	return rc;
 }
 
+static int _execve(const char *pathname, char *const argv[], char *const envp[],
+		size_t argc, size_t envc)
+{
+	struct _String s_argv[argc];
+	struct _String s_envp[envc];
+	struct exec_args e_args = {
+		.pathname = {
+			.str = pathname,
+			.len = strlen(pathname),
+		},
+		.argv = s_argv,
+		.envp = s_envp,
+		.argc = argc,
+		.envc = envc,
+	};
+
+	for (size_t i = 0; i < argc; i++) {
+		s_argv[i].str = argv[i];
+		s_argv[i].len = strlen(argv[i]);
+	}
+
+	for (size_t i = 0; i < envc; i++) {
+		s_envp[i].str = envp[i];
+		s_envp[i].len = strlen(envp[i]);
+	}
+
+	return syscall1(SYS_EXECVE, &e_args);
+}
+
 int execve(const char *pathname, char *const argv[], char *const envp[])
 {
-	return syscall3(SYS_EXECVE, (void*)pathname, (void*)argv, (void*)envp);
+	size_t argc, envc;
+	for (argc = 0; argv[argc]; argc++);
+	for (envc = 0; envp[envc]; envc++);
+	return _execve(pathname, argv, envp, argc, envc);
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 unsigned int alarm(unsigned int seconds)
 {
-	return syscall1(SYS_ALARM, (void*) (seconds * __TICKS_PER_SEC))
+	return syscall1(SYS_ALARM, (seconds * __TICKS_PER_SEC))
 		* __TICKS_PER_SEC;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 unsigned int sleep(unsigned int seconds)
 {
-	return syscall1(SYS_SLEEP, (void*) (seconds * __TICKS_PER_SEC))
+	return syscall1(SYS_SLEEP, (seconds * __TICKS_PER_SEC))
 		* __TICKS_PER_SEC;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 pid_t getpid(void)
 {
 	return syscall0(SYS_GETPID);
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 int open(const char *pathname, int flags, ...)
 {
-	int rv = syscall2(SYS_OPEN, (void*) pathname, (void*) flags);
+	int rv;
+	va_list ap;
+	unsigned long mode;
+	va_start(ap, flags);
+	mode = va_arg(ap, unsigned long);
+	va_end(ap);
+	rv = syscall4(SYS_OPEN, pathname, strlen(pathname), flags, mode);
 	if (rv < 0)
 		return -1;
 	return rv;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 int close(int fd)
 {
-	int rv = syscall1(SYS_CLOSE, (void*) fd);
+	int rv = syscall1(SYS_CLOSE, fd);
 	if (rv < 0)
 		return -1;
 	return rv;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 ssize_t read(int fd, void *buf, size_t nbyte)
 {
-	int rv = syscall3(SYS_READ, (void*) fd, buf, (void*) nbyte);
+	int rv = syscall3(SYS_READ, fd, buf, nbyte);
 	if (rv < 0)
 		return -1;
 	return rv;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 ssize_t write(int fd, const void *buf, size_t nbyte)
 {
-	int rv = syscall3(SYS_WRITE, (void*) fd, (void*) buf, (void*) nbyte);
+	int rv = syscall3(SYS_WRITE, fd, buf, nbyte);
 	if (rv < 0)
 		return -1;
 	return rv;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 off_t lseek(int fd, off_t offset, int whence)
 {
-	int rv = syscall3(SYS_LSEEK, (void*) fd, (void*) offset, (void*) whence);
+	int rv = syscall3(SYS_LSEEK, fd, offset, whence);
 	if (rv < 0)
 		return -1;
 	return rv;
 }
 
-/*-----------------------------------------------------------------------------
- * */
-//-----------------------------------------------------------------------------
 int ioctl(int fd, int command, ...)
 {
 	int rv;
 	va_list ap;
+	unsigned long arg;
 	va_start(ap, command);
-	rv = syscall3(SYS_IOCTL, (void*) fd, (void*) command, ap);
+	arg = va_arg(ap, unsigned long);
 	va_end(ap);
-	return (rv < 0) ? -1 : rv;
+	rv = syscall3(SYS_IOCTL, fd, command, arg);
+	if (rv < 0)
+		return -1;
+	return rv;
 }

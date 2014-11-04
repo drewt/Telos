@@ -1,4 +1,3 @@
-#include <kernel/types.h>
 #include <kernel/fs.h>
 #include <string.h>
 

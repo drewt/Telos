@@ -14,7 +14,6 @@
  * machines where multiplications are slow.
  */
 
-#include <kernel/types.h>
 #include <kernel/compiler.h>
 
 /* 2^31 + 2^29 - 2^25 + 2^22 - 2^19 - 2^16 + 1 */

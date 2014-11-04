@@ -230,7 +230,7 @@ void *sbrk(long increment)
 	unsigned long old;
 	long rc;
 
-	if ((rc = syscall2(SYS_SBRK, (void*) increment, &old)) < 0) {
+	if ((rc = syscall2(SYS_SBRK, increment, &old)) < 0) {
 		errno = -rc;
 		return (void*) -1;
 	}

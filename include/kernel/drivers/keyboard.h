@@ -15,11 +15,14 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TELOS_PROCESS_H_
-#define _TELOS_PROCESS_H_
+#ifndef _DRIVERS_KEYBOARD_H_
+#define _DRIVERS_KEYBOARD_H_
 
-pid_t syscreate(int(*func)(int,char**), int argc, char *argv[]);
-pid_t fcreate(const char *pathname, int argc, char *const argv[]);
-void sysyield(void);
+#define KEYBOARD_DATA_PORT    0x60
+#define KEYBOARD_COMMAND_PORT 0x64
+
+#define NOCHAR 256
+
+unsigned int kbtoa(unsigned char code);
 
 #endif

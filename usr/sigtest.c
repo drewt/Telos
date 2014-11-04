@@ -16,11 +16,11 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
-
-#include <telos/process.h>
+#include <time.h>
 
 /* half-assed "test" of sigqueue--verifies that it's substitutable for kill */
 #if 0
@@ -42,27 +42,30 @@ static void sigusr2_action(int signo, siginfo_t *info, void *data)
 
 static void sigusr2_handler(int signo)
 {
+	if (signo != SIGUSR2)
+		printf("sigusr2_handler: wrong signal: %d\n", signo);
 	printf("b");
 }
 
 static void sigusr1_handler(int signo)
 {
-	int sig;
+	sigset_t set;
+	if (signo != SIGUSR1)
+		printf("sigusr1_handler: wrong signal: %d\n", signo);
 	printf("a");
-	sig = sigwait();
-	if (sig != SIGUSR2)
-		puts("SIGUSR1 handler: bad signal");
-	else
-		puts("c");
+	sigfillset(&set);
+	sigdelset(&set, SIGUSR2);
+	sigsuspend(&set);
+	puts("c");
 }
 
-static int sig_proc()
+static _Noreturn void sig_proc(void)
 {
 	sleep(1);
 	kill(sigtest_pid, SIGUSR1);
 	sleep(1);
 	kill(sigtest_pid, SIGUSR2);
-	return 0;
+	exit(0);
 }
 
 static void kill_test(void)
@@ -89,14 +92,15 @@ static void sigprocmask_test(void)
 
 static void priority_test(void)
 {
-	int sig;
+	sigset_t set;
 	printf("Testing signal priority... abc ?= ");
 	signal(SIGUSR1, sigusr1_handler);
 	signal(SIGUSR2, sigusr2_handler);
-	syscreate(sig_proc, 0, NULL);
-	sig = sigwait();
-	if (sig != SIGUSR1)
-		printf("sig_test: bad signal: %d\n", sig);
+	if (!fork())
+		sig_proc();
+	sigfillset(&set);
+	sigdelset(&set, SIGUSR1);
+	sigsuspend(&set);
 }
 
 static void sigaction_test(void)
@@ -135,6 +139,72 @@ static void sigaction_test(void)
 		puts("FAIL: rejected valid signo");
 }
 
+static void child_proc(void)
+{
+	struct timespec t = {
+		.tv_sec = 0,
+		.tv_nsec = 100000000,
+	};
+	printf("Kill m");
+	for (;;) {
+		putchar('e');
+		nanosleep(&t, NULL);
+	}
+}
+
+static void sigkill_test(void)
+{
+	pid_t child;
+	if (!(child = fork()))
+		child_proc();
+	sleep(1);
+	kill(child, SIGKILL);
+	printf("\nKilled child\n");
+}
+
+static void change_mask_handler(int sig)
+{
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigprocmask(SIG_SETMASK, &mask, NULL);
+}
+
+static void suspend_proc(sigset_t oset)
+{
+	sigset_t nset;
+	signal(SIGUSR1, change_mask_handler);
+
+	// suspend with SIGUSR1 unblocked
+	sigfillset(&nset);
+	sigdelset(&nset, SIGUSR1);
+	sigsuspend(&nset);
+
+	// verify that signal mask unchanged
+	sigprocmask(0, NULL, &nset);
+	if (nset != oset)
+		printf("FAIL: signal mask altered by sigsuspend\n");
+	exit(0);
+}
+
+static void sigsuspend_test(void)
+{
+	int sig;
+	pid_t child;
+	sigset_t set;
+
+	// block all signals
+	sigfillset(&set);
+	sigprocmask(SIG_SETMASK, &set, NULL);
+	sigprocmask(0, NULL, &set);
+
+	if (!(child = fork()))
+		suspend_proc(set);
+	kill(child, SIGUSR1);
+	do {
+		sigwait(&set, &sig);
+	} while (sig != SIGCHLD);
+}
+
 int main(void)
 {
 	sigset_t mask;
@@ -148,6 +218,8 @@ int main(void)
 	sigprocmask_test();
 	priority_test();
 	sigaction_test();
+	sigkill_test();
+	sigsuspend_test();
 
 	return 0;
 }

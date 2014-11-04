@@ -22,25 +22,20 @@
 #define INTR_SYSCALL 0x80
 #endif
 
-#define SYSCALL_MIN 48
-
-enum syscall_id {
-	/* 0-47 reserved for hardware interrupts */
-	SYS_CREATE = SYSCALL_MIN,
+enum {
 	SYS_YIELD,
 	SYS_STOP,
+	SYS_WAITID,
 	SYS_GETPID,
+	SYS_GETPPID,
 	SYS_SLEEP,
 	SYS_SIGRETURN,
 	SYS_KILL,
 	SYS_SIGQUEUE,
 	SYS_SIGWAIT,
+	SYS_SIGSUSPEND,
 	SYS_SIGACTION,
-	SYS_SIGNAL,
 	SYS_SIGMASK,
-	SYS_SEND,
-	SYS_RECV,
-	SYS_REPLY,
 	SYS_OPEN,
 	SYS_CLOSE,
 	SYS_READ,
@@ -70,18 +65,7 @@ enum syscall_id {
 	SYS_STAT,
 	SYS_FORK,
 	SYS_EXECVE,
-	SYS_FCREATE,
 	SYSCALL_MAX
-};
-
-/* structure of arguments on the stack during a system call */
-struct sys_args {
-	ulong arg0;
-	ulong arg1;
-	ulong arg2;
-	ulong arg3;
-	ulong arg4;
-	ulong call;
 };
 
 static inline int syscall0(int call)
@@ -98,7 +82,8 @@ static inline int syscall0(int call)
 	return rc;
 }
 
-static inline int syscall1(int call, void *arg0)
+#define syscall1(call, arg0) __syscall1(call, (unsigned long) arg0)
+static inline int __syscall1(int call, unsigned long arg0)
 {
 	int rc;
 	asm volatile(
@@ -113,7 +98,9 @@ static inline int syscall1(int call, void *arg0)
 	return rc;
 }
 
-static inline int syscall2(int call, void *arg0, void *arg1)
+#define syscall2(call, arg0, arg1) \
+	__syscall2(call, (unsigned long) arg0, (unsigned long) arg1)
+static inline int __syscall2(int call, unsigned long arg0, unsigned long arg1)
 {
 	int rc;
 	asm volatile(
@@ -130,7 +117,11 @@ static inline int syscall2(int call, void *arg0, void *arg1)
 	return rc;
 }
 
-static inline int syscall3(int call, void *arg0, void *arg1, void *arg2)
+#define syscall3(call, arg0, arg1, arg2) \
+	__syscall3(call, (unsigned long) arg0, (unsigned long) arg1, \
+			(unsigned long) arg2)
+static inline int __syscall3(int call, unsigned long arg0, unsigned long arg1,
+		unsigned long arg2)
 {
 	int rc;
 	asm volatile(
@@ -148,8 +139,11 @@ static inline int syscall3(int call, void *arg0, void *arg1, void *arg2)
 	return rc;
 }
 
-static inline int syscall4(int call, void *arg0, void *arg1, void *arg2,
-		void *arg3)
+#define syscall4(call, arg0, arg1, arg2, arg3) \
+	__syscall4(call, (unsigned long) arg0, (unsigned long) arg1, \
+			(unsigned long) arg2, (unsigned long) arg3)
+static inline int __syscall4(int call, unsigned long arg0, unsigned long arg1,
+		unsigned long arg2, unsigned long arg3)
 {
 	int rc;
 	asm volatile(
@@ -168,8 +162,12 @@ static inline int syscall4(int call, void *arg0, void *arg1, void *arg2,
 	return rc;
 }
 
-static inline int syscall5(int call, void *arg0, void *arg1, void *arg2,
-		void *arg3, void *arg4)
+#define syscall5(call, arg0, arg1, arg2, arg3, arg4) \
+	__syscall5(call, (unsigned long) arg0, (unsigned long) arg1, \
+			(unsigned long) arg2, (unsigned long) arg3, \
+			(unsigned long) arg4)
+static inline int __syscall5(int call, unsigned long arg0, unsigned long arg1,
+		unsigned long arg2, unsigned long arg3, unsigned long arg4)
 {
 	int rc;
 	asm volatile(

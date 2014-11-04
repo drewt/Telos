@@ -7,6 +7,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/stat.h>
+#include <kernel/mm/vma.h>
 
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)
 {
@@ -14,13 +15,14 @@ long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)
 	struct file *file;
 	struct inode *inode;
 
+	if (vm_verify(&current->mm, dirent, sizeof(*dirent), VM_WRITE))
+		return -EFAULT;
 	if (fd >= NR_FILES || !(file = current->filp[fd]) ||
 			!(inode = file->f_inode))
 		return -EBADF;
 
 	error = -ENOTDIR;
 	if (file->f_op && file->f_op->readdir) {
-		// TODO: check pointer
 		error = file->f_op->readdir(inode, file, dirent, count);
 	}
 	return error;
@@ -62,6 +64,8 @@ long sys_read(unsigned int fd, char * buf, size_t count)
 	struct file *file;
 	struct inode *inode;
 
+	if (vm_verify(&current->mm, buf, count, VM_WRITE))
+		return -EFAULT;
 	if (fd >= NR_FILES || !(file = current->filp[fd]) 
 			|| !(inode = file->f_inode))
 		return -EBADF;
@@ -69,7 +73,6 @@ long sys_read(unsigned int fd, char * buf, size_t count)
 		return -EINVAL;
 	if (!count)
 		return 0;
-	// TODO: check pointer
 	return file->f_op->read(file, buf, count);
 }
 
@@ -78,6 +81,8 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 	struct file *file;
 	struct inode *inode;
 
+	if (vm_verify(&current->mm, buf, count, 0))
+		return -EFAULT;
 	if (fd >= NR_FILES || !(file = current->filp[fd])
 			|| !(inode = file->f_inode))
 		return -EBADF;
@@ -85,6 +90,5 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 		return -EINVAL;
 	if (!count)
 		return 0;
-	// TODO: check pointer
 	return file->f_op->write(file, buf, count);
 }

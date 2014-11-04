@@ -20,6 +20,16 @@
 #define _STDLIB_H_
 
 #include <stddef.h>
+#include <sys/type_macros.h>
+
+#ifndef _DIV_T_DEFINED
+#define _DIV_T_DEFINED
+//typedef _DIV_T_TYPE div_t;
+#endif
+#ifndef _LDIV_T_DEFINED
+#define _LDIV_T_DEFINED
+//typedef _LDIV_T_TYPE ldiv_t;
+#endif
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0

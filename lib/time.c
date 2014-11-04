@@ -40,7 +40,7 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 	if (req->tv_nsec < 0 || req->tv_nsec > 999999999)
 		return -1; /* EINVAL */
 
-	left = syscall1(SYS_SLEEP, (void*) __timespec_to_ticks(req));
+	left = syscall1(SYS_SLEEP, __timespec_to_ticks(req));
 
 	if (left != 0) {
 		__ticks_to_timespec(rem, left);
@@ -56,42 +56,41 @@ time_t time(time_t *t)
 
 int clock_getres(clockid_t clockid, struct timespec *res)
 {
-	return syscall2(SYS_CLOCK_GETRES, (void*) clockid, res);
+	return syscall2(SYS_CLOCK_GETRES, clockid, res);
 }
 
 int clock_gettime(clockid_t clockid, struct timespec *tp)
 {
-	return syscall2(SYS_CLOCK_GETTIME, (void*) clockid, tp);
+	return syscall2(SYS_CLOCK_GETTIME, clockid, tp);
 }
 
 int clock_settime(clockid_t clockid, struct timespec *tp)
 {
-	return syscall2(SYS_CLOCK_SETTIME, (void*) clockid, tp);
+	return syscall2(SYS_CLOCK_SETTIME, clockid, tp);
 }
 
 int timer_create(clockid_t clockid, struct sigevent *restrict sevp,
 		timer_t *restrict timerid)
 {
-	return syscall3(SYS_TIMER_CREATE, (void*) clockid, (void*) sevp,
+	return syscall3(SYS_TIMER_CREATE, clockid, sevp,
 			timerid);
 }
 
 int timer_delete(timer_t timerid)
 {
-	return syscall1(SYS_TIMER_DELETE, (void*) timerid);
+	return syscall1(SYS_TIMER_DELETE, timerid);
 }
 
 int timer_gettime(timer_t timerid, struct itimerspec *curr_value)
 {
-	return syscall2(SYS_TIMER_GETTIME, (void*) timerid, curr_value);
+	return syscall2(SYS_TIMER_GETTIME, timerid, curr_value);
 }
 
 int timer_settime(timer_t timerid, int flags,
 		const struct itimerspec *restrict new_value,
 		struct itimerspec *restrict old_value)
 {
-	return syscall4(SYS_TIMER_SETTIME, (void*) timerid, (void*) flags,
-			(void*) new_value, old_value);
+	return syscall4(SYS_TIMER_SETTIME, timerid, flags, new_value, old_value);
 }
 
 struct tm *gmtime_r(const time_t *timep, struct tm *result)

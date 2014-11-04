@@ -1,8 +1,6 @@
 #ifndef _ASM_GENERIC_BITOPS_FLS64_H_
 #define _ASM_GENERIC_BITOPS_FLS64_H_
 
-#include <kernel/types.h>
-
 /**
  * fls64 - find last set bit in a 64-bit word
  * @x: the word to search

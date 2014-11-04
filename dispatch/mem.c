@@ -33,8 +33,9 @@ long sys_sbrk(long inc, ulong *oldbrk)
 	int rc;
 	unsigned long new = current->mm.brk + inc;
 
-	/* FIXME: check address */
-	copy_to_current(oldbrk, &current->mm.brk, sizeof(current->mm.brk));
+	if (vm_verify(&current->mm, oldbrk, sizeof(*oldbrk), VM_WRITE))
+		return -EFAULT;
+	*oldbrk = current->mm.brk;
 
 	if (new < current->mm.heap->start)
 		return -EINVAL;

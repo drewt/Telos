@@ -1,8 +1,53 @@
 #ifndef _KERNEL_STAT_H_
 #define _KERNEL_STAT_H_
 
-#include <kernel/types.h>
-#include <kernel/time.h>
+#include <sys/type_macros.h>
+
+#ifndef _BLKCNT_T_DEFINED
+#define _BLKCNT_T_DEFINED
+typedef _BLKCNT_T_TYPE blkcnt_t;
+#endif
+#ifndef _BLKSIZE_T_DEFINED
+#define _BLKSIZE_T_DEFINED
+typedef _BLKSIZE_T_TYPE blksize_t;
+#endif
+#ifndef _DEV_T_DEFINED
+#define _DEV_T_DEFINED
+typedef _DEV_T_TYPE dev_t;
+#endif
+#ifndef _INO_T_DEFINED
+#define _INO_T_DEFINED
+typedef _INO_T_TYPE ino_t;
+#endif
+#ifndef _MODE_T_DEFINED
+#define _MODE_T_DEFINED
+typedef _MODE_T_TYPE mode_t;
+#endif
+#ifndef _NLINK_T_DEFINED
+#define _NLINK_T_DEFINED
+typedef _NLINK_T_TYPE nlink_t;
+#endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
+#ifndef _GID_T_DEFINED
+#define _GID_T_DEFINED
+typedef _GID_T_TYPE gid_t;
+#endif
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+typedef _OFF_T_TYPE off_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
 
 #define S_IFFUN  0110000
 
