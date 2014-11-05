@@ -123,18 +123,15 @@ void exn_page_fault(void)
 
 	// page not present (demand paging)
 	if (!(error & PGF_PERM)) {
-		// FIXME: kernel has to be interruptable, or else page faults
-		//        will occur in-kernel and clobber the kernel stack
 		code = SEGV_MAPERR;
-		goto segfault;
-		/*struct pf_info *frame = kalloc_frame();
+		struct pf_info *frame = kalloc_frame();
 		if (!frame)
 			// FIXME: stall until memory available?
 			goto segfault;
 		if (map_pages(current->mm.pgdir, addr, 1, vma->flags) < 0)
 			// FIXME: as above
 			goto segfault;
-		return;*/
+		return;
 	}
 
 	// copy-on-write

@@ -33,11 +33,11 @@ static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE (FRAME_SIZE*4)
 
-#define DATA_FLAGS   (VM_WRITE | VM_NOALLOC)
-#define RODATA_FLAGS (VM_NOALLOC)
+#define DATA_FLAGS   (VM_WRITE)
+#define RODATA_FLAGS 0
 #define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
 #define USTACK_FLAGS (VM_WRITE | VM_EXEC | VM_ZERO)
-#define KSTACK_FLAGS USTACK_FLAGS
+#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC)
 
 static struct vma *new_vma(ulong start, ulong end, ulong flags)
 {
@@ -142,9 +142,6 @@ struct vma *vma_find(const struct mm_struct *mm, const void *addr)
 
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 {
-	int error;
-	unsigned nr_pages = pages_in_range(vma->end, amount);
-
 	if (flags != vma->flags) {
 		if (vma_map(vma->mmap, vma->end, amount, flags) == NULL)
 			return -ENOMEM;
@@ -156,9 +153,6 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 		if (next->start < vma->end + amount)
 			return -ENOMEM;
 	}
-
-	if ((error = map_pages(vma->mmap->pgdir, vma->end, nr_pages, flags)))
-		return error;
 
 	vma->end += page_align(amount);
 	return 0;
@@ -255,8 +249,7 @@ struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags)
 	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
-	// TODO: demand paging
-	if (!(flags & VM_NOALLOC) && map_pages(mm->pgdir, dst, nr_pages, flags)) {
+	if (flags & VM_ALLOC && map_pages(mm->pgdir, dst, nr_pages, flags)) {
 		free_vma(vma);
 		return NULL;
 	}

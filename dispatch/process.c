@@ -169,8 +169,6 @@ void create_init(void(*func)(void*))
 {
 	int error;
 	long esp;
-	ulong *args;
-	void *frame;
 	struct pcb *p;
 
 	p = pcb_common_init(&proctab[1]);
@@ -189,14 +187,9 @@ void create_init(void(*func)(void*))
 	p->ifp = (char*)p->mm.kernel_stack->end - 16;
 	p->esp = (char*)p->ifp - sizeof(struct ucontext);
 
-	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct ucontext));
+	set_page_directory((void*)p->mm.pgdir);
 	esp = p->mm.stack->end - 16;
-	put_iret_uframe(frame, (ulong)func, esp);
-	kunmap_tmp_range(frame, sizeof(struct ucontext));
-
-	args = kmap_tmp_range(p->mm.pgdir, esp, sizeof(ulong));
-	args[0] = (ulong) exit;
-	kunmap_tmp_range(args, sizeof(ulong));
+	put_iret_uframe(p->esp, (ulong)func, esp);
 
 	ready(p);
 

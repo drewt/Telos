@@ -25,7 +25,7 @@ enum {
 	VM_EXEC    = 0x2,  /* execute permission */
 	VM_COW     = 0x4,  /* copy-on-write */
 	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
-	VM_NOALLOC = 0x10, /* pages already allocated and mapped */
+	VM_ALLOC   = 0x10, /* allocate memory immediately */
 };
 
 struct vma {
