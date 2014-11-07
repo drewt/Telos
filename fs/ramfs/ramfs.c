@@ -122,7 +122,7 @@ static int grow_file(struct inode *inode, size_t amount)
 	}
 
 	for (unsigned int i = 0; i < nr_pages; i++) {
-		struct pf_info *frame = kalloc_frame();
+		struct pf_info *frame = kalloc_frame(0);
 		if (frame == NULL)
 			return -ENOSPC; // TODO: free frames!!!
 		list_add_tail(&frame->chain, &inode->i_list);

@@ -108,15 +108,16 @@ static unsigned long get_error_code(void)
 
 void exn_page_fault(void)
 {
+	void *addr;
 	struct vma *vma;
-	unsigned long error, addr;
+	unsigned long error;
 	int code = SEGV_ACCERR;
 
 	error = get_error_code();
 	MOV("cr2", addr);
 
 	// address not mapped in process address space
-	if (!(vma = vma_get(&current->mm, (void*)addr))) {
+	if (!(vma = vma_get(&current->mm, addr))) {
 		code = SEGV_MAPERR;
 		goto segfault;
 	}
@@ -124,12 +125,8 @@ void exn_page_fault(void)
 	// page not present (demand paging)
 	if (!(error & PGF_PERM)) {
 		code = SEGV_MAPERR;
-		struct pf_info *frame = kalloc_frame();
-		if (!frame)
+		if (map_page(addr, vma->flags) < 0)
 			// FIXME: stall until memory available?
-			goto segfault;
-		if (map_pages(current->mm.pgdir, addr, 1, vma->flags) < 0)
-			// FIXME: as above
 			goto segfault;
 		return;
 	}

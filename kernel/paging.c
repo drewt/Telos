@@ -163,6 +163,11 @@ int paging_init(ulong start, ulong end)
 	return 0;
 }
 
+static inline ulong vma_to_page_flags(ulong flags)
+{
+	return PE_U | ((flags & VM_WRITE && !(flags & VM_COW)) ? PE_RW : 0);
+}
+
 /*
  * Map a page from the temporary page table to a given physical address.  This
  * function returns an address aliasing the given physical address.
@@ -252,12 +257,13 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
  * address space.  This function returns an address aliasing the given memory
  * region.
  */
-void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
+void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len, ulong flags)
 {
 	pmap_t pgtab;
 	pte_t *pte, *tmp;
 	ulong tmp_addr;
 	unsigned nr_pages;
+	uchar attr = vma_to_page_flags(flags);
 
 	/* map page tables */
 	pgdir = kmap_tmp_page_n((ulong)pgdir, 0);
@@ -271,6 +277,12 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len)
 
 	/* map memory area */
 	for (unsigned i = 0; i < nr_pages; i++, pte++, tmp++) {
+		if (!(*pte & PE_P)) {
+			struct pf_info *frame = kalloc_frame(flags);
+			if (!frame)
+				return NULL;
+			*pte = frame->addr | attr | PE_P;
+		}
 		*tmp = *pte | PE_RW;
 		flush_page(tmp_addr + i*FRAME_SIZE);
 	}
@@ -297,7 +309,7 @@ static ulong clone_page(ulong phys_page)
 
 	if (!(original = kmap_tmp_page(phys_page)))
 		return 0;
-	if (!(f_page = kzalloc_frame()))
+	if (!(f_page = kalloc_frame(VM_ZERO)))
 		return 0;
 	if (!(copy = kmap_tmp_page(f_page->addr))) {
 		kfree_frame(f_page);
@@ -318,7 +330,7 @@ static pmap_t clone_pgtab(ulong phys_pgtab)
 
 	if (!(original = kmap_tmp_page(phys_pgtab)))
 		return NULL;
-	if (!(f_pgtab = kzalloc_frame()))
+	if (!(f_pgtab = kalloc_frame(VM_ZERO)))
 		return NULL;
 	if (!(copy = kmap_tmp_page(f_pgtab->addr))) {
 		kfree_frame(f_pgtab);
@@ -371,9 +383,9 @@ pmap_t new_pgdir(void)
 	pmap_t pgdir, pgtab;
 	unsigned pdi;
 
-	if ((f_pgdir = kzalloc_frame()) == NULL)
+	if ((f_pgdir = kalloc_frame(VM_ZERO)) == NULL)
 		goto nomem0;
-	if ((f_pgtab = kzalloc_frame()) == NULL)
+	if ((f_pgtab = kalloc_frame(VM_ZERO)) == NULL)
 		goto nomem1;
 	if ((pgdir = kmap_tmp_page(f_pgdir->addr)) == NULL)
 		goto nomem2;
@@ -447,8 +459,9 @@ int del_pgdir(pmap_t phys_pgdir)
 /*
  * Allocate a page from the frame pool.
  */
-struct pf_info *kalloc_frame(void)
+struct pf_info *kalloc_frame(ulong flags)
 {
+	void *vaddr;
 	struct pf_info *page;
 
 	if (list_empty(&frame_pool))
@@ -456,27 +469,15 @@ struct pf_info *kalloc_frame(void)
 
 	page = list_pop(&frame_pool, struct pf_info, chain);
 	page->ref = 1;
-	return page;
-}
 
-/*
- * Allocate a page from the frame pool and fill it with zeros.
- */
-struct pf_info *kzalloc_frame(void)
-{
-	struct pf_info *page;
-	void *vaddr;
-
-	if ((page = kalloc_frame()) == NULL)
-		return NULL;
-
-	if ((vaddr = kmap_tmp_page(page->addr)) == NULL) {
-		kfree_frame(page);
-		return NULL;
+	if (flags & VM_ZERO) {
+		if (!(vaddr = kmap_tmp_page(page->addr))) {
+			kfree_frame(page);
+			return NULL;
+		}
+		memset(vaddr, 0, FRAME_SIZE);
+		kunmap_tmp_page(vaddr);
 	}
-
-	memset(vaddr, 0, FRAME_SIZE);
-	kunmap_tmp_page(vaddr);
 	return page;
 }
 
@@ -497,7 +498,7 @@ static pmap_t umap_page_table(pmap_t pgdir, ulong addr)
 	pte_t *pde = addr_to_pde(pgdir, addr);
 
 	if (!(*pde & PE_P)) {
-		struct pf_info *frame = kzalloc_frame();
+		struct pf_info *frame = kalloc_frame(VM_ZERO);
 		*pde = frame->addr | PE_P | PE_RW | PE_U;
 	}
 	return kmap_tmp_page(*pde & ~0xFFF);
@@ -513,7 +514,7 @@ static pmap_t kmap_page_table(ulong addr)
 
 	/* allocate page table if one does not already exist */
 	if (!(*pde & PE_P)) {
-		struct pf_info *frame = kzalloc_frame();
+		struct pf_info *frame = kalloc_frame(VM_ZERO);
 		*pde = frame->addr | PE_P | PE_RW;
 		/* update process page direcories */
 		for (uint i = 0; i < PT_SIZE; i++) {
@@ -550,11 +551,6 @@ static pmap_t unext_page_table(unsigned i, pmap_t pgdir, pmap_t pgtab)
 	for (uint i = start; i < (start) + (pages); \
 			i++, pgtab = unext_page_table(i, pgdir, pgtab))
 
-static inline ulong vma_to_page_flags(ulong flags)
-{
-	return PE_U | ((flags & VM_WRITE && !(flags & VM_COW)) ? PE_RW : 0);
-}
-
 /*
  * Map 'pages' pages starting at the virtual address 'dst' into the (physical)
  * page directory 'pgdir'.
@@ -567,13 +563,58 @@ int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
 	pmap_t pgtab = umap_page_table(pgdir, dst);
 
 	for_each_upage(i, pgdir, pgtab, dst / FRAME_SIZE, pages) {
-		frame = (flags & VM_ZERO) ? kzalloc_frame() : kalloc_frame();
+		frame = kalloc_frame(flags);
 		if (!frame)
 			return -ENOMEM;
 		pgtab[i % 1024] = frame->addr | PE_P | attr;
 	}
 	kunmap_tmp_page(pgtab);
 	kunmap_tmp_page(pgdir);
+	return 0;
+}
+
+int map_page(void *addr, ulong flags)
+{
+	pmap_t pgtab;
+	struct pf_info *frame;
+	uchar attr = vma_to_page_flags(flags);
+
+	frame = kalloc_frame(flags);
+	if (!frame)
+		return -ENOMEM;
+	pgtab = umap_page_table(current_pgdir, (ulong) addr);
+	if (!pgtab) {
+		kfree_frame(frame);
+		return -ENOMEM;
+	}
+
+	pgtab[addr_to_pti((ulong)addr)] = frame->addr | PE_P | attr;
+	kunmap_tmp_page(pgtab);
+	return 0;
+}
+
+int copy_page(void *addr, ulong flags)
+{
+	void *tmp;
+	pmap_t pgtab;
+	struct pf_info *frame;
+	uchar attr = vma_to_page_flags(flags);
+
+	frame = kalloc_frame(flags);
+	if (!frame)
+		return -ENOMEM;
+	pgtab = umap_page_table(current_pgdir, (ulong) addr);
+	if (!pgtab) {
+		kfree_frame(frame);
+		return -ENOMEM;
+	}
+
+	tmp = kmap_tmp_page(frame->addr);
+	memcpy(tmp, (void*)page_base((ulong)addr), FRAME_SIZE);
+	kunmap_tmp_page(tmp);
+
+	pgtab[addr_to_pti((ulong)addr)] = frame->addr | PE_P | attr;
+	kunmap_tmp_page(pgtab);
 	return 0;
 }
 
@@ -606,7 +647,7 @@ void *kalloc_pages(uint n)
 
 	/* allocate and map frames */
 	for (i = start; i < start + n; i++, pgtab = knext_page_table(i, pgtab)) {
-		struct pf_info *frame = kalloc_frame();
+		struct pf_info *frame = kalloc_frame(0);
 		pgtab[i % 1024] = frame->addr | PE_P | PE_RW;
 	}
 	kunmap_tmp_page(pgtab);

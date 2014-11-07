@@ -90,8 +90,6 @@ static struct pcb *pcb_common_init(struct pcb *p)
 	p->t_sleep.flags = 0;
 	p->timestamp = tick_count;
 	p->state = PROC_NASCENT;
-	INIT_LIST_HEAD(&p->mm.map);
-	INIT_LIST_HEAD(&p->mm.kheap);
 	INIT_LIST_HEAD(&p->children);
 	INIT_LIST_HEAD(&p->child_stats);
 	INIT_LIST_HEAD(&p->posix_timers);
@@ -133,11 +131,51 @@ static struct pcb *pcb_clone(struct pcb *src)
 	return p;
 }
 
+#define HEAP_START   0x00100000UL
+#define HEAP_SIZE    FRAME_SIZE
+#define STACK_START  0x0F000000UL
+#define STACK_SIZE   (FRAME_SIZE*8)
+#define KSTACK_START (STACK_START+STACK_SIZE)
+#define KSTACK_SIZE  (FRAME_SIZE*4)
+
+#define DATA_FLAGS   VM_WRITE
+#define RODATA_FLAGS 0
+#define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
+#define USTACK_FLAGS (VM_WRITE | VM_ZERO | VM_EXEC)
+#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC)
+
+static int address_space_init(struct mm_struct *mm)
+{
+	struct vma *vma;
+	mm->brk = HEAP_START + HEAP_SIZE;
+	mm->heap = vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS);
+	if (!mm->heap)
+		goto abort;
+	mm->stack = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
+	if (!mm->stack)
+		goto abort;
+	mm->kernel_stack = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
+	if (!mm->kernel_stack)
+		goto abort;
+	vma = vma_map(mm, urwstart, urwend - urwstart, VM_WRITE);
+	if (!vma)
+		goto abort;
+	vma = vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS);
+	if (!vma)
+		goto abort;
+	return 0;
+abort:
+	return -ENOMEM;
+}
+
+#define KFRAME_ROOM (sizeof(struct kcontext) + 16)
+
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 {
 	int error;
-	struct kcontext *frame;
 	struct pcb *p;
+	unsigned char cx_mem[KFRAME_ROOM];
+	struct kcontext *frame = (struct kcontext*) cx_mem;
 
 	if (!(p = get_free_pcb()))
 		return -EAGAIN;
@@ -150,19 +188,27 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	p->root = root_inode;
 	p->pwd = root_inode;
 
-	if ((error = mm_kinit(&p->mm)) < 0)
-		return error;
+	if ((error = mm_init(&p->mm)) < 0)
+		return error;;
+	if ((error = address_space_init(&p->mm)) < 0)
+		goto abort;
+	if (!vma_map(&p->mm, krostart, kroend - krostart, RODATA_FLAGS)) {
+		error = -ENOMEM;
+		goto abort;
+	}
 
-	p->esp = ((char*)p->mm.kernel_stack->end - sizeof(struct kcontext) - 16);
+	p->esp = ((char*)p->mm.kernel_stack->end - KFRAME_ROOM);
 
-	frame = kmap_tmp_range(p->mm.pgdir, (ulong)p->esp, sizeof(struct kcontext) + 16);
 	put_iret_kframe(frame, (ulong)func);
 	frame->stack[0] = (ulong) exit;
 	frame->stack[1] = (ulong) arg;
-	kunmap_tmp_range(frame, sizeof(struct kcontext));
+	vm_copy_to(&p->mm, p->esp, frame, KFRAME_ROOM);
 
 	ready(p);
 	return p->pid;
+abort:
+	mm_fini(&p->mm);
+	return error;
 }
 
 void create_init(void(*func)(void*))
@@ -183,10 +229,13 @@ void create_init(void(*func)(void*))
 
 	if ((error = mm_init(&p->mm)) < 0)
 		panic("mm_init failed with error %d", error);
+	if ((error = address_space_init(&p->mm)) < 0)
+		panic("address_space_init failed with error %d", error);
 
 	p->ifp = (char*)p->mm.kernel_stack->end - 16;
 	p->esp = (char*)p->ifp - sizeof(struct ucontext);
 
+	current = p;
 	set_page_directory((void*)p->mm.pgdir);
 	esp = p->mm.stack->end - 16;
 	put_iret_uframe(p->esp, (ulong)func, esp);
@@ -376,13 +425,16 @@ void do_exit(struct pcb *p, int status)
 		assert_status(pit, sit);
 	}
 
-	del_pgdir(current->mm.pgdir);
 	mm_fini(&current->mm);
 	zombie(p);
 }
 
 long sys_exit(int status)
 {
+	// FIXME: switch stacks (kernel boot stack?), since we're going to
+	//        free the stack we're currently using.  This hasn't been an
+	//        issue yet, since no memory is allocated between do_exit()
+	//        and schedule(), but it's risky.
 	do_exit(current, status);
 	schedule();
 	return 0;

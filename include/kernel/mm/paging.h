@@ -39,20 +39,20 @@ struct pf_info {
 	unsigned ref;
 };
 
-struct pf_info *kalloc_frame(void);
-struct pf_info *kzalloc_frame(void);
+struct pf_info *kalloc_frame(ulong flags);
 void *kalloc_pages(uint n);
 void kfree_pages(void *addr, uint n);
 void _kfree_frame(struct pf_info *page);
 void *kmap_tmp_page(ulong addr);
 void kunmap_page(void *addr);
-void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
+void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len, ulong flags);
 void kunmap_tmp_range(void *addrp, size_t len);
 int paging_init(unsigned long start, unsigned long end);
 pmap_t clone_pgdir(void);
 pmap_t new_pgdir(void);
 int del_pgdir(pmap_t phys_pgdir);
 int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags);
+int map_page(void *addr, ulong flags);
 
 static inline void kfree_frame(struct pf_info *frame)
 {

@@ -27,17 +27,21 @@ static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 #define alloc_vma() slab_alloc(area_cachep)
 #define free_vma(p) slab_free(area_cachep, p)
 
-#define HEAP_START  0x00100000UL
-#define STACK_START 0x0F000000UL
-#define STACK_SIZE  (FRAME_SIZE*8)
-#define KSTACK_START (STACK_START+STACK_SIZE)
-#define KSTACK_SIZE (FRAME_SIZE*4)
+struct mm_struct kernel_mm;
 
-#define DATA_FLAGS   (VM_WRITE)
-#define RODATA_FLAGS 0
-#define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
-#define USTACK_FLAGS (VM_WRITE | VM_EXEC | VM_ZERO)
-#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC)
+static void vm_sysinit(void)
+{
+	kernel_mm.pgdir = &_kernel_pgd;
+
+	INIT_LIST_HEAD(&kernel_mm.map);
+	INIT_LIST_HEAD(&kernel_mm.kheap);
+	if (!vma_map(&kernel_mm, krostart, kroend - krostart, 0))
+		panic("Failed to map kernel memory");
+	if (!vma_map(&kernel_mm, krwstart, krwend - krwstart, VM_WRITE))
+		panic("Failed to map kernel memory");
+
+}
+EXPORT_KINIT(vm, SUB_LAST, vm_sysinit);
 
 static struct vma *new_vma(ulong start, ulong end, ulong flags)
 {
@@ -52,50 +56,11 @@ static struct vma *new_vma(ulong start, ulong end, ulong flags)
 
 int mm_init(struct mm_struct *mm)
 {
-	struct vma *vma;
-
 	if (!(mm->pgdir = new_pgdir()))
 		return -ENOMEM;
-
-	mm->brk = HEAP_START + FRAME_SIZE;
-	mm->heap = vma_map(mm, HEAP_START, FRAME_SIZE, HEAP_FLAGS);
-	if (!mm->heap)
-		goto abort;
-	mm->stack = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
-	if (!mm->stack)
-		goto abort;
-	mm->kernel_stack = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
-	if (!mm->kernel_stack)
-		goto abort;
-	vma = vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS);
-	if (!vma)
-		goto abort;
-	vma = vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS);
-	if (!vma)
-		goto abort;
-
+	INIT_LIST_HEAD(&mm->map);
+	INIT_LIST_HEAD(&mm->kheap);
 	return 0;
-abort:
-	del_pgdir(mm->pgdir);
-	return -ENOMEM;
-}
-
-int mm_kinit(struct mm_struct *mm)
-{
-	int error;
-	struct vma *vma;
-
-	if ((error = mm_init(mm)))
-		return error;
-
-	vma = vma_map(mm, krostart, kroend - krostart, RODATA_FLAGS);
-	if (!vma)
-		goto abort;
-
-	return 0;
-abort:
-	del_pgdir(mm->pgdir);
-	return -ENOMEM;
 }
 
 void mm_fini(struct mm_struct *mm)
@@ -104,6 +69,7 @@ void mm_fini(struct mm_struct *mm)
 	list_for_each_entry_safe(vma, n, &mm->map, chain) {
 		free_vma(vma);
 	}
+	del_pgdir(mm->pgdir);
 }
 
 int mm_clone(struct mm_struct *dst, struct mm_struct *src)
@@ -113,6 +79,8 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 	if (!(dst->pgdir = clone_pgdir()))
 		return -ENOMEM;
 
+	INIT_LIST_HEAD(&dst->map);
+	INIT_LIST_HEAD(&dst->kheap);
 	list_for_each_entry(vma, &src->map, chain) {
 		struct vma *new = new_vma(vma->start, vma->end, vma->flags);
 		new->mmap = dst;
@@ -282,8 +250,11 @@ int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
 		size_t len)
 {
 	void *addr;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)src, len)))
-		return -1;
+	struct vma *vma;
+	if (!(vma = vma_get(mm, src)))
+		return -EFAULT;
+	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)src, len, vma->flags)))
+		return -ENOMEM;
 	memcpy(dst, addr, len);
 	kunmap_tmp_range(addr, len);
 	return 0;
@@ -293,27 +264,12 @@ int vm_copy_to(const struct mm_struct *mm, void *dst, const void *src,
 		size_t len)
 {
 	void *addr;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)dst, len)))
-		return -1;
+	struct vma *vma;
+	if (!(vma = vma_get(mm, dst)))
+		return -EFAULT;
+	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)dst, len, vma->flags)))
+		return -ENOMEM;
 	memcpy(addr, src, len);
 	kunmap_tmp_range(addr, len);
-	return 0;
-}
-
-int vm_copy_through(const struct mm_struct *dst_mm,
-		const struct mm_struct *src_mm, void *dst, const void *src,
-		size_t len)
-{
-	void *dst_addr, *src_addr;
-
-	if (!(dst_addr = kmap_tmp_range(dst_mm->pgdir, (ulong) dst, len)))
-		return -1;
-	if (!(src_addr = kmap_tmp_range(src_mm->pgdir, (ulong) src, len))) {
-		kunmap_tmp_range(dst_addr, len);
-		return -1;
-	}
-	memcpy(dst_addr, src_addr, len);
-	kunmap_tmp_range(dst_addr, len);
-	kunmap_tmp_range(src_addr, len);
 	return 0;
 }

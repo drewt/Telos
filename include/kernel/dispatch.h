@@ -47,9 +47,6 @@ long schedule(void);
 
 void __kill(struct pcb *p, int sig_no, int code);
 
-void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len);
-void kunmap_tmp_range(void *addrp, size_t len);
-
 static inline int verify_user_string(const char *str, size_t len)
 {
 	if (vm_verify(&current->mm, str, len, 0))
