@@ -73,7 +73,7 @@ long sys_read(unsigned int fd, char * buf, size_t count)
 		return -EINVAL;
 	if (!count)
 		return 0;
-	return file->f_op->read(file, buf, count);
+	return file->f_op->read(file, buf, count, &file->f_pos);
 }
 
 long sys_write(unsigned int fd, char * buf, size_t count)
@@ -90,5 +90,5 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 		return -EINVAL;
 	if (!count)
 		return 0;
-	return file->f_op->write(file, buf, count);
+	return file->f_op->write(file, buf, count, &file->f_pos);
 }

@@ -6,13 +6,14 @@
 
 #include <string.h>
 
-static int modfs_read(struct file *file, char *buf, size_t len)
+static int modfs_read(struct file *file, char *buf, size_t len,
+		unsigned long *pos)
 {
 	struct multiboot_mod_list *mod = file->f_inode->i_private;
 
 	len = MIN(len, file->f_inode->i_size - file->f_pos);
 	memcpy(buf, (void*)(mod->start + file->f_pos), len);
-	file->f_pos += len;
+	*pos += len;
 	return len;
 }
 

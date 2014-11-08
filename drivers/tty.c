@@ -106,7 +106,8 @@ static int tty_buffer_empty(struct tty_buffer *buf)
 	return buf->read == buf->pos;
 }
 
-static ssize_t tty_read(struct file *f, char *buf, size_t len)
+static ssize_t tty_read(struct file *f, char *buf, size_t len,
+		unsigned long *pos)
 {
 	size_t bytes = 0;
 	struct tty *tty = file_tty(f);
@@ -130,7 +131,8 @@ static ssize_t tty_read(struct file *f, char *buf, size_t len)
 	return bytes;
 }
 
-static ssize_t tty_write(struct file *f, const char *buf, size_t len)
+static ssize_t tty_write(struct file *f, const char *buf, size_t len,
+		unsigned long *pos)
 {
 	struct tty *tty = file_tty(f);
 

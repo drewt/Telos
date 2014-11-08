@@ -131,17 +131,17 @@ static int grow_file(struct inode *inode, size_t amount)
 	return 0;
 }
 
-int ramfs_read(struct file *file, char *buf, size_t len)
+int ramfs_read(struct file *file, char *buf, size_t len, unsigned long *pos)
 {
 	char *fbuf;
 	struct pf_info *frame;
-	unsigned long offset = file->f_pos % FRAME_SIZE;
-	unsigned int frame_nr = file->f_pos / FRAME_SIZE;
+	unsigned long offset = *pos % FRAME_SIZE;
+	unsigned int frame_nr = *pos / FRAME_SIZE;
 	unsigned int i = 0;
 
-	if (!len || file->f_pos >= file->f_inode->i_size)
+	if (!len || *pos >= file->f_inode->i_size)
 		return 0;
-	len = MIN(len, file->f_inode->i_size - file->f_pos);
+	len = MIN(len, file->f_inode->i_size - *pos);
 
 	list_for_each_entry(frame, &file->f_inode->i_list, chain) {
 		if (i++ < frame_nr)
@@ -157,16 +157,17 @@ int ramfs_read(struct file *file, char *buf, size_t len)
 		len -= FRAME_SIZE - offset;
 		offset = 0;
 	}
-	file->f_pos += len;
+	*pos += len;
 	return len;
 }
 
-static int ramfs_do_write(struct file *f, const char *buf, size_t len)
+static int ramfs_do_write(struct file *f, const char *buf, size_t len,
+		unsigned long pos)
 {
 	char *fbuf;
 	struct pf_info *frame;
-	unsigned long offset = f->f_pos % FRAME_SIZE;
-	unsigned int frame_nr = f->f_pos / FRAME_SIZE;
+	unsigned long offset = pos % FRAME_SIZE;
+	unsigned int frame_nr = pos / FRAME_SIZE;
 	unsigned int i = 0;
 
 	list_for_each_entry(frame, &f->f_inode->i_list, chain) {
@@ -209,10 +210,11 @@ static void zero_fill(struct file *f, unsigned long start, size_t len)
 	}
 }
 
-int ramfs_write(struct file *file, const char *buf, size_t len)
+int ramfs_write(struct file *file, const char *buf, size_t len,
+		unsigned long *pos)
 {
-	int error;
-	unsigned long next_pos = file->f_pos + len;
+	int error, rc;
+	unsigned long next_pos = *pos + len;
 	unsigned long prev_size = file->f_inode->i_size;
 
 	if (next_pos > file->f_inode->i_size) {
@@ -222,10 +224,13 @@ int ramfs_write(struct file *file, const char *buf, size_t len)
 	}
 
 	// fill gap with zeros if we've seeked past EOF
-	if (file->f_pos > prev_size)
-		zero_fill(file, prev_size, file->f_pos - prev_size);
+	if (*pos > prev_size)
+		zero_fill(file, prev_size, *pos - prev_size);
 
-	return ramfs_do_write(file, buf, len);
+	rc = ramfs_do_write(file, buf, len, *pos);
+	if (rc > 0)
+		*pos += rc;
+	return rc;
 }
 
 int ramfs_readdir(struct inode *dir, struct file *file, struct dirent *dirent,

@@ -4,8 +4,8 @@
 
 #include <kernel/fs.h>
 
-int ramfs_read(struct file *file, char *buf, size_t len);
-int ramfs_write(struct file *file, const char *buf, size_t len);
+int ramfs_read(struct file *file, char *buf, size_t len, unsigned long *pos);
+int ramfs_write(struct file *file, const char *buf, size_t len, unsigned long *pos);
 int ramfs_readdir(struct inode *dir, struct file *file, struct dirent *dirent,
 		int count);
 int ramfs_create(struct inode *dir, const char *name, int len, int mode,

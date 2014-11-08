@@ -67,8 +67,8 @@ struct super_block;
 
 struct file_operations {
 	off_t (*lseek)(struct inode *, struct file *, off_t, int);
-	ssize_t (*read)(struct file *, char *, size_t);
-	ssize_t (*write)(struct file *, const char *, size_t);
+	ssize_t (*read)(struct file *, char *, size_t, unsigned long *pos);
+	ssize_t (*write)(struct file *, const char *, size_t, unsigned long *pos);
 	int (*readdir)(struct inode *, struct file *, struct dirent *, int);
 	int (*open)(struct inode *, struct file *);
 	int (*release)(struct inode *, struct file *);
