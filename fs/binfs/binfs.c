@@ -35,6 +35,7 @@ extern PROGRAM(proctest);
 extern PROGRAM(sigtest);
 extern PROGRAM(strtest);
 extern PROGRAM(multi);
+extern PROGRAM(upread);
 
 extern PROGRAM(tsh);
 
@@ -69,6 +70,7 @@ static struct program progtab[] = {
 	BINENT(sigtest,     "sigtest"),
 	BINENT(strtest,     "strtest"),
 	BINENT(multi,       "multi"),
+	BINENT(upread,      "pread"),
 
 	BINENT(tsh,         "tsh"),
 };

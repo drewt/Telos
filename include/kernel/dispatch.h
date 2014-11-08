@@ -84,6 +84,7 @@ long sys_sigsuspend(sigset_t mask);
 long sys_open(const char *pathname, size_t name_len, int flags, int mode);
 long sys_close(unsigned int fd);
 long sys_read(unsigned int fd, char *buf, size_t nbyte);
+long sys_pread(unsigned int fd, char *buf, size_t nbyte, off_t pos);
 long sys_write(unsigned int fd, char *buf, size_t nbyte);
 long sys_lseek(unsigned int fd, off_t offset, unsigned int whence);
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count);
