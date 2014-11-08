@@ -51,6 +51,7 @@ static struct vma *new_vma(ulong start, ulong end, ulong flags)
 	vma->start = start;
 	vma->end = end;
 	vma->flags = flags;
+	vma->op = NULL;
 	return vma;
 }
 
@@ -224,6 +225,36 @@ struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags)
 
 	vma_insert(mm, vma);
 	return vma;
+}
+
+int vm_map_page(struct vma *vma, void *addr)
+{
+	// default: demand paging
+	if (!vma->op || !vma->op->map)
+		return map_page(addr, vma->flags);
+	return vma->op->map(vma, addr);
+}
+
+int vm_writeback(struct vma *vma, void *addr, size_t len)
+{
+	// default: no writeback
+	if (!vma->op || !vma->op->writeback)
+		return 0;
+	return vma->op->writeback(vma, addr, len);
+}
+
+int vm_read_perm(struct vma *vma, void *addr)
+{
+	if (!vma->op || !vma->op->read_perm)
+		return -EFAULT;
+	return vma->op->read_perm(vma, addr);
+}
+
+int vm_write_perm(struct vma *vma, void *addr)
+{
+	if (!vma->op || !vma->op->write_perm)
+		return -EFAULT;
+	return vma->op->write_perm(vma, addr);
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,

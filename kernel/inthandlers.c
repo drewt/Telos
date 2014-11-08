@@ -106,40 +106,45 @@ static unsigned long get_error_code(void)
 	return error;
 }
 
+static void segfault(int code)
+{
+	kprintf("Segmentation fault");
+	__kill(current, SIGSEGV, code);
+}
+
 void exn_page_fault(void)
 {
 	void *addr;
 	struct vma *vma;
 	unsigned long error;
-	int code = SEGV_ACCERR;
 
 	error = get_error_code();
 	MOV("cr2", addr);
 
 	// address not mapped in process address space
 	if (!(vma = vma_get(&current->mm, addr))) {
-		code = SEGV_MAPERR;
-		goto segfault;
+		segfault(SEGV_MAPERR);
+		return;
 	}
 
 	// page not present (demand paging)
 	if (!(error & PGF_PERM)) {
-		code = SEGV_MAPERR;
-		if (map_page(addr, vma->flags) < 0)
+		if (vm_map_page(vma, addr) < 0)
 			// FIXME: stall until memory available?
-			goto segfault;
+			segfault(SEGV_MAPERR);
 		return;
 	}
 
-	// copy-on-write
-	if (error & PGF_PERM && error & PGF_WRITE && vma->flags & VM_COW) {
-		kprintf("TODO: copy-on-write\n");
+	// write permission
+	if (error & PGF_WRITE) {
+		if (vm_write_perm(vma, addr) < 0)
+			segfault(SEGV_ACCERR);
+		return;
 	}
 
-segfault:
-	print_cpu_context(current->esp);
-	kprintf("Segmentation fault");
-	__kill(current, SIGSEGV, code);
+	// read permission
+	if (vm_read_perm(vma, addr) < 0)
+		segfault(SEGV_ACCERR);
 }
 
 static void exn_breakpoint(unsigned num, struct ucontext ctx)

@@ -23,10 +23,11 @@
 enum {
 	VM_WRITE   = 0x1,  /* write permission */
 	VM_EXEC    = 0x2,  /* execute permission */
-	VM_COW     = 0x4,  /* copy-on-write */
-	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
-	VM_ALLOC   = 0x10, /* allocate memory immediately */
+	VM_ZERO    = 0x4,  /* area should be initialized with zeros */
+	VM_ALLOC   = 0x8,  /* allocate memory immediately */
 };
+
+struct vma_operations;
 
 struct vma {
 	struct list_head chain;
@@ -34,6 +35,15 @@ struct vma {
 	ulong start;
 	ulong end;
 	ulong flags;
+	void *private;
+	struct vma_operations *op;
+};
+
+struct vma_operations {
+	int (*map)(struct vma *, void *);
+	int (*writeback)(struct vma *, void *, size_t);
+	int (*read_perm)(struct vma *, void *);
+	int (*write_perm)(struct vma *, void *);
 };
 
 struct mm_struct {
@@ -47,7 +57,6 @@ struct mm_struct {
 };
 
 int mm_init(struct mm_struct *mm);
-int mm_kinit(struct mm_struct *mm);
 void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
@@ -71,6 +80,10 @@ static inline size_t vma_size(const struct vma *vma)
 	return vma->end - vma->start;
 }
 
+int vm_map_page(struct vma *vma, void *addr);
+int vm_writeback(struct vma *vma, void *addr, size_t len);
+int vm_read_perm(struct vma *vma, void *addr);
+int vm_write_perm(struct vma *vma, void *addr);
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
