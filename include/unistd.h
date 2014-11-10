@@ -75,6 +75,7 @@ ssize_t read(int fd, void *buf, size_t nbyte);
 ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset);
 ssize_t write(int fd, const void *buf, size_t nbyte);
 off_t lseek(int fd, off_t offset, int whence);
+int truncate(const char *path, off_t length);
 int ioctl(int fd, int command, ...);
 int rmdir(const char *path);
 int chdir(const char *path);

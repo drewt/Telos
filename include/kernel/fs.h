@@ -98,6 +98,7 @@ struct inode_operations {
 	int(*rename)(struct inode *, const char *, int, struct inode *,
 			const char *, int);
 	int(*follow_link)(struct inode *, struct inode *, int, int, struct inode**);
+	int(*truncate)(struct inode *, size_t len);
 	struct file_operations *default_file_ops;
 };
 

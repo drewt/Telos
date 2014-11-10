@@ -161,6 +161,11 @@ int open_namei(const char *pathname, int flag, int mode,
 	if (error)
 		return error;
 	if (!namelen) {
+		if (flag & O_WRITE) {
+			iput(dir);
+			return -EISDIR;
+		}
+		// TODO: permission
 		*res_inode = dir;
 		return 0;
 	}
@@ -193,6 +198,22 @@ int open_namei(const char *pathname, int flag, int mode,
 		return error;
 	}
 	// TODO: lots of checks...
+	if (S_ISDIR(inode->i_mode) && (flag & O_WRITE)) {
+		iput(inode);
+		return -EACCES;
+	}
+	// TODO: permission
+	if (IS_RDONLY(inode) && (flag & O_WRITE)) {
+		iput(inode);
+		return -EROFS;
+	}
+	// TODO: check if file is busy (exec) for O_WRITE
+	if (flag & O_TRUNC) {
+		if (inode->i_op && inode->i_op->truncate)
+			inode->i_op->truncate(inode, 0);
+		inode->i_size = 0;
+		inode->i_dirt = 1;
+	}
 	*res_inode = inode;
 	return 0;
 }

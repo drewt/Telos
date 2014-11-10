@@ -22,6 +22,31 @@
 #include <sys/major.h>
 #include <string.h>
 
+long sys_truncate(const char *pathname, size_t name_len, size_t length)
+{
+	struct inode *inode;
+	int error;
+
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
+	error = namei(pathname, &inode);
+	if (error)
+		return error;
+	if (S_ISDIR(inode->i_mode)) {
+		iput(inode);
+		return -EISDIR;
+	}
+	if (!permission(inode, MAY_WRITE)) {
+		iput(inode);
+		return -EACCES;
+	}
+	if (inode->i_op && inode->i_op->truncate)
+		inode->i_op->truncate(inode, length);
+	inode->i_size = length;
+	return 0;
+}
+
 long sys_chdir(const char *pathname, size_t name_len)
 {
 	struct inode *inode;
@@ -48,7 +73,7 @@ long sys_chdir(const char *pathname, size_t name_len)
 
 long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 {
-	int flag, fd, error;
+	int fd, error;
 	struct inode *inode;
 	struct file *filp;
 
@@ -65,13 +90,9 @@ long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 		return -ENFILE;
 
 	current->filp[fd] = filp;
-	filp->f_flags = flag = flags;
-	filp->f_mode = (flag+1) & O_ACCMODE;
-	if (filp->f_mode)
-		flag++;
-	if (flag & (O_TRUNC | O_CREAT))
-		flag |= 2;
-	error = open_namei(pathname, flag, mode, &inode, NULL);
+	filp->f_flags = flags;
+	// TODO: f_mode
+	error = open_namei(pathname, flags, mode, &inode, NULL);
 	if (error) {
 		current->filp[fd] = NULL;
 		free_filp(filp);

@@ -138,6 +138,17 @@ off_t lseek(int fd, off_t offset, int whence)
 	return rv;
 }
 
+int truncate(const char *path, off_t length)
+{
+	int rv;
+	if (length < 0)
+		return -1;
+	rv = syscall3(SYS_TRUNCATE, path, strlen(path), length);
+	if (rv < 0)
+		return -1;
+	return rv;
+}
+
 int ioctl(int fd, int command, ...)
 {
 	int rv;

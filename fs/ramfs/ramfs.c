@@ -187,7 +187,7 @@ static int ramfs_do_write(struct file *f, const char *buf, size_t len,
 	return len;
 }
 
-static void zero_fill(struct file *f, unsigned long start, size_t len)
+static void zero_fill(struct inode *inode, unsigned long start, size_t len)
 {
 	char *fbuf;
 	struct pf_info *frame;
@@ -195,7 +195,7 @@ static void zero_fill(struct file *f, unsigned long start, size_t len)
 	unsigned long frame_nr = start / FRAME_SIZE;
 	unsigned int i = 0;
 
-	list_for_each_entry(frame, &f->f_inode->i_list, chain) {
+	list_for_each_entry(frame, &inode->i_list, chain) {
 		if (i++ < frame_nr)
 			continue;
 
@@ -225,12 +225,40 @@ int ramfs_write(struct file *file, const char *buf, size_t len,
 
 	// fill gap with zeros if we've seeked past EOF
 	if (*pos > prev_size)
-		zero_fill(file, prev_size, *pos - prev_size);
+		zero_fill(file->f_inode, prev_size, *pos - prev_size);
 
 	rc = ramfs_do_write(file, buf, len, *pos);
 	if (rc > 0)
 		*pos += rc;
 	return rc;
+}
+
+int ramfs_truncate(struct inode *inode, size_t len)
+{
+	unsigned int nr_pages = pages_in_range(0, len);
+	unsigned int old_nr_pages = pages_in_range(0, inode->i_size);
+	int page_diff = nr_pages - old_nr_pages;
+	ssize_t diff = len - inode->i_size;
+
+	if (diff > 0) {
+		unsigned long prev_size = inode->i_size;
+		int error = grow_file(inode, diff);
+		if (error)
+			return error;
+		zero_fill(inode, prev_size, len);
+		return 0;
+	} else for (; page_diff < 0; page_diff++) {
+		struct pf_info *frame;
+		if (list_empty(&inode->i_list)) {
+			warn("ramfs: expected more frames in truncate");
+			break;
+		}
+		frame = list_entry(inode->i_list.prev, struct pf_info, chain);
+		list_del(&frame->chain);
+		kfree_frame(frame);
+	}
+	return 0;
+
 }
 
 int ramfs_readdir(struct inode *dir, struct file *file, struct dirent *dirent,
@@ -472,6 +500,7 @@ struct file_operations ramfs_reg_fops = {
 };
 
 static struct inode_operations ramfs_reg_iops = {
+	.truncate = ramfs_truncate,
 	.default_file_ops = &ramfs_reg_fops,
 };
 
