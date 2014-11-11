@@ -82,5 +82,7 @@ int chdir(const char *path);
 int unlink(const char *path);
 int link(const char *old, const char *new);
 void *sbrk(long increment);
+int dup(int fd);
+int dup2(int oldfd, int newfd);
 
 #endif

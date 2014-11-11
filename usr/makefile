@@ -6,7 +6,7 @@ submakes = multi
 objects = cat.o echo.o eventtest.o memtest.o umkdir.o proctest.o sigtest.o \
 	  strtest.o exntest.o jmptest.o tsh.o date.o ulink.o uls.o urename.o \
 	  urmdir.o ustat.o uunlink.o uumount.o mount_ramfs.o exectest.o init.o \
-	  upread.o utruncate.o \
+	  upread.o utruncate.o duptest.o \
 	  $(foreach var,$(submakes),$(var)/telos_obj.o )
 targets = usr.a
 clean = $(objects) $(targets)

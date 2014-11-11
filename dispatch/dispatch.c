@@ -62,6 +62,7 @@ syscall_t systab[SYSCALL_MAX] = {
 	[SYS_UMOUNT]        = sys_umount,
 	[SYS_STAT]          = sys_stat,
 	[SYS_TRUNCATE]      = sys_truncate,
+	[SYS_FCNTL]         = sys_fcntl,
 	[SYS_ALARM]         = sys_alarm,
 	[SYS_TIMER_CREATE]  = sys_timer_create,
 	[SYS_TIMER_DELETE]  = sys_timer_delete,

@@ -86,7 +86,7 @@ long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 	if (fd == NR_FILES)
 		return -EMFILE;
 
-	if (!(filp = get_filp()))
+	if (!(filp = get_empty_file()))
 		return -ENFILE;
 
 	current->filp[fd] = filp;
@@ -95,7 +95,7 @@ long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 	error = open_namei(pathname, flags, mode, &inode, NULL);
 	if (error) {
 		current->filp[fd] = NULL;
-		free_filp(filp);
+		free_file(filp);
 		return error;
 	}
 
@@ -110,7 +110,7 @@ long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 		if (error) {
 			iput(inode);
 			current->filp[fd] = NULL;
-			free_filp(filp);
+			free_file(filp);
 			return error;
 		}
 	}
@@ -132,7 +132,7 @@ static int close_fp(struct file *filp, unsigned int fd)
 	}
 	if (filp->f_op && filp->f_op->release)
 		filp->f_op->release(inode, filp);
-	free_filp(filp);
+	free_file(filp);
 	iput(inode);
 	return 0;
 }

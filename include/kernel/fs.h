@@ -152,7 +152,7 @@ extern struct slab_cache *file_cachep;
 extern struct slab_cache *inode_cachep;
 extern struct inode *root_inode;
 
-static inline struct file *get_filp(void)
+static inline struct file *get_empty_file(void)
 {
 	struct file *filp = slab_alloc(file_cachep);
 	if (filp)
@@ -160,7 +160,7 @@ static inline struct file *get_filp(void)
 	return filp;
 }
 
-static inline void free_filp(struct file *filp)
+static inline void free_file(struct file *filp)
 {
 	slab_free(file_cachep, filp);
 }

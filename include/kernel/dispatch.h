@@ -102,6 +102,7 @@ long sys_mount(const struct mount *mount);
 long sys_umount(const char *name, size_t name_len);
 long sys_stat(const char *pathname, size_t name_len, struct stat *s);
 long sys_truncate(const char *pathname, size_t name_len, size_t length);
+long sys_fcntl(int fd, int cmd, int arg);
 long sys_time(time_t *t);
 long sys_clock_getres(clockid_t clockid, struct timespec *res);
 long sys_clock_gettime(clockid_t clockid, struct timespec *tp);

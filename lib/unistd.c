@@ -15,6 +15,7 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fcntl.h>
 #include <stdarg.h>
 #include <time.h>
 #include <unistd.h>
@@ -158,6 +159,36 @@ int ioctl(int fd, int command, ...)
 	arg = va_arg(ap, unsigned long);
 	va_end(ap);
 	rv = syscall3(SYS_IOCTL, fd, command, arg);
+	if (rv < 0)
+		return -1;
+	return rv;
+}
+
+int fcntl(int fd, int cmd, ...)
+{
+	int rv;
+	va_list ap;
+	int arg;
+	va_start(ap, cmd);
+	arg = va_arg(ap, int);
+	va_end(ap);
+	rv = syscall3(SYS_FCNTL, fd, cmd, arg);
+	if (rv < 0)
+		return -1;
+	return rv;
+}
+
+int dup(int fd)
+{
+	int rv = syscall3(SYS_FCNTL, fd, F_DUPFD, 0);
+	if (rv < 0)
+		return -1;
+	return rv;
+}
+
+int dup2(int oldfd, int newfd)
+{
+	int rv = syscall3(SYS_FCNTL, oldfd, F_DUP2FD, newfd);
 	if (rv < 0)
 		return -1;
 	return rv;

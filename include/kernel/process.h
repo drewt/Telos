@@ -113,5 +113,20 @@ static inline struct pcb *get_pcb(pid_t pid)
 	return NULL;
 }
 
+static inline int fd_ok(struct pcb *p, int fd)
+{
+	return fd < NR_FILES && p->filp[fd];
+}
+
+static inline int get_fd(struct pcb *p, int start)
+{
+	if (start >= NR_FILES)
+		return -EINVAL;
+	for (; start < NR_FILES; start++)
+		if (!p->filp[start])
+			return start;
+	return -EMFILE;
+}
+
 #endif /* __ASM__ */
 #endif /* _KERNEL_PROCESS_H_ */
