@@ -212,12 +212,13 @@ long sig_restore(struct ucontext *old_cx)
 
 static int verify_sigaction(struct sigaction *act)
 {
-	if (vm_verify(&current->mm, act, sizeof(*act), 0))
+	if (vm_verify(&current->mm, act, sizeof(*act), VM_READ))
 		return -1;
 	if (act->sa_handler == SIG_DFL || act->sa_handler == SIG_IGN)
 		return 0;
 	// FIXME: handler should have VM_EXEC
-	if (vm_verify(&current->mm, act->sa_handler, sizeof(*(act->sa_handler)), 0))
+	if (vm_verify(&current->mm, act->sa_handler,
+				sizeof(*(act->sa_handler)), VM_READ))
 		return -1;
 	return 0;
 }
@@ -248,7 +249,7 @@ long sys_sigaction(int sig, struct sigaction *act, struct sigaction *oact)
 
 long sys_sigprocmask(int how, sigset_t *set, sigset_t *oset)
 {
-	if (set && vm_verify(&current->mm, set, sizeof(*set), 0))
+	if (set && vm_verify(&current->mm, set, sizeof(*set), VM_READ))
 		return -EFAULT;
 	if (oset && vm_verify(&current->mm, oset, sizeof(*oset), VM_WRITE))
 		return -EFAULT;

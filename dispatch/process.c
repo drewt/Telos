@@ -138,10 +138,10 @@ static struct pcb *pcb_clone(struct pcb *src)
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE  (FRAME_SIZE*4)
 
-#define DATA_FLAGS   VM_WRITE
-#define RODATA_FLAGS 0
-#define HEAP_FLAGS   (VM_WRITE | VM_ZERO)
-#define USTACK_FLAGS (VM_WRITE | VM_ZERO | VM_EXEC)
+#define DATA_FLAGS   (VM_READ | VM_WRITE)
+#define RODATA_FLAGS VM_READ
+#define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO)
+#define USTACK_FLAGS (VM_READ | VM_WRITE | VM_ZERO | VM_EXEC)
 #define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC)
 
 static int address_space_init(struct mm_struct *mm)
@@ -157,7 +157,7 @@ static int address_space_init(struct mm_struct *mm)
 	mm->kernel_stack = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
 	if (!mm->kernel_stack)
 		goto abort;
-	vma = vma_map(mm, urwstart, urwend - urwstart, VM_WRITE);
+	vma = vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS);
 	if (!vma)
 		goto abort;
 	vma = vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS);
@@ -248,13 +248,13 @@ static int verify_exec_args(struct exec_args *args)
 {
 	int error;
 
-	if (vm_verify(&current->mm, args, sizeof(*args), 0))
+	if (vm_verify(&current->mm, args, sizeof(*args), VM_READ))
 		return -EFAULT;
 	if (vm_verify(&current->mm, args->argv,
-				sizeof(*(args->argv)) * args->argc, 0))
+				sizeof(*(args->argv)) * args->argc, VM_READ))
 		return -EFAULT;
 	if (vm_verify(&current->mm, args->envp,
-				sizeof(*(args->envp)) * args->envc, 0))
+				sizeof(*(args->envp)) * args->envc, VM_READ))
 		return -EFAULT;
 	error = verify_user_string(args->pathname.str, args->pathname.len);
 	if (error)

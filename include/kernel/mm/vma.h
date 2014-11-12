@@ -20,11 +20,16 @@
 
 #include <kernel/list.h>
 
+/*
+ * The first three flags are the familar mode bits; these should not be changed
+ * as mmap, etc. assume they have the usual meaning.
+ */
 enum {
-	VM_WRITE   = 0x1,  /* write permission */
-	VM_EXEC    = 0x2,  /* execute permission */
-	VM_ZERO    = 0x4,  /* area should be initialized with zeros */
-	VM_ALLOC   = 0x8,  /* allocate memory immediately */
+	VM_EXEC    = 0x1,  /* execute permission */
+	VM_WRITE   = 0x2,  /* write permission */
+	VM_READ    = 0x4,  /* read permission */
+	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
+	VM_ALLOC   = 0x10, /* allocate memory immediately */
 };
 
 struct vma_operations;
@@ -61,6 +66,8 @@ int mm_init(struct mm_struct *mm);
 void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
+struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
+		size_t len, ulong flags);
 struct vma *vma_find(const struct mm_struct *mm, const void *addr);
 struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags);
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags);

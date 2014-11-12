@@ -55,6 +55,25 @@ static struct vma *new_vma(ulong start, ulong end, ulong flags)
 	return vma;
 }
 
+struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
+		size_t len, ulong flags)
+{
+	struct vma *vma;
+	unsigned long start = (unsigned long) z_start;
+	unsigned long end = (unsigned long) z_end;
+	list_for_each_entry(vma, &mm->map, chain) {
+		if (vma->start < start)
+			continue;
+		if (start + len >= end)
+			return NULL;
+		if (start + len < vma->start)
+			return new_vma(start, page_align(start+len), flags);
+		start = vma->end;
+	}
+	// XXX: assumes a VMA exists after end
+	return NULL;
+}
+
 int mm_init(struct mm_struct *mm)
 {
 	if (!(mm->pgdir = new_pgdir()))

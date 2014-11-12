@@ -165,7 +165,7 @@ int paging_init(ulong start, ulong end)
 
 static inline ulong vma_to_page_flags(ulong flags)
 {
-	return PE_U | ((flags & VM_WRITE) ? PE_RW : 0);
+	return ((flags & VM_READ) ? PE_U : 0) | ((flags & VM_WRITE) ? PE_RW : 0);
 }
 
 /*

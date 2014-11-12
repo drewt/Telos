@@ -97,7 +97,7 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 	struct file *file;
 	struct inode *inode;
 
-	if (vm_verify(&current->mm, buf, count, 0))
+	if (vm_verify(&current->mm, buf, count, VM_READ))
 		return -EFAULT;
 	if (fd >= NR_FILES || !(file = current->filp[fd])
 			|| !(inode = file->f_inode))

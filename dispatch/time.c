@@ -170,7 +170,7 @@ long sys_clock_settime(clockid_t clockid, struct timespec *tp)
 		return -EINVAL;
 	if (posix_clocks[clockid].set == NULL)
 		return -EPERM;
-	if (vm_verify(&current->mm, tp, sizeof(*tp), 0))
+	if (vm_verify(&current->mm, tp, sizeof(*tp), VM_READ))
 		return -EFAULT;
 	posix_clocks[clockid].set(tp);
 	return 0;
@@ -230,7 +230,7 @@ long sys_timer_create(clockid_t clockid, struct sigevent *sevp,
 
 	if (clockid != CLOCK_MONOTONIC)
 		return -ENOTSUP;
-	if (sevp && vm_verify(&current->mm, sevp, sizeof(*sevp), 0))
+	if (sevp && vm_verify(&current->mm, sevp, sizeof(*sevp), VM_READ))
 		return -EFAULT;
 	if (vm_verify(&current->mm, timerid, sizeof(*timerid), VM_WRITE))
 		return -EFAULT;
@@ -305,7 +305,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 
 	if (pt == NULL)
 		return -EINVAL;
-	if (vm_verify(&current->mm, new_value, sizeof(*new_value), 0))
+	if (vm_verify(&current->mm, new_value, sizeof(*new_value), VM_READ))
 		return -EFAULT;
 
 	*v = *new_value;

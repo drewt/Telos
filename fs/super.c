@@ -349,7 +349,7 @@ static long unpacked_mount(const char *dev_name, const char *dir_name,
 long sys_mount(const struct mount *mount)
 {
 	int error;
-	if (vm_verify(&current->mm, mount, sizeof(*mount), 0))
+	if (vm_verify(&current->mm, mount, sizeof(*mount), VM_READ))
 		return -EFAULT;
 	if (mount->dev.str) {
 		error = verify_user_string(mount->dev.str, mount->dev.len);
