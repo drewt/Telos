@@ -49,7 +49,7 @@ typedef _PID_T_TYPE pid_t;
 #endif
 #ifndef _INTPTR_T_DEFINED
 #define _INTPTR_T_DEFINED
-typedef _INTPTR_T_TYPE intptr_t;
+//typedef _INTPTR_T_TYPE intptr_t; // FIXME: conflicts with gcc stdint.h
 #endif
 
 enum {

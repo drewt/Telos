@@ -19,8 +19,8 @@
 #ifndef _STDIO_H_
 #define _STDIO_H_
 
-#include <stddef.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <sys/type_macros.h>
 
 #ifndef EOF
@@ -48,32 +48,60 @@ typedef struct {
 	int fd;
 	unsigned char buf;
 	size_t buffered;
+	int error;
+	_Bool eof;
 } FILE;
 
 extern FILE *stdin;
 extern FILE *stdout;
 extern FILE *stderr;
 
-int vsnprintf(char *str, size_t size, const char *fmt, va_list ap);
-int snprintf(char *str, size_t size, const char *fmt, ...);
-int vsprintf(char *str, const char *fmt, va_list ap);
-int sprintf(char *str, const char *fmt, ...);
-int printf(const char *fmt, ...);
-int vprintf(const char *fmt, va_list ap);
+static inline void clearerr(FILE *stream)
+{
+	stream->error = 0;
+	stream->eof = 0;
+}
+
+static inline int feof(FILE *stream)
+{
+	return stream->eof;
+}
+
+static inline int ferror(FILE *stream)
+{
+	return stream->error;
+}
+
+static inline int fflush(FILE *stream)
+{
+	return 0;
+}
+
+static inline int fileno(FILE *stream)
+{
+	return stream->fd;
+}
+
+int fclose(FILE *stream);
+int fgetc(FILE *stream);
 int fprintf(FILE *stream, const char *fmt, ...);
-int vfprintf(FILE *stream, const char *fmt, va_list ap);
-int puts(const char *s);
-int putchar(int c);
-int putc(int c, FILE *stream);
-
-size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+int fputc(int c, FILE *stream);
+int fputs(const char *restrict s, FILE *restrict stream);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-
-int getc(FILE *stream);
-int ungetc(int c, FILE *stream);
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+#define getc fgetc
 int getchar(void);
-char *gets(char *s, int size);
-
+int printf(const char *fmt, ...);
+#define putc fputc
+int putchar(int c);
+int puts(const char *s);
 int rename(const char *old, const char *new);
+int snprintf(char *str, size_t size, const char *fmt, ...);
+int sprintf(char *str, const char *fmt, ...);
+int ungetc(int c, FILE *stream);
+int vfprintf(FILE *stream, const char *fmt, va_list ap);
+int vprintf(const char *fmt, va_list ap);
+int vsnprintf(char *str, size_t size, const char *fmt, va_list ap);
+int vsprintf(char *str, const char *fmt, va_list ap);
 
 #endif
