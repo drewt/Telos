@@ -114,10 +114,12 @@ static ssize_t tty_read(struct file *f, char *buf, size_t len,
 
 	while (bytes < len) {
 		struct tty_buffer *tty_buf;
-		list_add_tail(&current->chain, &tty->readers);
 		while (list_empty(&tty->flushed)) {
-			if (schedule())
+			list_add_tail(&current->chain, &tty->readers);
+			if (schedule()) {
+				list_del(&current->chain);
 				return -EINTR;
+			}
 		}
 
 		tty_buf = list_first_entry(&tty->flushed, struct tty_buffer, chain);
@@ -248,8 +250,4 @@ int tty_insert_char(struct tty *tty, unsigned char c)
 	if (tty->buffer->pos >= TTY_BUFFER_SIZE)
 		tty_buffer_flush(tty);
 	return 0;
-}
-
-static void tty_sysinit(void)
-{
 }
