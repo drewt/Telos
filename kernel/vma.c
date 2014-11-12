@@ -68,6 +68,7 @@ void mm_fini(struct mm_struct *mm)
 {
 	struct vma *vma, *n;
 	list_for_each_entry_safe(vma, n, &mm->map, chain) {
+		vm_unmap(vma);
 		free_vma(vma);
 	}
 	del_pgdir(mm->pgdir);
@@ -255,6 +256,13 @@ int vm_write_perm(struct vma *vma, void *addr)
 	if (!vma->op || !vma->op->write_perm)
 		return -EFAULT;
 	return vma->op->write_perm(vma, addr);
+}
+
+int vm_unmap(struct vma *vma)
+{
+	if (!vma->op || !vma->op->unmap)
+		return 0;
+	return vma->op->unmap(vma);
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,

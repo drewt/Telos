@@ -44,6 +44,7 @@ struct vma_operations {
 	int (*writeback)(struct vma *, void *, size_t);
 	int (*read_perm)(struct vma *, void *);
 	int (*write_perm)(struct vma *, void *);
+	int (*unmap)(struct vma *);
 };
 
 struct mm_struct {
@@ -84,6 +85,7 @@ int vm_map_page(struct vma *vma, void *addr);
 int vm_writeback(struct vma *vma, void *addr, size_t len);
 int vm_read_perm(struct vma *vma, void *addr);
 int vm_write_perm(struct vma *vma, void *addr);
+int vm_unmap(struct vma *vma);
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
