@@ -123,8 +123,13 @@ static ssize_t tty_read(struct file *f, char *buf, size_t len,
 		}
 
 		tty_buf = list_first_entry(&tty->flushed, struct tty_buffer, chain);
-		bytes += tty_buffer_copy(tty_buf, buf + bytes, len - bytes);
+		if (tty_buffer_empty(tty_buf)) {
+			list_del(&tty_buf->chain);
+			free_tty_buffer(tty_buf);
+			return 0;
+		}
 
+		bytes += tty_buffer_copy(tty_buf, buf + bytes, len - bytes);
 		if (tty_buffer_empty(tty_buf)) {
 			list_del(&tty_buf->chain);
 			free_tty_buffer(tty_buf);
@@ -242,6 +247,9 @@ int tty_insert_char(struct tty *tty, unsigned char c)
 		break;
 	case '\n':
 		_tty_insert_char(tty, c);
+		tty_buffer_flush(tty);
+		return 0;
+	case 4:
 		tty_buffer_flush(tty);
 		return 0;
 	default:
