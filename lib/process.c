@@ -64,5 +64,5 @@ void sched_yield(void)
 
 void exit(int status)
 {
-	syscall1(SYS_STOP, status);
+	syscall1(SYS_EXIT, status);
 }
