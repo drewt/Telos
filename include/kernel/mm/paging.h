@@ -76,7 +76,7 @@ static inline ulong align_down(ulong addr, unsigned align)
 	return addr & ~(align - 1);
 }
 
-#define page_align(n) align_up(n, FRAME_SIZE)
-#define page_base(n)  align_down(n, FRAME_SIZE)
+#define page_align(n) align_up((ulong)n, FRAME_SIZE)
+#define page_base(n)  align_down((ulong)n, FRAME_SIZE)
 
 #endif

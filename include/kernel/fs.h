@@ -152,6 +152,8 @@ extern struct slab_cache *file_cachep;
 extern struct slab_cache *inode_cachep;
 extern struct inode *root_inode;
 
+void iput(struct inode *inode);
+
 static inline struct file *get_empty_file(void)
 {
 	struct file *filp = slab_alloc(file_cachep);
@@ -165,6 +167,16 @@ static inline void free_file(struct file *filp)
 	slab_free(file_cachep, filp);
 }
 
+static inline void file_unref(struct file *file)
+{
+	if (--file->f_count > 0)
+		return;
+	if (file->f_op && file->f_op->release)
+		file->f_op->release(file->f_inode, file);
+	iput(file->f_inode);
+	free_file(file);
+}
+
 static inline struct inode *get_empty_inode(void)
 {
 	return slab_alloc(inode_cachep);
@@ -174,7 +186,6 @@ void mount_root(void);
 
 struct inode *iget(struct super_block *sb, unsigned long ino);
 struct inode *__iget(struct super_block *sb, ino_t ino, bool crossmntp);
-void iput(struct inode *inode);
 void insert_inode_hash(struct inode *inode);
 
 static void ifree(struct inode *inode)

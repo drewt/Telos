@@ -55,8 +55,8 @@ static struct vma *new_vma(ulong start, ulong end, ulong flags)
 	return vma;
 }
 
-struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
-		size_t len, ulong flags)
+static unsigned long vma_find_space(struct mm_struct *mm, void *z_start,
+		void *z_end, size_t len)
 {
 	struct vma *vma;
 	unsigned long start = (unsigned long) z_start;
@@ -65,13 +65,35 @@ struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
 		if (vma->start < start)
 			continue;
 		if (start + len >= end)
-			return NULL;
+			return 0;
 		if (start + len < vma->start)
-			return new_vma(start, page_align(start+len), flags);
+			return start;
 		start = vma->end;
 	}
 	// XXX: assumes a VMA exists after end
-	return NULL;
+	return 0;
+}
+
+static void vma_insert(struct mm_struct *mm, struct vma *vma)
+{
+	struct list_head *it;
+	list_for_each(it, &mm->map) {
+		if (list_entry(it, struct vma, chain)->start > vma->start)
+			break;
+	}
+	list_add_tail(&vma->chain, it);
+	vma->mmap = mm;
+}
+
+struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
+		size_t len, unsigned long flags)
+{
+	unsigned long start = vma_find_space(mm, z_start, z_end, len);
+	struct vma *vma = new_vma(start, page_align(start+len), flags);
+	if (!vma)
+		return NULL;
+	vma_insert(mm, vma);
+	return vma;
 }
 
 int mm_init(struct mm_struct *mm)
@@ -145,18 +167,6 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 
 	vma->end += page_align(amount);
 	return 0;
-}
-
-static void vma_insert(struct mm_struct *mm, struct vma *vma)
-{
-	struct list_head *it;
-
-	list_for_each(it, &mm->map) {
-		if (list_entry(it, struct vma, chain)->start > vma->start)
-			break;
-	}
-	list_add_tail(&vma->chain, it);
-	vma->mmap = mm;
 }
 
 static int vma_split_left(struct vma *vma, ulong end, ulong flags)

@@ -113,6 +113,11 @@ static inline struct pcb *get_pcb(pid_t pid)
 	return NULL;
 }
 
+static inline struct file *fd_file(struct pcb *p, int fd)
+{
+	return (fd >= 0 && fd < NR_FILES && p->filp[fd]) ? p->filp[fd] : NULL;
+}
+
 static inline int fd_ok(struct pcb *p, int fd)
 {
 	return fd < NR_FILES && p->filp[fd];

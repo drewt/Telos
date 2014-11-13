@@ -119,21 +119,11 @@ long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 
 static int close_fp(struct file *filp, unsigned int fd)
 {
-	struct inode *inode;
-
 	if (filp->f_count == 0) {
 		kprintf("VFS: Close: file count is 0\n");
 		return 0;
 	}
-	inode = filp->f_inode;
-	if (filp->f_count > 1) {
-		filp->f_count--;
-		return 0;
-	}
-	if (filp->f_op && filp->f_op->release)
-		filp->f_op->release(inode, filp);
-	free_file(filp);
-	iput(inode);
+	file_unref(filp);
 	return 0;
 }
 

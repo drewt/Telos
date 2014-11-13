@@ -26,6 +26,7 @@ extern PROGRAM(uunlink);
 extern PROGRAM(urename);
 extern PROGRAM(ustat);
 
+extern PROGRAM(mmaptest);
 extern PROGRAM(duptest);
 extern PROGRAM(exectest);
 extern PROGRAM(exntest);
@@ -63,6 +64,7 @@ static struct program progtab[] = {
 	BINENT(uumount,     "umount"),
 	BINENT(uunlink,     "unlink"),
 
+	BINENT(mmaptest,    "mmaptest"),
 	BINENT(duptest,     "duptest"),
 	BINENT(exectest,    "exectest"),
 	BINENT(exntest,     "exntest"),

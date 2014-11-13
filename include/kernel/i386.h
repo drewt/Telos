@@ -202,6 +202,26 @@ static inline void disable_paging(void)
 	);
 }
 
+static inline void enable_write_protect(void)
+{
+	asm volatile(
+		"mov %%cr0, %%eax\n"
+		"or  %0,    %%eax\n"
+		"mov %%eax, %%cr0\n"
+	: : "i" (1 << 16) : "%eax"
+	);
+}
+
+static inline void disable_write_protect(void)
+{
+	asm volatile(
+		"mov %%cr0, %%eax\n"
+		"and %0,    %%eax\n"
+		"mov %%eax, %%cr0\n"
+	: : "i" (~(1 << 16)) : "%eax"
+	);
+}
+
 static inline void set_page_directory(void *addr)
 {
 	asm volatile("mov %0, %%cr3" : : "r" (addr) :);

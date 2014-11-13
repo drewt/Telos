@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <syscall.h>
+#include <sys/mman.h>
 
 #include <kernel/list.h> /* FIXME: shouldn't include kernel header */
 
@@ -236,4 +237,20 @@ void *sbrk(long increment)
 	}
 
 	return (void*) old;
+}
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off)
+{
+	struct __mmap_args args = {
+		.addr  = addr,
+		.len   = len,
+		.prot  = prot,
+		.flags = flags,
+		.fd    = fd,
+		.off   = off,
+	};
+	int rc = syscall1(SYS_MMAP, &args);
+	if (rc < 0)
+		return MAP_FAILED;
+	return args.addr;
 }
