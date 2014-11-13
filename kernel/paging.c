@@ -55,14 +55,24 @@ static inline void flush_pages(ulong addr, uint n)
 		flush_page(addr + n*FRAME_SIZE);
 }
 
-static inline unsigned addr_to_pdi(ulong addr)
+static inline unsigned int addr_to_pdi(ulong addr)
 {
 	return (addr & 0xFFC00000) >> 22;
 }
 
-static inline unsigned addr_to_pti(ulong addr)
+static inline unsigned long pdi_to_addr(unsigned int pdi)
+{
+	return pdi << 22;
+}
+
+static inline unsigned int addr_to_pti(ulong addr)
 {
 	return (addr & 0x003FF000) >> 12;
+}
+
+static inline unsigned long pti_to_addr(unsigned int pdi, unsigned int pti)
+{
+	return pdi_to_addr(pdi) + (pti << 12);
 }
 
 static struct pf_info *phys_to_info(ulong addr)
@@ -454,6 +464,56 @@ int del_pgdir(pmap_t phys_pgdir)
 	kfree_frame(phys_to_info((ulong)phys_pgdir));
 	kunmap_tmp_page(pgdir);
 	return 0;
+}
+
+static int pm_unmap_pgtab(struct vma *vma, unsigned int pdi,
+		unsigned long phys_pgtab)
+{
+	pmap_t pgtab;
+	unsigned int pti = 0;
+	unsigned int last = 1023;
+
+	// start in middle of page table
+	if (vma->start > pdi_to_addr(pdi))
+		pti = addr_to_pti(vma->start);
+	// end in middle of page table
+	if (vma->end < pdi_to_addr(pdi+1))
+		last = addr_to_pti(vma->end-1);
+
+	pgtab = kmap_tmp_page(phys_pgtab);
+	if (!pgtab)
+		return -ENOMEM;
+	for (; pti <= last; pti++) {
+		void *addr = (void*) pti_to_addr(pdi, pti);
+		if (!(pgtab[pti] & PE_P))
+			continue;
+		if (pgtab[pti] & PE_D)
+			vm_writeback(vma, addr, FRAME_SIZE);
+		kfree_frame(phys_to_info(pgtab[pti] & ~0xFFF));
+		pgtab[pti] = 0;
+		flush_page(addr);
+	}
+	kunmap_tmp_page(pgtab);
+	return 0;
+}
+
+int pm_unmap(struct vma *vma)
+{
+	int error = 0;
+	unsigned int last = addr_to_pdi(vma->end-1);
+	pmap_t pgdir = kmap_tmp_page((ulong)vma->mmap->pgdir);
+
+	if (!pgdir)
+		return -ENOMEM;
+	for (unsigned int pdi = addr_to_pdi(vma->start); pdi <= last; pdi++) {
+		if (!(pgdir[pdi] & PE_P))
+			continue;
+		if ((error = pm_unmap_pgtab(vma, pdi, pgdir[pdi] & ~0xFFF)))
+			break;
+		// FIXME: free page table (if empty)?
+	}
+	kunmap_tmp_page(pgdir);
+	return error;
 }
 
 /*

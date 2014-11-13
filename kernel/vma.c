@@ -289,9 +289,11 @@ int vm_write_perm(struct vma *vma, void *addr)
 
 int vm_unmap(struct vma *vma)
 {
-	if (!vma->op || !vma->op->unmap)
+	if (vma->flags & VM_KEEP)
 		return 0;
-	return vma->op->unmap(vma);
+	if (vma->op && vma->op->unmap)
+		vma->op->unmap(vma);
+	return pm_unmap(vma);
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,

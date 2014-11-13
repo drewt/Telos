@@ -30,6 +30,7 @@ enum {
 	VM_READ    = 0x4,  /* read permission */
 	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
 	VM_ALLOC   = 0x10, /* allocate memory immediately */
+	VM_KEEP    = 0x20, /* keep after exec */
 };
 
 struct vma_operations;

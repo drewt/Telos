@@ -31,6 +31,8 @@
 #define PE_P  0x1
 #define PE_RW 0x2
 #define PE_U  0x4
+#define PE_A  0x10
+#define PE_D  0x20
 
 /* page frame info */
 struct pf_info {
@@ -38,6 +40,8 @@ struct pf_info {
 	unsigned long addr;
 	unsigned ref;
 };
+
+struct vma;
 
 struct pf_info *kalloc_frame(ulong flags);
 void *kalloc_pages(uint n);
@@ -53,6 +57,7 @@ pmap_t new_pgdir(void);
 int del_pgdir(pmap_t phys_pgdir);
 int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags);
 int map_page(void *addr, ulong flags);
+int pm_unmap(struct vma *vma);
 
 static inline void kfree_frame(struct pf_info *frame)
 {
