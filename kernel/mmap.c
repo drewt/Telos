@@ -30,9 +30,36 @@
 struct mmap_private {
 	struct file *file;
 	unsigned long off;
+	unsigned int ref;
 };
 
 static DEFINE_SLAB_CACHE(mmap_private_cachep, sizeof(struct mmap_private));
+
+static inline struct mmap_private *alloc_private(struct file *file,
+		unsigned long off)
+{
+	struct mmap_private *private = slab_alloc(mmap_private_cachep);
+	if (!private)
+		return NULL;
+	private->file = file;
+	private->off = off;
+	private->ref = 1;
+	file->f_count++;
+	return private;
+}
+
+static inline void private_unref(struct mmap_private *private)
+{
+	file_unref(private->file);
+	if (--private->ref == 0)
+		slab_free(mmap_private_cachep, private);
+}
+
+static inline void private_ref(struct mmap_private *private)
+{
+	private->file->f_count++;
+	private->ref++;
+}
 
 static int mmap_map(struct vma *vma, void *addr)
 {
@@ -59,15 +86,20 @@ static int mmap_map(struct vma *vma, void *addr)
 
 static int mmap_unmap(struct vma *vma)
 {
-	struct mmap_private *private = vma->private;
-	file_unref(private->file);
-	slab_free(mmap_private_cachep, private);
+	private_unref(vma->private);
+	return 0;
+}
+
+static int mmap_clone(struct vma *dst, struct vma *src)
+{
+	private_ref((dst->private = src->private));
 	return 0;
 }
 
 struct vma_operations mmap_vma_ops = {
 	.map = mmap_map,
 	.unmap = mmap_unmap,
+	.clone = mmap_clone,
 };
 
 int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
@@ -77,7 +109,7 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 	struct vma *vma;
 	struct mmap_private *private;
 
-	private = slab_alloc(mmap_private_cachep);
+	private = alloc_private(file, off);
 	if (!private)
 		return -ENOMEM;
 
@@ -88,15 +120,12 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 		end  = MMAP_AREA_END;
 	}
 
-	vma = create_vma(&current->mm, *addr, end, len, prot);
+	vma = create_vma(&current->mm, *addr, end, len, prot | VM_CLOEXEC);
 	if (!vma) {
 		slab_free(mmap_private_cachep, private);
 		return -ENOMEM;
 	}
 
-	file->f_count++;
-	private->file = file;
-	private->off = off;
 	vma->private = private;
 	vma->op = &mmap_vma_ops;
 	return 0;

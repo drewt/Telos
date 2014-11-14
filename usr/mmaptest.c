@@ -21,11 +21,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 
 int main(void)
 {
 	int fd;
 	char *addr;
+	pid_t child;
 
 	printf("Testing mmap()... ");
 	fd = open("/test", O_CREAT | O_TRUNC, O_RDWR);
@@ -43,6 +45,12 @@ int main(void)
 	if (addr == MAP_FAILED) {
 		fprintf(stderr, "mmaptest: mmap returned MAP_FAILED\n");
 		exit(EXIT_FAILURE);
+	}
+
+	// fork a child to check that mmap works across a fork()
+	if ((child = fork())) {
+		wait(NULL);
+		return 0;
 	}
 
 	if (memcmp(addr, "mmap\n", 5)) {

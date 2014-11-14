@@ -30,7 +30,8 @@ enum {
 	VM_READ    = 0x4,  /* read permission */
 	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
 	VM_ALLOC   = 0x10, /* allocate memory immediately */
-	VM_KEEP    = 0x20, /* keep after exec */
+	VM_KEEP    = 0x20, /* never unmap */
+	VM_CLOEXEC = 0x40, /* unmap on exec */
 };
 
 struct vma_operations;
@@ -51,6 +52,7 @@ struct vma_operations {
 	int (*read_perm)(struct vma *, void *);
 	int (*write_perm)(struct vma *, void *);
 	int (*unmap)(struct vma *);
+	int (*clone)(struct vma *, struct vma *);
 };
 
 struct mm_struct {
@@ -94,6 +96,8 @@ int vm_writeback(struct vma *vma, void *addr, size_t len);
 int vm_read_perm(struct vma *vma, void *addr);
 int vm_write_perm(struct vma *vma, void *addr);
 int vm_unmap(struct vma *vma);
+int vm_clone(struct vma *dst, struct vma *src);
+
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,

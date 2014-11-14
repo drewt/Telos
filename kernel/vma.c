@@ -118,6 +118,7 @@ void mm_fini(struct mm_struct *mm)
 int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 {
 	struct vma *vma;
+	int error = 0;
 
 	if (!(dst->pgdir = clone_pgdir()))
 		return -ENOMEM;
@@ -126,8 +127,13 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 	INIT_LIST_HEAD(&dst->kheap);
 	list_for_each_entry(vma, &src->map, chain) {
 		struct vma *new = new_vma(vma->start, vma->end, vma->flags);
+		if (!new) {
+			error = -ENOMEM;
+			goto abort;
+		}
 		new->mmap = dst;
 		list_add_tail(&new->chain, &dst->map);
+		vm_clone(new, vma);
 		if (vma == src->heap)
 			dst->heap = new;
 		else if (vma == src->stack)
@@ -138,6 +144,9 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 	// TODO: dst->kheap
 	dst->brk = src->brk;
 	return 0;
+abort:
+	mm_fini(dst);
+	return error;
 }
 
 struct vma *vma_find(const struct mm_struct *mm, const void *addr)
@@ -294,6 +303,14 @@ int vm_unmap(struct vma *vma)
 	if (vma->op && vma->op->unmap)
 		vma->op->unmap(vma);
 	return pm_unmap(vma);
+}
+
+int vm_clone(struct vma *dst, struct vma *src)
+{
+	dst->op = src->op;
+	if (!src->op || !src->op->clone)
+		return 0;
+	return src->op->clone(dst, src);
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
