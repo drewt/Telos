@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
 	}
 
 	while ((ent = readdir(dir)))
-		printf("%s\n", ent->d_name);
+		printf("%s ", ent->d_name);
+	putchar('\n');
 
 	closedir(dir);
 	return 0;
