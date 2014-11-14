@@ -7,6 +7,11 @@
 .set STACKSIZE, 0x4000
 .set NR_LOW_PGTS, 16
 
+.macro vmov val reg
+	mov \val, \reg
+	sub $KERNEL_PAGE_OFFSET, \reg
+.endm
+
 .section .bss
 
 .align 0x1000
@@ -33,8 +38,7 @@ _kstack:          .space STACKSIZE
 
 loader:
     # temporarily use physical address for stack
-    mov  $(_kstack + STACKSIZE), %esp
-    subl $KERNEL_PAGE_OFFSET, %esp
+    vmov $(_kstack + STACKSIZE), %esp
 
     # save multiboot data
     push %eax
@@ -53,10 +57,8 @@ hang:
     jmp hang
 
 boot_init_paging:
-    mov  $_kernel_pgd, %ebx
-    mov  $_kernel_low_pgt, %edx
-    sub  $KERNEL_PAGE_OFFSET, %ebx
-    sub  $KERNEL_PAGE_OFFSET, %edx
+    vmov $_kernel_pgd, %ebx
+    vmov $_kernel_low_pgt, %edx
 
     or   $0x7, %edx
     mov  $0x0, %ecx
@@ -70,31 +72,26 @@ boot_init_paging:
         jl   _set_pgt_loop
     
     # initialize page tables
-    mov  $_kernel_low_pgt, %eax
-    sub  $KERNEL_PAGE_OFFSET, %eax
+    vmov $_kernel_low_pgt, %eax
     mov  $0x0, %ebx
     mov  $(0x400000 * NR_LOW_PGTS), %ecx
     call boot_direct_map
 
     # map kernel in higher half
-    mov  $_kernel_pgd, %eax
-    mov  $_kernel_high_pgt, %ebx
-    sub  $KERNEL_PAGE_OFFSET, %eax
-    sub  $KERNEL_PAGE_OFFSET, %ebx
+    vmov $_kernel_pgd, %eax
+    vmov $_kernel_high_pgt, %ebx
     or   $0x7, %ebx
     mov  $KERNEL_PAGE_OFFSET, %ecx
     shr  $22, %ecx
     mov  %ebx, (%eax, %ecx, 4)
 
-    mov  $_kernel_high_pgt, %eax
-    sub  $KERNEL_PAGE_OFFSET, %eax
+    vmov $_kernel_high_pgt, %eax
     mov  $0x0, %ebx
     mov  $0x400000, %ecx
     call boot_direct_map
 
     # enable paging
-    mov  $_kernel_pgd, %eax
-    sub  $KERNEL_PAGE_OFFSET, %eax
+    vmov $_kernel_pgd, %eax
     mov  %eax, %cr3
     mov  %cr0, %eax
     or   $((1 << 31) | (1 << 16)), %eax

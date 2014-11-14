@@ -22,8 +22,6 @@ extern pte_t _kernel_pgd;
 extern ulong _kernel_high_pgt;
 extern ulong _kstack;
 
-#define kstack (&_kstack)
-
 /* linker variables */
 extern ulong KERNEL_PAGE_OFFSET;
 extern ulong _kstart;   // start of the kernel
@@ -39,6 +37,7 @@ extern ulong _kroend;   // end of kernel read-only memory
 extern ulong _krwstart; // start of kernel read-write memory
 extern ulong _krwend;   // end of kernel read-write memory
 
+#define kstack   ((ulong)&_kstack)
 #define kstart   ((ulong)&_kstart)
 #define kend     ((ulong)&_kend)
 #define ustart   ((ulong)&_ustart)

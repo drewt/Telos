@@ -4,62 +4,66 @@
 #include <kernel/interrupt.h>
 #include <kernel/process.h>
 
-#define SET_SEGS(val, reg)	\
-	movw $val, reg;		\
-	movw reg, %ds;		\
-	movw reg, %es;		\
-	movw reg, %fs;		\
-	movw reg, %gs
+.macro set_segs val reg
+	movw \val, \reg
+	movw \reg, %ds
+	movw \reg, %es
+	movw \reg, %fs
+	movw \reg, %gs
+.endm
 
-#define SAVE_ALL	\
-	pushl %gs;	\
-	pushl %fs;	\
-	pushl %es;	\
-	pushl %ds;	\
-	pushl %ebp;	\
-	pushl %ebp;	\
-	pushl %eax;	\
-	pushl %esi;	\
-	pushl %edi;	\
-	pushl %edx;	\
-	pushl %ecx;	\
+.macro save_all
+	pushl %gs
+	pushl %fs
+	pushl %es
+	pushl %ds
+	pushl %ebp
+	pushl %ebp
+	pushl %eax
+	pushl %esi
+	pushl %edi
+	pushl %edx
+	pushl %ecx
 	pushl %ebx
+.endm
 
-#define RESTORE_ALL	\
-	popl %ebx;	\
-	popl %ecx;	\
-	popl %edx;	\
-	popl %edi;	\
-	popl %esi;	\
-	popl %eax;	\
-	popl %ebp;	\
-	popl %ebp;	\
-	popl %ds;	\
-	popl %es;	\
-	popl %fs;	\
+.macro restore_all
+	popl %ebx
+	popl %ecx
+	popl %edx
+	popl %edi
+	popl %esi
+	popl %eax
+	popl %ebp
+	popl %ebp
+	popl %ds
+	popl %es
+	popl %fs
 	popl %gs
+.endm
+
+.macro isr_entry entry handler
+.global \entry
+\entry:	save_all
+	set_segs $SEG_KDATA, %bx
+	movl current, %ebx
+	movl %esp, PCB_ESP(%ebx)
+	call \handler
+	jmp return_to_user
+.endm
 
 .set EAX, 0x14
 
-#define isr_entry(entry, handler)		\
-.global entry;					\
-entry:	SAVE_ALL;				\
-	SET_SEGS(SEG_KDATA, %bx);		\
-	movl current,       %ebx;		\
-	movl %esp,          PCB_ESP(%ebx);	\
-	call handler;				\
-	jmp  return_to_user
-
-isr_entry(pgf_entry,   exn_page_fault)
-isr_entry(fpe_entry,   exn_fpe)
-isr_entry(ill_entry,   exn_ill_instr)
-isr_entry(timer_entry, tick)
-isr_entry(kbd_entry,   int_keyboard)
+isr_entry pgf_entry,   exn_page_fault
+isr_entry fpe_entry,   exn_fpe
+isr_entry ill_entry,   exn_ill_instr
+isr_entry timer_entry, tick
+isr_entry kbd_entry,   int_keyboard
 
 .global syscall_entry
 syscall_entry:
-	SAVE_ALL
-	SET_SEGS(SEG_KDATA, %bx)
+	save_all
+	set_segs $SEG_KDATA, %bx
 	movl current,       %ebx
 	movl $-1,           EAX(%esp)
 	cmpl NR_SYSCALLS,   %eax
@@ -73,7 +77,7 @@ _return_to_user:
 	movl PCB_ESP(%ebx), %esp
 	movl PCB_IFP(%ebx), %ebx
 	movl %ebx,          (tss + 4)
-	RESTORE_ALL
+	restore_all
 	iret
 
 .global switch_to
@@ -91,7 +95,7 @@ schedule:
 	pushfl
 	pushl %cs
 	pushl $schedule_return
-	SAVE_ALL
+	save_all
 	movl %esp, PCB_ESP(%eax)
 	call _schedule
 	movl %eax, %ebx
@@ -101,3 +105,14 @@ schedule_return:
 	movl %ecx, PCB_ESP(%eax)
 	movl PCB_RC(%eax), %eax
 	ret
+
+.global sys_exit
+sys_exit:
+	movl  0x4(%esp), %eax
+	movl  current,   %ebx
+	movl  $(_kstack + 0x4000), %esp
+	subl  $0x8, %esp
+	pushl %eax
+	pushl %ebx
+	call  do_exit
+	call  schedule

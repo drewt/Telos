@@ -429,17 +429,6 @@ void do_exit(struct pcb *p, int status)
 	zombie(p);
 }
 
-long sys_exit(int status)
-{
-	// FIXME: switch stacks (kernel boot stack?), since we're going to
-	//        free the stack we're currently using.  This hasn't been an
-	//        issue yet, since no memory is allocated between do_exit()
-	//        and schedule(), but it's risky.
-	do_exit(current, status);
-	schedule();
-	return 0;
-}
-
 long sys_getpid(void)
 {
 	return current->pid;
