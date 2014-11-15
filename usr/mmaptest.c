@@ -36,12 +36,12 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
-	if (write(fd, "mmap\n", 5) < 0) {
+	if (write(fd, "test\n", 5) < 0) {
 		fprintf(stderr, "mmaptest: write failed\n");
 		exit(EXIT_FAILURE);
 	}
 
-	addr = mmap(NULL, 5, PROT_READ, MAP_PRIVATE, fd, 0);
+	addr = mmap(NULL, 5, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (addr == MAP_FAILED) {
 		fprintf(stderr, "mmaptest: mmap returned MAP_FAILED\n");
 		exit(EXIT_FAILURE);
@@ -53,10 +53,13 @@ int main(void)
 		return 0;
 	}
 
-	if (memcmp(addr, "mmap\n", 5)) {
+	if (memcmp(addr, "test\n", 5)) {
 		fprintf(stderr, "mmaptest: unexpected contents in mapped memory\n");
 		exit(EXIT_FAILURE);
 	}
+
+	// make sure writeback works
+	memcpy(addr, "mmap\n", 5);
 
 	printf("OK\n");
 	return 0;

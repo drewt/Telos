@@ -65,22 +65,47 @@ static int mmap_map(struct vma *vma, void *addr)
 {
 	int error;
 	ssize_t bytes;
-	char *base = (void*)page_base((ulong)addr);
+	struct pf_info *frame;
+	char *vaddr;
 	struct mmap_private *private = vma->private;
-	unsigned long pos = private->off + (vma->start - (ulong)base);
+	unsigned long base = page_base((ulong)addr);
+	unsigned long pos = private->off + (vma->start - base);
 
-	error = map_page(addr, vma->flags);
-	if (error)
-		return error;
-	disable_write_protect();
-	bytes = private->file->f_op->read(private->file, base, FRAME_SIZE, &pos);
+	// FIXME: should wait until memory is available...
+	if (!(frame = kalloc_frame(vma->flags)))
+		return -ENOMEM;
+	if (!(vaddr = kmap_tmp_page(frame->addr))) {
+		kfree_frame(frame);
+		return -ENOMEM;
+	}
+	bytes = private->file->f_op->read(private->file, vaddr, FRAME_SIZE, &pos);
 	if (bytes < 0) {
-		enable_write_protect();
-		return bytes;
+		error = bytes;
+		goto abort;
 	}
 	if (bytes < FRAME_SIZE)
-		memset(base + bytes, 0, FRAME_SIZE - bytes);
-	enable_write_protect();
+		memset(vaddr + bytes, 0, FRAME_SIZE - bytes);
+	if ((error = map_frame(frame, addr, vma->flags)))
+		goto abort;
+	kunmap_tmp_page(vaddr);
+	return 0;
+abort:
+	kunmap_tmp_page(vaddr);
+	kfree_frame(frame);
+	return error;
+}
+
+static int mmap_writeback(struct vma *vma, void *addr, size_t len)
+{
+	ssize_t bytes;
+	struct mmap_private *private = vma->private;
+	unsigned long base = page_base((ulong)addr);
+	unsigned long pos = private->off + (vma->start - base);
+
+	len = MIN(len, private->file->f_inode->i_size - pos);
+	bytes = private->file->f_op->write(private->file, addr, len, &pos);
+	if (bytes < 0)
+		return bytes;
 	return 0;
 }
 
@@ -98,6 +123,13 @@ static int mmap_clone(struct vma *dst, struct vma *src)
 
 struct vma_operations mmap_vma_ops = {
 	.map = mmap_map,
+	.unmap = mmap_unmap,
+	.clone = mmap_clone,
+};
+
+struct vma_operations mmap_shared_vma_ops = {
+	.map = mmap_map,
+	.writeback = mmap_writeback,
 	.unmap = mmap_unmap,
 	.clone = mmap_clone,
 };
@@ -127,7 +159,7 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 	}
 
 	vma->private = private;
-	vma->op = &mmap_vma_ops;
+	vma->op = (flags & MAP_SHARED) ? &mmap_shared_vma_ops : &mmap_vma_ops;
 	return 0;
 }
 
@@ -140,8 +172,6 @@ long sys_mmap(struct __mmap_args *args)
 		return -EBADF;
 	if (args->flags & MAP_FIXED)
 		return -ENOTSUP;
-	if (args->flags & MAP_SHARED)
-		return -ENOTSUP; // TODO
 	return do_mmap(file, &args->addr, args->len, args->prot & 7,
 			args->flags, args->off);
 }

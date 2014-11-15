@@ -633,24 +633,25 @@ int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
 	return 0;
 }
 
-int map_page(void *addr, ulong flags)
+int map_frame(struct pf_info *frame, void *addr, ulong flags)
 {
 	pmap_t pgtab;
-	struct pf_info *frame;
 	uchar attr = vma_to_page_flags(flags);
 
-	frame = kalloc_frame(flags);
-	if (!frame)
-		return -ENOMEM;
 	pgtab = umap_page_table(current_pgdir, (ulong) addr);
-	if (!pgtab) {
-		kfree_frame(frame);
+	if (!pgtab)
 		return -ENOMEM;
-	}
-
 	pgtab[addr_to_pti((ulong)addr)] = frame->addr | PE_P | attr;
 	kunmap_tmp_page(pgtab);
 	return 0;
+}
+
+int map_page(void *addr, ulong flags)
+{
+	struct pf_info *frame = kalloc_frame(flags);
+	if (!frame)
+		return -ENOMEM;
+	return map_frame(frame, addr, flags);
 }
 
 int copy_page(void *addr, ulong flags)

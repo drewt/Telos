@@ -298,11 +298,14 @@ int vm_write_perm(struct vma *vma, void *addr)
 
 int vm_unmap(struct vma *vma)
 {
+	int error;
 	if (vma->flags & VM_KEEP)
 		return 0;
+	if ((error = pm_unmap(vma)))
+		return error;
 	if (vma->op && vma->op->unmap)
 		vma->op->unmap(vma);
-	return pm_unmap(vma);
+	return 0;
 }
 
 int vm_clone(struct vma *dst, struct vma *src)
