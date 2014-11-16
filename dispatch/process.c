@@ -148,22 +148,16 @@ static struct pcb *pcb_clone(struct pcb *src)
 
 static int address_space_init(struct mm_struct *mm)
 {
-	struct vma *vma;
 	mm->brk = HEAP_START + HEAP_SIZE;
-	mm->heap = vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS);
-	if (!mm->heap)
+	if (!vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS))
 		goto abort;
-	vma = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
-	if (!vma)
+	if (!vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS))
 		goto abort;
-	vma = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
-	if (!vma)
+	if (!vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS))
 		goto abort;
-	vma = vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS);
-	if (!vma)
+	if (!vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS))
 		goto abort;
-	vma = vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS);
-	if (!vma)
+	if (!vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS))
 		goto abort;
 	return 0;
 abort:
@@ -292,12 +286,17 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	char *mem, *kmem;
 	char **argv;
 	char **envp;
+	ssize_t diff;
+	struct vma *heap;
 	size_t size = exec_mem_needed(args);
-	ssize_t diff = size - vma_size(current->mm.heap);
+
+	if (!(heap = vma_get(&current->mm, (void*)(current->mm.brk-1))))
+		panic("Process %d has no heap!\n", current->pid);
+	diff = size - vma_size(heap);
 
 	// need more memory in heap
 	if (diff > 0) {
-		error = vma_grow_up(current->mm.heap, diff, current->mm.heap->flags);
+		error = vma_grow_up(heap, diff, heap->flags);
 		if (error)
 			return error;
 	}
@@ -317,8 +316,8 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	}
 
 	// copy back into user memory and populate argv/envp
-	memcpy((void*) current->mm.heap->start, kmem, size);
-	argv = (char**) current->mm.heap->start;
+	memcpy((void*) heap->start, kmem, size);
+	argv = (char**) heap->start;
 	envp = argv + args->argc + 1;
 	mem = (char*) (envp + args->envc + 1);
 	for (size_t i = 0; i < args->argc; i++) {

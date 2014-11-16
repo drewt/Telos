@@ -60,8 +60,7 @@ struct mm_struct {
 	pmap_t pgdir;
 	struct list_head map;
 	struct list_head kheap;
-	struct vma *heap;
-	ulong  brk;
+	unsigned long brk;
 };
 
 int mm_init(struct mm_struct *mm);

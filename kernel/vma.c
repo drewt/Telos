@@ -133,8 +133,6 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 		new->mmap = dst;
 		list_add_tail(&new->chain, &dst->map);
 		vm_clone(new, vma);
-		if (vma == src->heap)
-			dst->heap = new;
 	}
 	// TODO: dst->kheap
 	dst->brk = src->brk;

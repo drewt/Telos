@@ -31,19 +31,23 @@
 long sys_sbrk(long inc, ulong *oldbrk)
 {
 	int rc;
+	struct vma *heap;
 	unsigned long new = current->mm.brk + inc;
 
 	if (vm_verify(&current->mm, oldbrk, sizeof(*oldbrk), VM_WRITE))
 		return -EFAULT;
 	*oldbrk = current->mm.brk;
 
-	if (new < current->mm.heap->start)
+	if (!(heap = vma_get(&current->mm, (void*)(current->mm.brk-1))))
+		panic("Process %d has no heap!\n", current->pid);
+
+	if (new < heap->start)
 		return -EINVAL;
 
-	if (inc <= 0 || new < current->mm.heap->end)
+	if (inc <= 0 || new < heap->end)
 		goto skip;
 
-	if ((rc = vma_grow_up(current->mm.heap, inc, current->mm.heap->flags)))
+	if ((rc = vma_grow_up(heap, inc, heap->flags)))
 		return rc;
 
 skip:
