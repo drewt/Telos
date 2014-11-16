@@ -254,3 +254,11 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off)
 		return MAP_FAILED;
 	return args.addr;
 }
+
+int munmap(void *addr, size_t len)
+{
+	int rc = syscall2(SYS_MUNMAP, addr, len);
+	if (rc < 0)
+		return -1;
+	return 0;
+}

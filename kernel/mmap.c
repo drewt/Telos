@@ -30,19 +30,21 @@
 struct mmap_private {
 	struct file *file;
 	unsigned long off;
+	unsigned long len;
 	unsigned int ref;
 };
 
 static DEFINE_SLAB_CACHE(mmap_private_cachep, sizeof(struct mmap_private));
 
 static inline struct mmap_private *alloc_private(struct file *file,
-		unsigned long off)
+		unsigned long off, unsigned long len)
 {
 	struct mmap_private *private = slab_alloc(mmap_private_cachep);
 	if (!private)
 		return NULL;
 	private->file = file;
 	private->off = off;
+	private->len = len;
 	private->ref = 1;
 	file->f_count++;
 	return private;
@@ -102,7 +104,7 @@ static int mmap_writeback(struct vma *vma, void *addr, size_t len)
 	unsigned long base = page_base((ulong)addr);
 	unsigned long pos = private->off + (vma->start - base);
 
-	len = MIN(len, private->file->f_inode->i_size - pos);
+	len = MIN(len, (vma->start + private->len) - base);
 	bytes = private->file->f_op->write(private->file, addr, len, &pos);
 	if (bytes < 0)
 		return bytes;
@@ -121,10 +123,26 @@ static int mmap_clone(struct vma *dst, struct vma *src)
 	return 0;
 }
 
+static int mmap_split(struct vma *new, struct vma *old)
+{
+	struct mmap_private *private;
+	struct mmap_private *old_private = old->private;
+	private = alloc_private(old_private->file, old_private->off,
+			old_private->len);
+	if (!private)
+		return -ENOMEM;
+	private->off += new->start - old->start;
+	private->len -= old->end - old->start;
+	old_private->len -= private->len;
+	new->private = private;
+	return 0;
+}
+
 struct vma_operations mmap_vma_ops = {
 	.map = mmap_map,
 	.unmap = mmap_unmap,
 	.clone = mmap_clone,
+	.split = mmap_split,
 };
 
 struct vma_operations mmap_shared_vma_ops = {
@@ -132,6 +150,7 @@ struct vma_operations mmap_shared_vma_ops = {
 	.writeback = mmap_writeback,
 	.unmap = mmap_unmap,
 	.clone = mmap_clone,
+	.split = mmap_split,
 };
 
 int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
@@ -141,7 +160,7 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 	struct vma *vma;
 	struct mmap_private *private;
 
-	private = alloc_private(file, off);
+	private = alloc_private(file, off, len);
 	if (!private)
 		return -ENOMEM;
 
@@ -174,4 +193,36 @@ long sys_mmap(struct __mmap_args *args)
 		return -ENOTSUP;
 	return do_mmap(file, &args->addr, args->len, args->prot & 7,
 			args->flags, args->off);
+}
+
+long sys_munmap(void *addr, size_t len)
+{
+	struct vma *vma, *n;
+	unsigned long start = (size_t)addr;
+	unsigned long end = start + page_align(len);
+	if (!len || !page_aligned(addr))
+		return -EINVAL;
+	// ensure no VMAs in range have VM_KEEP
+	list_for_each_entry(vma, &current->mm.map, chain) {
+		if (vma->end < start)
+			continue;
+		if (vma->start >= end)
+			break;
+		if (vma->flags & VM_KEEP)
+			return -EINVAL;
+	}
+	list_for_each_entry_safe(vma, n, &current->mm.map, chain) {
+		if (vma->end < start)
+			continue;
+		if (vma->start >= end)
+			break;
+		if (vma->start < start) {
+			vma_bisect(vma, start, vma->flags, vma->flags);
+			vma = list_entry(vma->chain.next, struct vma, chain);
+		}
+		if (vma->end > end)
+			vma_bisect(vma, end, vma->flags, vma->flags);
+		vm_unmap(vma);
+	}
+	return 0;
 }

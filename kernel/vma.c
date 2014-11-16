@@ -110,7 +110,6 @@ void mm_fini(struct mm_struct *mm)
 	struct vma *vma, *n;
 	list_for_each_entry_safe(vma, n, &mm->map, chain) {
 		vm_unmap(vma);
-		free_vma(vma);
 	}
 	del_pgdir(mm->pgdir);
 }
@@ -167,48 +166,39 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 			return -ENOMEM;
 		return 0;
 	}
-
 	if (vma->chain.next != &vma->mmap->map) {
 		struct vma *next = list_entry(vma->chain.next, struct vma, chain);
 		if (next->start < vma->end + amount)
 			return -ENOMEM;
 	}
-
 	vma->end += page_align(amount);
 	return 0;
 }
 
-static int vma_split_left(struct vma *vma, ulong end, ulong flags)
+int vma_bisect(struct vma *vma, ulong split, ulong lflags, ulong rflags)
 {
-	struct vma *left;
-
-	if ((left = alloc_vma()) == NULL)
-		return -ENOMEM;
-
-	left->start = vma->start;
-	left->end = end;
-	left->flags = flags;
-	left->mmap = vma->mmap;
-
-	vma->start = end;
-
-	list_add_tail(&left->chain, &vma->chain);
-	return 0;
-}
-
-static int vma_split_right(struct vma *vma, ulong start, ulong flags)
-{
+	int error;
 	struct vma *right;
+	ulong orig_flags = vma->flags;
 
-	if ((right = alloc_vma()) == NULL)
+	if (!(right = alloc_vma()))
 		return -ENOMEM;
 
-	right->start = start;
+	right->start = split;
 	right->end = vma->end;
-	right->flags = flags;
+	right->flags = rflags;
 	right->mmap = vma->mmap;
+	right->op = vma->op;
 
-	vma->end = start;
+	vma->end = split;
+	vma->flags = lflags;
+
+	if ((error = vm_split(right, vma))) {
+		vma->flags = orig_flags;
+		vma->end = right->end;
+		free_vma(right);
+		return error;
+	}
 
 	list_add(&right->chain, &vma->chain);
 	return 0;
@@ -216,12 +206,13 @@ static int vma_split_right(struct vma *vma, ulong start, ulong flags)
 
 int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
 {
+	int error;
 	struct vma *mid, *right;
 
 	if (vma->start == start)
-		return vma_split_left(vma, end, flags);
+		return vma_bisect(vma, end, flags, vma->flags);
 	else if (vma->end == end)
-		return vma_split_right(vma, start, flags);
+		return vma_bisect(vma, start, vma->flags, flags);
 
 	/* split middle */
 	if ((mid = alloc_vma()) == NULL)
@@ -241,8 +232,16 @@ int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
 	mid->flags = flags;
 	mid->mmap = vma->mmap;
 
-	vma->end = start;
+	// XXX: the order matters here!  Note that the second call uses mid
+	//      as the "old" VMA -- this is so split() always gets adjacent
+	//      VMAs.
+	if ((error = vm_split(mid, vma)) || (error = vm_split(right, mid))) {
+		free_vma(mid);
+		free_vma(right);
+		return error;
+	}
 
+	vma->end = start;
 	list_add(&mid->chain, &vma->chain);
 	list_add(&right->chain, &mid->chain);
 	return 0;
@@ -305,6 +304,8 @@ int vm_unmap(struct vma *vma)
 		return error;
 	if (vma->op && vma->op->unmap)
 		vma->op->unmap(vma);
+	list_del(&vma->chain);
+	free_vma(vma);
 	return 0;
 }
 
@@ -316,11 +317,18 @@ int vm_clone(struct vma *dst, struct vma *src)
 	return src->op->clone(dst, src);
 }
 
+int vm_split(struct vma *new, struct vma *old)
+{
+	new->op = old->op;
+	if (old->op && old->op->split)
+		return old->op->split(new, old);
+	return 0;
+}
+
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags)
 {
 	struct vma *vma;
-
 	if (!(vma = vma_get(mm, start))) {
 		kprintf("%p not mapped!\n", start);
 		return -1; // not mapped
@@ -334,6 +342,15 @@ int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		return -1; // invalid length
 	}
 	return 0;
+}
+
+int vm_verify_unmapped(const struct mm_struct *mm, const void *start,
+		size_t len)
+{
+	struct vma *vma = vma_find(mm, start);
+	if (!vma || vma->start > (size_t)start + len)
+		return 0;
+	return -1;
 }
 
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,

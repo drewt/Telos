@@ -74,4 +74,5 @@ syscall_t systab[SYSCALL_MAX] = {
 	[SYS_CLOCK_SETTIME] = sys_clock_settime,
 	[SYS_SBRK]          = sys_sbrk,
 	[SYS_MMAP]          = sys_mmap,
+	[SYS_MUNMAP]        = sys_munmap,
 };

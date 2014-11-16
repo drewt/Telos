@@ -53,6 +53,7 @@ struct vma_operations {
 	int (*write_perm)(struct vma *, void *);
 	int (*unmap)(struct vma *);
 	int (*clone)(struct vma *, struct vma *);
+	int (*split)(struct vma *, struct vma *);
 };
 
 struct mm_struct {
@@ -74,6 +75,7 @@ struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
 struct vma *vma_find(const struct mm_struct *mm, const void *addr);
 struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags);
 int vma_grow_up(struct vma *vma, size_t amount, ulong flags);
+int vma_bisect(struct vma *vma, ulong split, ulong lflags, ulong rflags);
 
 static inline bool vma_contains(struct vma *vma, const void *addr)
 {
@@ -97,9 +99,12 @@ int vm_read_perm(struct vma *vma, void *addr);
 int vm_write_perm(struct vma *vma, void *addr);
 int vm_unmap(struct vma *vma);
 int vm_clone(struct vma *dst, struct vma *src);
+int vm_split(struct vma *new, struct vma *old);
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		ulong flags);
+int vm_verify_unmapped(const struct mm_struct *mm, const void *start,
+		size_t len);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
 		size_t len);
 int vm_copy_to(const struct mm_struct *mm, void *dst, const void *src,

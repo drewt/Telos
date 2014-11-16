@@ -66,6 +66,7 @@ void int_keyboard(void);
 /* service routines */
 long sys_sbrk(long inc, ulong *oldbrk);
 long sys_mmap(struct __mmap_args *args);
+long sys_munmap(void *addr, size_t len);
 long sys_execve(struct exec_args *args);
 long sys_fork(void);
 long sys_yield(void);
