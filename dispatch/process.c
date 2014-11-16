@@ -135,8 +135,10 @@ static struct pcb *pcb_clone(struct pcb *src)
 #define HEAP_SIZE    FRAME_SIZE
 #define STACK_START  0x0F000000UL
 #define STACK_SIZE   (FRAME_SIZE*8)
+#define STACK_END    (STACK_START+STACK_SIZE)
 #define KSTACK_START (STACK_START+STACK_SIZE)
 #define KSTACK_SIZE  (FRAME_SIZE*4)
+#define KSTACK_END   (KSTACK_START + KSTACK_SIZE)
 
 #define DATA_FLAGS   (VM_READ | VM_WRITE | VM_KEEP)
 #define RODATA_FLAGS (VM_READ | VM_KEEP)
@@ -151,11 +153,11 @@ static int address_space_init(struct mm_struct *mm)
 	mm->heap = vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS);
 	if (!mm->heap)
 		goto abort;
-	mm->stack = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
-	if (!mm->stack)
+	vma = vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS);
+	if (!vma)
 		goto abort;
-	mm->kernel_stack = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
-	if (!mm->kernel_stack)
+	vma = vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS);
+	if (!vma)
 		goto abort;
 	vma = vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS);
 	if (!vma)
@@ -197,7 +199,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 		goto abort;
 	}
 
-	p->esp = ((char*)p->mm.kernel_stack->end - KFRAME_ROOM);
+	p->esp = ((char*)KSTACK_END - KFRAME_ROOM);
 
 	put_iret_kframe(frame, (ulong)func);
 	frame->stack[0] = (ulong) exit;
@@ -232,12 +234,12 @@ void create_init(void(*func)(void*))
 	if ((error = address_space_init(&p->mm)) < 0)
 		panic("address_space_init failed with error %d", error);
 
-	p->ifp = (char*)p->mm.kernel_stack->end - 16;
+	p->ifp = (char*)KSTACK_END - 16;
 	p->esp = (char*)p->ifp - sizeof(struct ucontext);
 
 	current = p;
 	set_page_directory((void*)p->mm.pgdir);
-	esp = p->mm.stack->end - 16;
+	esp = STACK_END - 16;
 	put_iret_uframe(p->esp, (ulong)func, esp);
 
 	ready(p);
@@ -357,10 +359,10 @@ long sys_execve(struct exec_args *args)
 		return error;
 
 	sig_exec(&current->sig);
-	current->ifp = (char*) current->mm.kernel_stack->end - 16;
+	current->ifp = (char*) KSTACK_END - 16;
 	current->esp = (char*) current->ifp - sizeof(struct ucontext);
 
-	esp = current->mm.stack->end - 16;
+	esp = STACK_END - 16;
 	put_iret_uframe(current->esp, (ulong)inode->i_private, esp);
 
 	main_args = (unsigned long*) esp;

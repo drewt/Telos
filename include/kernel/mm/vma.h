@@ -61,8 +61,6 @@ struct mm_struct {
 	struct list_head map;
 	struct list_head kheap;
 	struct vma *heap;
-	struct vma *stack;
-	struct vma *kernel_stack;
 	ulong  brk;
 };
 

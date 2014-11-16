@@ -135,10 +135,6 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 		vm_clone(new, vma);
 		if (vma == src->heap)
 			dst->heap = new;
-		else if (vma == src->stack)
-			dst->stack = new;
-		else if (vma == src->kernel_stack)
-			dst->kernel_stack = new;
 	}
 	// TODO: dst->kheap
 	dst->brk = src->brk;
