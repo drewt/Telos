@@ -142,9 +142,17 @@ static struct pcb *pcb_clone(struct pcb *src)
 
 #define DATA_FLAGS   (VM_READ | VM_WRITE | VM_KEEP)
 #define RODATA_FLAGS (VM_READ | VM_KEEP)
-#define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO | VM_KEEP)
+#define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO)
 #define USTACK_FLAGS (VM_READ | VM_WRITE | VM_EXEC | VM_ZERO | VM_KEEP)
 #define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC | VM_KEEP)
+
+struct vma *get_heap(struct mm_struct *mm)
+{
+	struct vma *heap;
+	if ((heap = vma_get(mm, (void*)(mm->brk-1))))
+		return heap;
+	return vma_map(mm, mm->brk-1, 1, HEAP_FLAGS);
+}
 
 static int address_space_init(struct mm_struct *mm)
 {
@@ -290,8 +298,8 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	struct vma *heap;
 	size_t size = exec_mem_needed(args);
 
-	if (!(heap = vma_get(&current->mm, (void*)(current->mm.brk-1))))
-		panic("Process %d has no heap!\n", current->pid);
+	if (!(heap = get_heap(&current->mm)))
+		return -ENOMEM;
 	diff = size - vma_size(heap);
 
 	// need more memory in heap

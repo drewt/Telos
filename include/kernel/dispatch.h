@@ -57,6 +57,8 @@ static inline int verify_user_string(const char *str, size_t len)
 	return 0;
 }
 
+struct vma *get_heap(struct mm_struct *mm);
+
 void exn_page_fault(void);
 void exn_fpe(void);
 void exn_ill_instr(void);

@@ -15,20 +15,12 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * dispatch/mem.c
- *
- * System calls for memory allocation.  Currently these allocate memory in a
- * shared heap.  Eventually these should be replaced by a brk syscall and
- * user-space malloc routines.
- */
-
 #include <kernel/dispatch.h>
 #include <kernel/list.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
 
-long sys_sbrk(long inc, ulong *oldbrk)
+long sys_sbrk(long inc, unsigned long *oldbrk)
 {
 	int rc;
 	struct vma *heap;
@@ -37,19 +29,14 @@ long sys_sbrk(long inc, ulong *oldbrk)
 	if (vm_verify(&current->mm, oldbrk, sizeof(*oldbrk), VM_WRITE))
 		return -EFAULT;
 	*oldbrk = current->mm.brk;
-
-	if (!(heap = vma_get(&current->mm, (void*)(current->mm.brk-1))))
-		panic("Process %d has no heap!\n", current->pid);
-
+	if (!(heap = get_heap(&current->mm)))
+		return -ENOMEM;
 	if (new < heap->start)
 		return -EINVAL;
-
 	if (inc <= 0 || new < heap->end)
 		goto skip;
-
 	if ((rc = vma_grow_up(heap, inc, heap->flags)))
 		return rc;
-
 skip:
 	current->mm.brk = new;
 	return 0;

@@ -66,11 +66,9 @@ int main(void)
 	if (memcmp(buf, "mmap\n", 5))
 		die("mmaptest: unexpected contents in file\n");
 
-	// FIXME: this really ought to be allowed; only kernel memory (incl.
-	//        kernel stack) should be un-unmappable.  For now, this serves
-	//        to test the VM_KEEP restriction.
-	if (!munmap(page_align(buf), 1))
-		die("mmaptest: succeeded in unmapping stack?\n");
+	// test VM_KEEP restriction by trying to unmap kernel stack
+	if (!munmap((void*)(0x0F000000 + 4096*9), 1))
+		die("mmaptest: succeeded in unmapping kernel stack?\n");
 
 	// test multi-page mapping
 	addr = mmap(NULL, 4096 * 3, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
