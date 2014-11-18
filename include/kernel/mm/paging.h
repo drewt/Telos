@@ -59,7 +59,10 @@ int del_pgdir(pmap_t phys_pgdir);
 int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags);
 int map_frame(struct pf_info *frame, void *addr, ulong flags);
 int map_page(void *addr, ulong flags);
+int copy_page(void *addr, ulong flags);
 int pm_unmap(struct vma *vma);
+int pm_disable_write(struct vma *vma);
+int pm_copy(struct vma *vma);
 
 static inline void kfree_frame(struct pf_info *frame)
 {

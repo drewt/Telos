@@ -144,7 +144,7 @@ static struct pcb *pcb_clone(struct pcb *src)
 #define RODATA_FLAGS (VM_READ | VM_KEEP)
 #define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO)
 #define USTACK_FLAGS (VM_READ | VM_WRITE | VM_EXEC | VM_ZERO | VM_KEEP)
-#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC | VM_KEEP)
+#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC | VM_KEEP | VM_SHARE)
 
 struct vma *get_heap(struct mm_struct *mm)
 {
@@ -163,7 +163,7 @@ static int address_space_init(struct mm_struct *mm)
 		goto abort;
 	if (!vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS))
 		goto abort;
-	if (!vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS))
+	if (!vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS | VM_SHARE))
 		goto abort;
 	if (!vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS))
 		goto abort;

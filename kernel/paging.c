@@ -332,7 +332,32 @@ static ulong clone_page(ulong phys_page)
 	return f_page->addr;
 }
 
-static pmap_t clone_pgtab(ulong phys_pgtab)
+static pmap_t clone_pgtab(unsigned long phys_pgtab)
+{
+	struct pf_info *f_pgtab;
+	pmap_t copy, original;
+
+	if (!(f_pgtab = kalloc_frame(VM_ZERO)))
+		return NULL;
+	if (!(original = kmap_tmp_page(phys_pgtab))) {
+		kfree_frame(f_pgtab);
+		return NULL;
+	}
+	if (!(copy = kmap_tmp_page(f_pgtab->addr))) {
+		kunmap_tmp_page(original);
+		kfree_frame(f_pgtab);
+		return NULL;
+	}
+	for (unsigned int i = 0; i < 1024; i++) {
+		if (!(original[i] & PE_P))
+			continue;
+		phys_to_info(original[i] & ~0xFFF)->ref++;
+		copy[i] = original[i];
+	}
+	return (pmap_t) f_pgtab->addr;
+}
+
+static pmap_t _clone_pgtab(ulong phys_pgtab)
 {
 	struct pf_info *f_pgtab;
 	pmap_t copy, original, retval;
@@ -466,8 +491,10 @@ int del_pgdir(pmap_t phys_pgdir)
 	return 0;
 }
 
-static int pm_unmap_pgtab(struct vma *vma, unsigned int pdi,
-		unsigned long phys_pgtab)
+typedef unsigned long (*apply_fn)(struct vma *, void *, unsigned long);
+
+static int pm_apply_pgtab(struct vma *vma, unsigned int pdi,
+		unsigned long phys_pgtab, apply_fn fn)
 {
 	pmap_t pgtab;
 	unsigned int pti = 0;
@@ -487,33 +514,76 @@ static int pm_unmap_pgtab(struct vma *vma, unsigned int pdi,
 		void *addr = (void*) pti_to_addr(pdi, pti);
 		if (!(pgtab[pti] & PE_P))
 			continue;
-		if (pgtab[pti] & PE_D)
-			vm_writeback(vma, addr, FRAME_SIZE);
-		kfree_frame(phys_to_info(pgtab[pti] & ~0xFFF));
-		pgtab[pti] = 0;
+		pgtab[pti] = fn(vma, addr, pgtab[pti]);
 		flush_page(addr);
 	}
 	kunmap_tmp_page(pgtab);
 	return 0;
 }
 
-int pm_unmap(struct vma *vma)
+static int pm_apply(struct vma *vma, apply_fn fn)
 {
 	int error = 0;
 	unsigned int last = addr_to_pdi(vma->end-1);
-	pmap_t pgdir = kmap_tmp_page((ulong)vma->mmap->pgdir);
+	pmap_t pgdir = kmap_tmp_page((unsigned long)vma->mmap->pgdir);
 
 	if (!pgdir)
 		return -ENOMEM;
 	for (unsigned int pdi = addr_to_pdi(vma->start); pdi <= last; pdi++) {
 		if (!(pgdir[pdi] & PE_P))
 			continue;
-		if ((error = pm_unmap_pgtab(vma, pdi, pgdir[pdi] & ~0xFFF)))
+		error = pm_apply_pgtab(vma, pdi, pgdir[pdi] & ~0xFFF, fn);
+		if (error)
 			break;
-		// FIXME: free page table (if empty)?
 	}
 	kunmap_tmp_page(pgdir);
 	return error;
+}
+
+static unsigned long pm_unmap_fn(struct vma *vma, void *addr, unsigned long pte)
+{
+	if (pte & PE_D)
+		vm_writeback(vma, addr, FRAME_SIZE);
+	kfree_frame(phys_to_info(pte & ~0xFFF));
+	return 0;
+}
+
+int pm_unmap(struct vma *vma)
+{
+	return pm_apply(vma, pm_unmap_fn);
+}
+
+static unsigned long pm_disable_write_fn(struct vma *vma, void *addr,
+		unsigned long pte)
+{
+	return pte & ~PE_RW;
+}
+
+int pm_disable_write(struct vma *vma)
+{
+	return pm_apply(vma, pm_disable_write_fn);
+}
+
+static unsigned long pm_copy_fn(struct vma *vma, void *addr, unsigned long pte)
+{
+	void *tmp;
+	struct pf_info *frame;
+
+	if (!(frame = kalloc_frame(vma->flags)))
+		panic("pm_copy_fn: out of memory...");
+	if (!(tmp = kmap_tmp_page(frame->addr)))
+		panic("pm_copy_fn: out of memory...");
+
+	memcpy(tmp, addr, FRAME_SIZE);
+	kunmap_tmp_page(tmp);
+
+	kfree_frame(phys_to_info(pte & ~0xFFF));
+	return frame->addr | (pte & 0xFFF);
+}
+
+int pm_copy(struct vma *vma)
+{
+	return pm_apply(vma, pm_copy_fn);
 }
 
 /*
@@ -660,22 +730,35 @@ int copy_page(void *addr, ulong flags)
 	pmap_t pgtab;
 	struct pf_info *frame;
 	uchar attr = vma_to_page_flags(flags);
+	unsigned int pti = addr_to_pti((unsigned long)addr);
 
-	frame = kalloc_frame(flags);
-	if (!frame)
-		return -ENOMEM;
 	pgtab = umap_page_table(current_pgdir, (ulong) addr);
-	if (!pgtab) {
-		kfree_frame(frame);
+	if (!pgtab)
+		return -ENOMEM;
+	// no need to copy if frame is only referenced once
+	if (phys_to_info(pgtab[pti] & ~0xFFF)->ref == 1) {
+		pgtab[pti] |= attr;
+		goto success;
+	}
+	frame = kalloc_frame(flags);
+	if (!frame) {
+		kunmap_tmp_page(pgtab);
 		return -ENOMEM;
 	}
-
 	tmp = kmap_tmp_page(frame->addr);
+	if (!tmp) {
+		kfree_frame(frame);
+		kunmap_tmp_page(pgtab);
+		return -ENOMEM;
+	}
 	memcpy(tmp, (void*)page_base((ulong)addr), FRAME_SIZE);
 	kunmap_tmp_page(tmp);
 
-	pgtab[addr_to_pti((ulong)addr)] = frame->addr | PE_P | attr;
+	kfree_frame(phys_to_info(pgtab[pti] & ~0xFFF));
+	pgtab[pti] = frame->addr | PE_P | attr;
+success:
 	kunmap_tmp_page(pgtab);
+	flush_page(addr);
 	return 0;
 }
 

@@ -32,6 +32,7 @@ enum {
 	VM_ALLOC   = 0x10, /* allocate memory immediately */
 	VM_KEEP    = 0x20, /* never unmap */
 	VM_CLOEXEC = 0x40, /* unmap on exec */
+	VM_SHARE   = 0x80, /* share across fork */
 };
 
 struct vma_operations;

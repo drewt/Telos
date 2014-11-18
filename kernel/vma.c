@@ -284,6 +284,8 @@ int vm_read_perm(struct vma *vma, void *addr)
 
 int vm_write_perm(struct vma *vma, void *addr)
 {
+	if (vma->flags & VM_WRITE)
+		return copy_page(addr, vma->flags);
 	if (!vma->op || !vma->op->write_perm)
 		return -EFAULT;
 	return vma->op->write_perm(vma, addr);
@@ -306,6 +308,12 @@ int vm_unmap(struct vma *vma)
 int vm_clone(struct vma *dst, struct vma *src)
 {
 	dst->op = src->op;
+	if (src->flags & VM_ALLOC) {
+		pm_copy(dst);
+	} else if (src->flags & VM_WRITE && !(src->flags & VM_SHARE)) {
+		pm_disable_write(src);
+		pm_disable_write(dst);
+	}
 	if (!src->op || !src->op->clone)
 		return 0;
 	return src->op->clone(dst, src);
