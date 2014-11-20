@@ -55,25 +55,6 @@ static struct vma *new_vma(uintptr_t start, uintptr_t end, int flags)
 	return vma;
 }
 
-static uintptr_t vma_find_space(struct mm_struct *mm, void *z_start,
-		void *z_end, size_t len)
-{
-	struct vma *vma;
-	uintptr_t start = (uintptr_t) z_start;
-	uintptr_t end = (uintptr_t) z_end;
-	list_for_each_entry(vma, &mm->map, chain) {
-		if (vma->start < start)
-			continue;
-		if (start + len >= end)
-			return 0;
-		if (start + len < vma->start)
-			return start;
-		start = vma->end;
-	}
-	// XXX: assumes a VMA exists after end
-	return 0;
-}
-
 static void vma_insert(struct mm_struct *mm, struct vma *vma)
 {
 	struct list_head *it;
@@ -85,11 +66,67 @@ static void vma_insert(struct mm_struct *mm, struct vma *vma)
 	vma->mmap = mm;
 }
 
-struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
+static uintptr_t vma_find_space_high(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len)
+{
+	struct vma *vma;
+	len = page_align(len);
+	list_for_each_entry_reverse(vma, &mm->map, chain) {
+		if (vma->start >= end)
+			continue;
+		if (start + len > end)
+			return 0;
+		if (vma->end + len <= end)
+			return end - len;
+		end = vma->start;
+	}
+	if (end <= start || end - start < len)
+		return 0;
+	return end - len;
+}
+
+static uintptr_t vma_find_space(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len)
+{
+	struct vma *vma;
+	list_for_each_entry(vma, &mm->map, chain) {
+		if (vma->end <= start)
+			continue;
+		if (start + len >= end)
+			return 0;
+		if (start + len < vma->start)
+			return start;
+		start = vma->end;
+	}
+	if (start >= end || start + len > end)
+		return 0;
+	return start;
+}
+
+struct vma *create_vma_high(struct mm_struct *mm, uintptr_t start, uintptr_t end,
 		size_t len, int flags)
 {
-	uintptr_t start = vma_find_space(mm, z_start, z_end, len);
-	struct vma *vma = new_vma(start, page_align(start+len), flags);
+	uintptr_t addr;
+	struct vma *vma;
+	addr = vma_find_space_high(mm, start, end, len);
+	if (!addr)
+		return NULL;
+	vma = new_vma(addr, page_align(addr+len), flags);
+	if (!vma)
+		return NULL;
+	vma_insert(mm, vma);
+	return vma;
+}
+
+struct vma *create_vma(struct mm_struct *mm, uintptr_t start, uintptr_t end,
+		size_t len, int flags)
+{
+	uintptr_t addr;
+	struct vma *vma;
+	addr = vma_find_space(mm, start, end, len);
+	if (!addr)
+		return NULL;
+	vma = new_vma(addr, page_align(addr+len), flags);
 	if (!vma)
 		return NULL;
 	vma_insert(mm, vma);

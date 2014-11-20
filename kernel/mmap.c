@@ -25,9 +25,6 @@
 #include <sys/mman.h>
 #include <string.h>
 
-#define MMAP_AREA_START ((void*)0x0D000000)
-#define MMAP_AREA_END   ((void*)0x0F000000)
-
 struct mmap_private {
 	struct file *file;
 	unsigned long off;
@@ -154,7 +151,7 @@ struct vma_operations mmap_shared_vma_ops = {
 int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 		unsigned long off)
 {
-	void *end;
+	uintptr_t start, end;
 	struct vma *vma;
 	struct mmap_private *private;
 
@@ -163,17 +160,19 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 		return -ENOMEM;
 
 	if (flags & MAP_FIXED) {
-		end = (char*)*addr + len;
+		start = (uintptr_t)*addr;
+		end   = (uintptr_t)*addr + len;
 	} else {
-		*addr = MMAP_AREA_START;
-		end  = MMAP_AREA_END;
+		start = 0;
+		end   = kernel_base;
 	}
 
-	vma = create_vma(&current->mm, *addr, end, len, prot | VM_CLOEXEC);
+	vma = create_vma_high(&current->mm, start, end, len, prot | VM_CLOEXEC);
 	if (!vma) {
 		slab_free(mmap_private_cachep, private);
 		return -ENOMEM;
 	}
+	*addr = (void*) vma->start;
 
 	vma->private = private;
 	vma->op = (flags & MAP_SHARED) ? &mmap_shared_vma_ops : &mmap_vma_ops;

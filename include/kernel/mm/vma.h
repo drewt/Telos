@@ -67,7 +67,9 @@ int mm_init(struct mm_struct *mm);
 void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
-struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
+struct vma *create_vma(struct mm_struct *mm, uintptr_t start, uintptr_t end,
+		size_t len, int flags);
+struct vma *create_vma_high(struct mm_struct *mm, uintptr_t start, uintptr_t end,
 		size_t len, int flags);
 struct vma *vma_find(const struct mm_struct *mm, const void *addr);
 struct vma *vma_map(struct mm_struct *mm, uintptr_t dst, size_t len, int flags);
