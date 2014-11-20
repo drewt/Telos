@@ -71,7 +71,7 @@ static int mmap_map(struct vma *vma, void *addr)
 	struct pf_info *frame;
 	char *vaddr;
 	struct mmap_private *private = vma->private;
-	unsigned long base = page_base((unsigned long)addr);
+	uintptr_t base = page_base((uintptr_t)addr);
 	unsigned long pos = private->off + (vma->start - base);
 
 	// FIXME: should wait until memory is available...
@@ -99,7 +99,7 @@ static int mmap_writeback(struct vma *vma, void *addr, size_t len)
 {
 	ssize_t bytes;
 	struct mmap_private *private = vma->private;
-	unsigned long base = page_base((unsigned long)addr);
+	uintptr_t base = page_base((uintptr_t)addr);
 	unsigned long pos = private->off + (vma->start - base);
 
 	len = MIN(len, (vma->start + private->len) - base);
@@ -196,8 +196,8 @@ long sys_mmap(struct __mmap_args *args)
 long sys_munmap(void *addr, size_t len)
 {
 	struct vma *vma, *n;
-	unsigned long start = (size_t)addr;
-	unsigned long end = start + page_align(len);
+	uintptr_t start = (uintptr_t)addr;
+	uintptr_t end = start + page_align(len);
 
 	if (end > kernel_base)
 		return -EINVAL;

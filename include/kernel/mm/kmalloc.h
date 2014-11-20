@@ -26,7 +26,7 @@ struct mem_header {
 	unsigned char		data[];	// start of allocated block
 };
 
-void *hmalloc(unsigned int size, struct mem_header **hdr);
+void *hmalloc(size_t size, struct mem_header **hdr);
 void hfree(struct mem_header *hdr);
 
 static inline struct mem_header *mem_ptoh(void *addr)
@@ -34,7 +34,7 @@ static inline struct mem_header *mem_ptoh(void *addr)
 	return (struct mem_header*) addr - 1;
 }
 
-static inline void *kmalloc(unsigned int size)
+static inline void *kmalloc(size_t size)
 {
 	return hmalloc(size, NULL);
 }

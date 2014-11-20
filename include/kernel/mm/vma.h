@@ -40,9 +40,9 @@ struct vma_operations;
 struct vma {
 	struct list_head chain;
 	struct mm_struct *mmap;
-	unsigned long start;
-	unsigned long end;
-	unsigned long flags;
+	uintptr_t start;
+	uintptr_t end;
+	int flags;
 	void *private;
 	struct vma_operations *op;
 };
@@ -58,10 +58,10 @@ struct vma_operations {
 };
 
 struct mm_struct {
-	pmap_t pgdir;
+	uintptr_t pgdir;
 	struct list_head map;
 	struct list_head kheap;
-	unsigned long brk;
+	uintptr_t brk;
 };
 
 int mm_init(struct mm_struct *mm);
@@ -69,17 +69,15 @@ void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
 struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
-		size_t len, unsigned long flags);
+		size_t len, int flags);
 struct vma *vma_find(const struct mm_struct *mm, const void *addr);
-struct vma *vma_map(struct mm_struct *mm, unsigned long dst, size_t len,
-		unsigned long flags);
-int vma_grow_up(struct vma *vma, size_t amount, unsigned long flags);
-int vma_bisect(struct vma *vma, unsigned long split, unsigned long lflags,
-		unsigned long rflags);
+struct vma *vma_map(struct mm_struct *mm, uintptr_t dst, size_t len, int flags);
+int vma_grow_up(struct vma *vma, size_t amount, int flags);
+int vma_bisect(struct vma *vma, uintptr_t split, int lflags, int rflags);
 
 static inline bool vma_contains(struct vma *vma, const void *addr)
 {
-	return (unsigned long)addr >= vma->start && (unsigned long)addr < vma->end;
+	return (uintptr_t)addr >= vma->start && (uintptr_t)addr < vma->end;
 }
 
 static inline struct vma *vma_get(const struct mm_struct *mm, const void *addr)
@@ -102,7 +100,7 @@ int vm_clone(struct vma *dst, struct vma *src);
 int vm_split(struct vma *new, struct vma *old);
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
-		unsigned long flags);
+		int flags);
 int vm_verify_unmapped(const struct mm_struct *mm, const void *start,
 		size_t len);
 int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,

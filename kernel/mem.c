@@ -39,9 +39,9 @@ ulong kheap_end;
  *      close to the kernel).  If it puts them somewhere dumb, like the end of
  *      memory, this will fail catastrophically.
  */
-static ulong get_heap_start(struct multiboot_info *info)
+static uintptr_t get_heap_start(struct multiboot_info *info)
 {
-	ulong max = page_align(kend);
+	uintptr_t max = page_align(kend);
 
 	if (MULTIBOOT_MODS_VALID(info)) {
 		struct multiboot_mod_list *mods = (void*) info->mods_addr;
@@ -66,7 +66,7 @@ static ulong get_heap_start(struct multiboot_info *info)
 /*
  * Returns a 4MB aligned address, at least 1MB after start.
  */
-static ulong get_heap_end(ulong start)
+static uintptr_t get_heap_end(uintptr_t start)
 {
 	return (start + 0x00500000) & 0xFFC00000;
 }
@@ -125,7 +125,7 @@ EXPORT_KINIT(memory, SUB_MEMORY, mem_init);
  * size bytes of memory, *hdr will point to the struct mem_header corresponding
  * to the allocated block when this function returns.
  */
-void *hmalloc(unsigned int size, struct mem_header **hdr)
+void *hmalloc(size_t size, struct mem_header **hdr)
 {
 	struct mem_header *p, *r;
 	struct list_head *it;

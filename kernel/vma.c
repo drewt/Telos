@@ -31,7 +31,7 @@ struct mm_struct kernel_mm;
 
 static void vm_sysinit(void)
 {
-	kernel_mm.pgdir = &_kernel_pgd;
+	kernel_mm.pgdir = (uintptr_t)&_kernel_pgd;
 
 	INIT_LIST_HEAD(&kernel_mm.map);
 	INIT_LIST_HEAD(&kernel_mm.kheap);
@@ -43,8 +43,7 @@ static void vm_sysinit(void)
 }
 EXPORT_KINIT(vm, SUB_LAST, vm_sysinit);
 
-static struct vma *new_vma(unsigned long start, unsigned long end,
-		unsigned long flags)
+static struct vma *new_vma(uintptr_t start, uintptr_t end, int flags)
 {
 	struct vma *vma;
 	if (!(vma = alloc_vma()))
@@ -56,12 +55,12 @@ static struct vma *new_vma(unsigned long start, unsigned long end,
 	return vma;
 }
 
-static unsigned long vma_find_space(struct mm_struct *mm, void *z_start,
+static uintptr_t vma_find_space(struct mm_struct *mm, void *z_start,
 		void *z_end, size_t len)
 {
 	struct vma *vma;
-	unsigned long start = (unsigned long) z_start;
-	unsigned long end = (unsigned long) z_end;
+	uintptr_t start = (uintptr_t) z_start;
+	uintptr_t end = (uintptr_t) z_end;
 	list_for_each_entry(vma, &mm->map, chain) {
 		if (vma->start < start)
 			continue;
@@ -87,9 +86,9 @@ static void vma_insert(struct mm_struct *mm, struct vma *vma)
 }
 
 struct vma *create_vma(struct mm_struct *mm, void *z_start, void *z_end,
-		size_t len, unsigned long flags)
+		size_t len, int flags)
 {
-	unsigned long start = vma_find_space(mm, z_start, z_end, len);
+	uintptr_t start = vma_find_space(mm, z_start, z_end, len);
 	struct vma *vma = new_vma(start, page_align(start+len), flags);
 	if (!vma)
 		return NULL;
@@ -148,13 +147,13 @@ struct vma *vma_find(const struct mm_struct *mm, const void *addr)
 	struct vma *area;
 
 	list_for_each_entry(area, &mm->map, chain) {
-		if (area->end > (unsigned long)addr)
+		if (area->end > (uintptr_t)addr)
 			return area;
 	}
 	return NULL;
 }
 
-int vma_grow_up(struct vma *vma, size_t amount, unsigned long flags)
+int vma_grow_up(struct vma *vma, size_t amount, int flags)
 {
 	if (flags != vma->flags) {
 		if (vma_map(vma->mmap, vma->end, amount, flags) == NULL)
@@ -170,12 +169,11 @@ int vma_grow_up(struct vma *vma, size_t amount, unsigned long flags)
 	return 0;
 }
 
-int vma_bisect(struct vma *vma, unsigned long split, unsigned long lflags,
-		unsigned long rflags)
+int vma_bisect(struct vma *vma, uintptr_t split, int lflags, int rflags)
 {
 	int error;
 	struct vma *right;
-	unsigned long orig_flags = vma->flags;
+	int orig_flags = vma->flags;
 
 	if (!(right = alloc_vma()))
 		return -ENOMEM;
@@ -200,8 +198,7 @@ int vma_bisect(struct vma *vma, unsigned long split, unsigned long lflags,
 	return 0;
 }
 
-int vma_split(struct vma *vma, unsigned long start, unsigned long end,
-		unsigned long flags)
+int vma_split(struct vma *vma, uintptr_t start, uintptr_t end, int flags)
 {
 	int error;
 	struct vma *mid, *right;
@@ -244,8 +241,7 @@ int vma_split(struct vma *vma, unsigned long start, unsigned long end,
 	return 0;
 }
 
-struct vma *vma_map(struct mm_struct *mm, unsigned long dst, size_t len,
-		unsigned long flags)
+struct vma *vma_map(struct mm_struct *mm, uintptr_t dst, size_t len, int flags)
 {
 	struct vma *vma;
 	unsigned nr_pages = pages_in_range(dst, len);
@@ -332,7 +328,7 @@ int vm_split(struct vma *new, struct vma *old)
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
-		unsigned long flags)
+		int flags)
 {
 	struct vma *vma;
 	if (!(vma = vma_get(mm, start))) {
@@ -343,7 +339,7 @@ int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		kprintf("%p bad access!\n", start);
 		return -1; // bad access
 	}
-	if ((unsigned long)start - vma->start < len) {
+	if ((uintptr_t)start - vma->start < len) {
 		kprintf("%p bad length!\n", start);
 		return -1; // invalid length
 	}
@@ -354,7 +350,7 @@ int vm_verify_unmapped(const struct mm_struct *mm, const void *start,
 		size_t len)
 {
 	struct vma *vma = vma_find(mm, start);
-	if (!vma || vma->start > (size_t)start + len)
+	if (!vma || vma->start > (uintptr_t)start + len)
 		return 0;
 	return -1;
 }
@@ -366,7 +362,7 @@ int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
 	struct vma *vma;
 	if (!(vma = vma_get(mm, src)))
 		return -EFAULT;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (unsigned long)src, len, vma->flags)))
+	if (!(addr = kmap_tmp_range(mm->pgdir, (uintptr_t)src, len, vma->flags)))
 		return -ENOMEM;
 	memcpy(dst, addr, len);
 	kunmap_tmp_range(addr, len);
@@ -380,7 +376,7 @@ int vm_copy_to(const struct mm_struct *mm, void *dst, const void *src,
 	struct vma *vma;
 	if (!(vma = vma_get(mm, dst)))
 		return -EFAULT;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (unsigned long)dst, len, vma->flags)))
+	if (!(addr = kmap_tmp_range(mm->pgdir, (uintptr_t)dst, len, vma->flags)))
 		return -ENOMEM;
 	memcpy(addr, src, len);
 	kunmap_tmp_range(addr, len);

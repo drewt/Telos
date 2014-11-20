@@ -23,7 +23,7 @@
 #include <kernel/mm/slab.h>
 
 #define bitmap_length(cache) (cache->pages_per_slab * (256 / BITS_PER_LONG))
-#define bitmap_size(cache) (bitmap_length(cache) * sizeof(ulong))
+#define bitmap_size(cache) (bitmap_length(cache) * sizeof(unsigned long))
 #define slab_size(cache) (cache->pages_per_slab * FRAME_SIZE)
 #define slab_desc_size(cache) (sizeof(struct slab) + bitmap_size(cache))
 #define slab_mem_size(cache) (slab_size(cache) - slab_desc_size(cache))
@@ -39,9 +39,9 @@ EXPORT_KINIT(slab_layer, SUB_SLAB, slab_sysinit);
 
 struct slab {
 	struct list_head chain;
-	unsigned in_use;
+	unsigned int in_use;
 	void *mem;
-	ulong bitmap[];
+	unsigned long bitmap[];
 };
 
 struct slab_cache *slab_cache_create(size_t size)
@@ -96,7 +96,7 @@ static struct slab *get_slab(struct slab_cache *cache)
 
 void *slab_alloc(struct slab_cache *cache)
 {
-	ulong zero;
+	unsigned long zero;
 	struct slab *slab = get_slab(cache);
 
 	/* find first free object and update bitmap */
@@ -112,12 +112,12 @@ void *slab_alloc(struct slab_cache *cache)
 		list_add(&slab->chain, &cache->partial);
 	}
 
-	return (void*) ((ulong)slab->mem + zero * cache->obj_size);
+	return (void*) ((uintptr_t)slab->mem + zero * cache->obj_size);
 }
 
 static inline void *slab_end(struct slab_cache *cache, struct slab *slab)
 {
-	return (void*) ((ulong)slab->mem + slab_mem_size(cache));
+	return (void*) ((uintptr_t)slab->mem + slab_mem_size(cache));
 }
 
 static struct slab *find_slab(struct slab_cache *cache, void *mem)
@@ -147,7 +147,7 @@ void slab_free(struct slab_cache *cache, void *mem)
 		return;
 	}
 
-	idx = ((ulong)mem - (ulong)slab->mem) / cache->obj_size;
+	idx = ((uintptr_t)mem - (uintptr_t)slab->mem) / cache->obj_size;
 	bitmap_clear(slab->bitmap, idx);
 
 	if (--slab->in_use == 0) {

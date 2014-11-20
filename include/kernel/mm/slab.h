@@ -25,8 +25,8 @@ struct slab_cache {
 	struct list_head full;
 	struct list_head partial;
 	struct list_head empty;
-	unsigned pages_per_slab;
-	unsigned objs_per_slab;
+	unsigned int pages_per_slab;
+	unsigned int objs_per_slab;
 	size_t obj_size;
 };
 
