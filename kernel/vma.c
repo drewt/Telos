@@ -250,11 +250,6 @@ struct vma *vma_map(struct mm_struct *mm, uintptr_t dst, size_t len, int flags)
 	if (!(vma = new_vma(dst, dst + nr_pages*FRAME_SIZE, flags)))
 		return NULL;
 
-	if (flags & VM_ALLOC && map_pages(mm->pgdir, dst, nr_pages, flags)) {
-		free_vma(vma);
-		return NULL;
-	}
-
 	vma_insert(mm, vma);
 	return vma;
 }
@@ -308,9 +303,7 @@ int vm_unmap(struct vma *vma)
 int vm_clone(struct vma *dst, struct vma *src)
 {
 	dst->op = src->op;
-	if (src->flags & VM_ALLOC) {
-		pm_copy(dst);
-	} else if (src->flags & VM_WRITE && !(src->flags & VM_SHARE)) {
+	if (src->flags & VM_WRITE && !(src->flags & VM_SHARE)) {
 		pm_disable_write(src);
 		pm_disable_write(dst);
 	}

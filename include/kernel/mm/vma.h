@@ -29,10 +29,9 @@ enum {
 	VM_WRITE   = 0x2,  /* write permission */
 	VM_READ    = 0x4,  /* read permission */
 	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
-	VM_ALLOC   = 0x10, /* allocate memory immediately */
-	VM_KEEP    = 0x20, /* never unmap */
-	VM_CLOEXEC = 0x40, /* unmap on exec */
-	VM_SHARE   = 0x80, /* share across fork */
+	VM_KEEP    = 0x10, /* never unmap */
+	VM_CLOEXEC = 0x20, /* unmap on exec */
+	VM_SHARE   = 0x40, /* share across fork */
 };
 
 struct vma_operations;
