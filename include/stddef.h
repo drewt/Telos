@@ -25,6 +25,10 @@
 #define NULL _NULL_DEFN
 #endif
 
+#ifndef _PTRDIFF_T_DEFINED
+#define _PTRDIFF_T_DEFINED
+typedef _PTRDIFF_T_TYPE ptrdiff_t;
+#endif
 #ifndef _SIZE_T_DEFINED
 #define _SIZE_T_DEFINED
 typedef _SIZE_T_TYPE size_t;

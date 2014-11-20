@@ -21,6 +21,7 @@
 #define _NULL_DEFN ((void*)0)
 #define _EOF_DEFN (-1)
 
+#define _PTRDIFF_T_TYPE long
 #define _SIZE_T_TYPE unsigned int
 #define _SSIZE_T_TYPE int
 #define _INTPTR_T_TYPE long

@@ -12,7 +12,7 @@
 extern unsigned int __sw_hweight8(unsigned int w);
 extern unsigned int __sw_hweight16(unsigned int w);
 extern unsigned int __sw_hweight32(unsigned int w);
-extern unsigned long __sw_hweight64(__u64 w);
+extern unsigned long __sw_hweight64(u64 w);
 
 /*
  * Include this here because some architectures need generic_ffs/fls in
@@ -70,7 +70,7 @@ static __inline__ int get_count_order(unsigned int count)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u64 rol64(__u64 word, unsigned int shift)
+static inline u64 rol64(u64 word, unsigned int shift)
 {
 	return (word << shift) | (word >> (64 - shift));
 }
@@ -80,7 +80,7 @@ static inline __u64 rol64(__u64 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u64 ror64(__u64 word, unsigned int shift)
+static inline u64 ror64(u64 word, unsigned int shift)
 {
 	return (word >> shift) | (word << (64 - shift));
 }
@@ -90,7 +90,7 @@ static inline __u64 ror64(__u64 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u32 rol32(__u32 word, unsigned int shift)
+static inline u32 rol32(u32 word, unsigned int shift)
 {
 	return (word << shift) | (word >> (32 - shift));
 }
@@ -100,7 +100,7 @@ static inline __u32 rol32(__u32 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u32 ror32(__u32 word, unsigned int shift)
+static inline u32 ror32(u32 word, unsigned int shift)
 {
 	return (word >> shift) | (word << (32 - shift));
 }
@@ -110,7 +110,7 @@ static inline __u32 ror32(__u32 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u16 rol16(__u16 word, unsigned int shift)
+static inline u16 rol16(u16 word, unsigned int shift)
 {
 	return (word << shift) | (word >> (16 - shift));
 }
@@ -120,7 +120,7 @@ static inline __u16 rol16(__u16 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u16 ror16(__u16 word, unsigned int shift)
+static inline u16 ror16(u16 word, unsigned int shift)
 {
 	return (word >> shift) | (word << (16 - shift));
 }
@@ -130,7 +130,7 @@ static inline __u16 ror16(__u16 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u8 rol8(__u8 word, unsigned int shift)
+static inline u8 rol8(u8 word, unsigned int shift)
 {
 	return (word << shift) | (word >> (8 - shift));
 }
@@ -140,7 +140,7 @@ static inline __u8 rol8(__u8 word, unsigned int shift)
  * @word: value to rotate
  * @shift: bits to roll
  */
-static inline __u8 ror8(__u8 word, unsigned int shift)
+static inline u8 ror8(u8 word, unsigned int shift)
 {
 	return (word >> shift) | (word << (8 - shift));
 }
@@ -150,10 +150,10 @@ static inline __u8 ror8(__u8 word, unsigned int shift)
  * @value: value to sign extend
  * @index: 0 based bit index (0<=index<32) to sign bit
  */
-static inline __s32 sign_extend32(__u32 value, int index)
+static inline s32 sign_extend32(u32 value, int index)
 {
-	__u8 shift = 31 - index;
-	return (__s32)(value << shift) >> shift;
+	u8 shift = 31 - index;
+	return (s32)(value << shift) >> shift;
 }
 
 static inline unsigned fls_long(unsigned long l)

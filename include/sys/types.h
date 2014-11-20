@@ -99,6 +99,10 @@ typedef _DEV_T_TYPE dev_t;
 
 #ifdef __KERNEL__
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #define BITS_PER_LONG 32
 
 typedef unsigned short port_t;
@@ -111,35 +115,14 @@ typedef unsigned short	ushort;
 typedef unsigned int	uint;
 typedef unsigned long	ulong;
 
-// XXX: arch/implementation dependent
-typedef signed   char		s8;
-typedef unsigned char		u8;
-typedef unsigned long		__s8;
-typedef unsigned long		__u8;
-
-typedef signed   short		s16;
-typedef unsigned short		u16;
-typedef unsigned long		__s16;
-typedef unsigned long		__u16;
-
-typedef signed   long		s32;
-typedef unsigned long		u32;
-typedef unsigned long		__s32;
-typedef unsigned long		__u32;
-
-typedef signed   long long	s64;
-typedef unsigned long long	u64;
-typedef unsigned long long	__s64;
-typedef unsigned long long	__u64;
-
-typedef signed   long long	int64_t;
-typedef unsigned long long	uint64_t;
-
-typedef long			ptrdiff_t;
-
-#define bool	_Bool
-#define true	1
-#define false	0
+typedef int8_t   s8;
+typedef uint8_t  u8;
+typedef int16_t  s16;
+typedef uint16_t u16;
+typedef int32_t  s32;
+typedef uint32_t u32;
+typedef int64_t  s64;
+typedef uint64_t u64;
 
 #endif /* __KERNEL__ */
 #endif /* _KERNEL_TYPES_H_ */
