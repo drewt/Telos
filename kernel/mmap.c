@@ -18,6 +18,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/i386.h>
+#include <kernel/mmap.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vma.h>
@@ -70,16 +71,13 @@ static int mmap_map(struct vma *vma, void *addr)
 	struct pf_info *frame;
 	char *vaddr;
 	struct mmap_private *private = vma->private;
-	unsigned long base = page_base((ulong)addr);
+	unsigned long base = page_base((unsigned long)addr);
 	unsigned long pos = private->off + (vma->start - base);
 
 	// FIXME: should wait until memory is available...
 	if (!(frame = kalloc_frame(vma->flags)))
 		return -ENOMEM;
-	if (!(vaddr = kmap_tmp_page(frame->addr))) {
-		kfree_frame(frame);
-		return -ENOMEM;
-	}
+	vaddr = kmap_tmp_page(frame->addr);
 	bytes = private->file->f_op->read(private->file, vaddr, FRAME_SIZE, &pos);
 	if (bytes < 0) {
 		error = bytes;
@@ -101,7 +99,7 @@ static int mmap_writeback(struct vma *vma, void *addr, size_t len)
 {
 	ssize_t bytes;
 	struct mmap_private *private = vma->private;
-	unsigned long base = page_base((ulong)addr);
+	unsigned long base = page_base((unsigned long)addr);
 	unsigned long pos = private->off + (vma->start - base);
 
 	len = MIN(len, (vma->start + private->len) - base);
@@ -200,6 +198,9 @@ long sys_munmap(void *addr, size_t len)
 	struct vma *vma, *n;
 	unsigned long start = (size_t)addr;
 	unsigned long end = start + page_align(len);
+
+	if (end > kernel_base)
+		return -EINVAL;
 	if (!len || !page_aligned(addr))
 		return -EINVAL;
 	// ensure no VMAs in range have VM_KEEP

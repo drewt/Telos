@@ -67,7 +67,7 @@ int main(void)
 		die("mmaptest: unexpected contents in file\n");
 
 	// test VM_KEEP restriction by trying to unmap kernel stack
-	if (!munmap((void*)(0x0F000000 + 4096*9), 1))
+	if (!munmap((void*)0xFFFFD000, 1))
 		die("mmaptest: succeeded in unmapping kernel stack?\n");
 
 	// test multi-page mapping

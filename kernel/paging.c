@@ -43,19 +43,19 @@ static PAGE_TABLE(_tmp_pgtab);
 /* free list for page heap */
 static LIST_HEAD(frame_pool);
 static struct pf_info *frame_table;
-static ulong fp_start;
-static uint first_free;
+static unsigned long fp_start;
+static unsigned int first_free;
 
 #define flush_page(addr) \
 	asm volatile("invlpg (%0)" : : "b" (addr));
 
-static inline void flush_pages(ulong addr, uint n)
+static inline void flush_pages(unsigned long addr, unsigned int n)
 {
-	for (uint i = 0; i < n; i++)
+	for (unsigned int i = 0; i < n; i++)
 		flush_page(addr + n*FRAME_SIZE);
 }
 
-static inline unsigned int addr_to_pdi(ulong addr)
+static inline unsigned int addr_to_pdi(unsigned long addr)
 {
 	return (addr & 0xFFC00000) >> 22;
 }
@@ -65,7 +65,7 @@ static inline unsigned long pdi_to_addr(unsigned int pdi)
 	return pdi << 22;
 }
 
-static inline unsigned int addr_to_pti(ulong addr)
+static inline unsigned int addr_to_pti(unsigned long addr)
 {
 	return (addr & 0x003FF000) >> 12;
 }
@@ -75,7 +75,7 @@ static inline unsigned long pti_to_addr(unsigned int pdi, unsigned int pti)
 	return pdi_to_addr(pdi) + (pti << 12);
 }
 
-static struct pf_info *phys_to_info(ulong addr)
+static struct pf_info *phys_to_info(unsigned long addr)
 {
 	return &frame_table[(addr - fp_start) / FRAME_SIZE];
 }
@@ -85,7 +85,7 @@ static struct pf_info *phys_to_info(ulong addr)
  * address space.  Assumes a page table exists mapping the region containing
  * the given address.
  */
-static inline pte_t *addr_to_pte(pmap_t pgdir, ulong addr)
+static inline pte_t *addr_to_pte(pmap_t pgdir, unsigned long addr)
 {
 	pte_t pde = pgdir[addr_to_pdi(addr)];
 	pte_t *pgtab = (pte_t*) (pde & ~0xFFF);
@@ -96,7 +96,7 @@ static inline pte_t *addr_to_pte(pmap_t pgdir, ulong addr)
  * Get the page directory entry associated with a given address in a given
  * address space.
  */
-static inline ulong *addr_to_pde(pmap_t pgdir, ulong frame)
+static inline unsigned long *addr_to_pde(pmap_t pgdir, unsigned long frame)
 {
 	return pgdir + addr_to_pdi(frame);
 }
@@ -104,7 +104,8 @@ static inline ulong *addr_to_pde(pmap_t pgdir, ulong frame)
 /*
  * Unset a page attribute (PE_P, PE_RW, PE_U).
  */
-static void page_attr_off(pmap_t pgdir, ulong start, ulong end, ulong flags)
+static void page_attr_off(pmap_t pgdir, unsigned long start, unsigned long end,
+		unsigned long flags)
 {
 	pte_t *pte;
 	int nr_frames;
@@ -118,7 +119,8 @@ static void page_attr_off(pmap_t pgdir, ulong start, ulong end, ulong flags)
 /*
  * Set a page attribute (PE_P, PE_RW, PE_U).
  */
-static void page_attr_on(pmap_t pgdir, ulong start, ulong end, ulong flags)
+static void page_attr_on(pmap_t pgdir, unsigned long start, unsigned long end,
+		unsigned long flags)
 {
 	pte_t *pte;
 	int nr_frames;
@@ -129,7 +131,7 @@ static void page_attr_on(pmap_t pgdir, ulong start, ulong end, ulong flags)
 		*pte |= flags;
 }
 
-static int frame_pool_init(ulong start, ulong end)
+static int frame_pool_init(unsigned long start, unsigned long end)
 {
 	unsigned nr_frames = (end - start) / FRAME_SIZE;
 	frame_table = kmalloc(nr_frames * sizeof(struct pf_info));
@@ -149,7 +151,7 @@ static int frame_pool_init(ulong start, ulong end)
 /*
  * Initialize the frame pool.
  */
-int paging_init(ulong start, ulong end)
+int paging_init(unsigned long start, unsigned long end)
 {
 	frame_pool_init(start, end);
 
@@ -173,7 +175,7 @@ int paging_init(ulong start, ulong end)
 	return 0;
 }
 
-static inline ulong vma_to_page_flags(ulong flags)
+static inline unsigned long vma_to_page_flags(unsigned long flags)
 {
 	return ((flags & VM_READ) ? PE_U : 0) | ((flags & VM_WRITE) ? PE_RW : 0);
 }
@@ -182,17 +184,17 @@ static inline ulong vma_to_page_flags(ulong flags)
  * Map a page from the temporary page table to a given physical address.  This
  * function returns an address aliasing the given physical address.
  */
-void *kmap_tmp_page(ulong addr)
+void *kmap_tmp_page(unsigned long addr)
 {
 	int i;
-	ulong tmp_addr;
+	unsigned long tmp_addr;
 
-	for (i = NR_RESERVED_PAGES; i < 1022; i++) {
+	for (i = NR_RESERVED_PAGES; i < 1024 - NR_HIGH_PAGES; i++) {
 		if (!(tmp_pgtab[i] & PE_P))
 			break;
 	}
-	if (i == 1022)
-		return NULL;
+	if (i == 1024 - NR_HIGH_PAGES)
+		panic("Ran out of temporary address space!");
 
 	tmp_pgtab[i] = addr | PE_P | PE_RW;
 
@@ -201,9 +203,9 @@ void *kmap_tmp_page(ulong addr)
 	return (void*) (tmp_addr + (addr & 0xFFF));
 }
 
-static void *kmap_tmp_page_n(ulong addr, unsigned n)
+static void *kmap_tmp_page_n(unsigned long addr, unsigned n)
 {
-	ulong tmp_addr = TMP_PGTAB_BASE + n * FRAME_SIZE;
+	unsigned long tmp_addr = TMP_PGTAB_BASE + n * FRAME_SIZE;
 	tmp_pgtab[n] = addr | PE_P | PE_RW;
 	flush_page(tmp_addr);
 	return (void*) tmp_addr;
@@ -211,7 +213,7 @@ static void *kmap_tmp_page_n(ulong addr, unsigned n)
 
 void kunmap_tmp_page(void *addr)
 {
-	tmp_pgtab[addr_to_pti((ulong)addr)] = 0;
+	tmp_pgtab[addr_to_pti((unsigned long)addr)] = 0;
 	flush_page(addr);
 }
 
@@ -223,10 +225,10 @@ void kunmap_page(void *addr)
 {
 	pmap_t pgtab;
 
-	pgtab = (pmap_t) (kernel_pgdir[addr_to_pdi((ulong)addr)] & ~0xFFF);
-	pgtab = kmap_tmp_page_n((ulong)pgtab, 0);
+	pgtab = (pmap_t) (kernel_pgdir[addr_to_pdi((unsigned long)addr)] & ~0xFFF);
+	pgtab = kmap_tmp_page_n((unsigned long)pgtab, 0);
 
-	pgtab[addr_to_pti((ulong)addr)] = 0;
+	pgtab[addr_to_pti((unsigned long)addr)] = 0;
 	flush_page(addr);
 }
 
@@ -237,10 +239,10 @@ void kunmap_page(void *addr)
  *
  * TODO: make this more efficient (bitmap?)
  */
-static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
+static unsigned long get_tmp_ptes(pte_t **dst, unsigned nr_pages)
 {
 	pte_t *pte, *first = NULL;
-	ulong first_addr;
+	unsigned long first_addr;
 	unsigned count = 0;
 
 	pte = &tmp_pgtab[NR_RESERVED_PAGES];
@@ -267,18 +269,19 @@ static ulong get_tmp_ptes(pte_t **dst, unsigned nr_pages)
  * address space.  This function returns an address aliasing the given memory
  * region.
  */
-void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len, ulong flags)
+void *kmap_tmp_range(pmap_t pgdir, unsigned long addr, size_t len,
+		unsigned long flags)
 {
 	pmap_t pgtab;
 	pte_t *pte, *tmp;
-	ulong tmp_addr;
-	unsigned nr_pages;
-	uchar attr = vma_to_page_flags(flags);
+	unsigned long tmp_addr;
+	unsigned int nr_pages;
+	unsigned char attr = vma_to_page_flags(flags);
 
 	/* map page tables */
-	pgdir = kmap_tmp_page_n((ulong)pgdir, 0);
+	pgdir = kmap_tmp_page_n((unsigned long)pgdir, 0);
 	pgtab = (pmap_t) (pgdir[addr_to_pdi(addr)] & ~0xFFF);
-	pgtab = kmap_tmp_page_n((ulong)pgtab, 1);
+	pgtab = kmap_tmp_page_n((unsigned long)pgtab, 1);
 	pte = (pte_t*) &pgtab[addr_to_pti(addr)];
 
 	nr_pages = pages_in_range(addr, len);
@@ -302,35 +305,15 @@ void *kmap_tmp_range(pmap_t pgdir, ulong addr, size_t len, ulong flags)
 
 void kunmap_tmp_range(void *addrp, size_t len)
 {
-	unsigned nr_pages = pages_in_range((ulong)addrp, len);
-	unsigned starti = addr_to_pti((ulong)addrp);
+	unsigned int nr_pages = pages_in_range((unsigned long)addrp, len);
+	unsigned int starti = addr_to_pti((unsigned long)addrp);
 
 	for (unsigned i = starti; i < starti + nr_pages; i++) {
 		tmp_pgtab[i] = 0;
 	}
 }
 
-#define kernel_pdi addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET)
-
-static ulong clone_page(ulong phys_page)
-{
-	struct pf_info *f_page;
-	void *copy, *original;
-
-	if (!(original = kmap_tmp_page(phys_page)))
-		return 0;
-	if (!(f_page = kalloc_frame(VM_ZERO)))
-		return 0;
-	if (!(copy = kmap_tmp_page(f_page->addr))) {
-		kfree_frame(f_page);
-		return 0;
-	}
-
-	memcpy(copy, original, FRAME_SIZE);
-	kunmap_tmp_page(copy);
-	kunmap_tmp_page(original);
-	return f_page->addr;
-}
+#define kernel_pdi addr_to_pdi(kernel_base)
 
 static pmap_t clone_pgtab(unsigned long phys_pgtab)
 {
@@ -339,15 +322,10 @@ static pmap_t clone_pgtab(unsigned long phys_pgtab)
 
 	if (!(f_pgtab = kalloc_frame(VM_ZERO)))
 		return NULL;
-	if (!(original = kmap_tmp_page(phys_pgtab))) {
-		kfree_frame(f_pgtab);
-		return NULL;
-	}
-	if (!(copy = kmap_tmp_page(f_pgtab->addr))) {
-		kunmap_tmp_page(original);
-		kfree_frame(f_pgtab);
-		return NULL;
-	}
+	original = kmap_tmp_page(phys_pgtab);
+	copy = kmap_tmp_page(f_pgtab->addr);
+
+	// loop over pages to update reference counts
 	for (unsigned int i = 0; i < 1024; i++) {
 		if (!(original[i] & PE_P))
 			continue;
@@ -357,48 +335,12 @@ static pmap_t clone_pgtab(unsigned long phys_pgtab)
 	return (pmap_t) f_pgtab->addr;
 }
 
-static pmap_t _clone_pgtab(ulong phys_pgtab)
-{
-	struct pf_info *f_pgtab;
-	pmap_t copy, original, retval;
-	ulong page;
-
-	if (!(original = kmap_tmp_page(phys_pgtab)))
-		return NULL;
-	if (!(f_pgtab = kalloc_frame(VM_ZERO)))
-		return NULL;
-	if (!(copy = kmap_tmp_page(f_pgtab->addr))) {
-		kfree_frame(f_pgtab);
-		return NULL;
-	}
-
-	retval = (pmap_t) f_pgtab->addr;
-	for (unsigned i = 0; i < 1024; i++) {
-		if (!(original[i] & PE_P))
-			continue;
-		if (!(page = clone_page(original[i] & ~0xFFF))) {
-			kfree_frame(f_pgtab);
-			retval = NULL;
-			break;
-		}
-		copy[i] = page | (original[i] & 0xFFF);
-	}
-
-	kunmap_tmp_page(copy);
-	kunmap_tmp_page(original);
-	return retval;
-}
-
 pmap_t clone_pgdir(void)
 {
 	pmap_t p_pgdir, pgdir, pgtab;
-
 	if (!(p_pgdir = new_pgdir()))
 		return NULL;
-
-	if (!(pgdir = kmap_tmp_page((ulong)p_pgdir)))
-		return NULL;
-
+	pgdir = kmap_tmp_page((unsigned long)p_pgdir);
 	for (unsigned i = 0; i < kernel_pdi; i++) {
 		if (!(current_pgdir[i] & PE_P))
 			continue;
@@ -406,57 +348,91 @@ pmap_t clone_pgdir(void)
 			kunmap_tmp_page(pgdir);
 			return NULL;
 		}
-		pgdir[i] = (ulong)pgtab | (current_pgdir[i] & 0xFFF);
+		pgdir[i] = (unsigned long)pgtab | (current_pgdir[i] & 0xFFF);
 	}
+
+	// copy kernel stack
+	pgtab = kmap_tmp_page(pgdir[1023] & ~0xFFF);
+	for (int i = 0; i < NR_KSTACK_PAGES; i++) {
+		void *tmp = kmap_tmp_page(pgtab[(1024 - NR_HIGH_PAGES) + i] & ~0xFFF);
+		memcpy(tmp, (void*)(KSTACK_START + i*FRAME_SIZE), FRAME_SIZE);
+		kunmap_tmp_page(tmp);
+	}
+
 	kunmap_tmp_page(pgdir);
 	return p_pgdir;
 }
 
-pmap_t new_pgdir(void)
+/*
+ * Here we keep a free-list of "husk" page directories which map only the
+ * kernel's address space.  This speeds up process creation, but is also useful
+ * to delay freeing page directories which are in use (i.e. during exit).
+ */
+
+#define MAX_HUSKS 16
+static unsigned int husks = 0;
+static LIST_HEAD(husk_list);
+
+static inline pmap_t pop_husk(void)
 {
-	struct pf_info *f_pgdir, *f_pgtab;
+	struct pf_info *frame;
+	frame = list_first_entry(&husk_list, struct pf_info, chain);
+	list_del(&frame->chain);
+	husks--;
+	return (pmap_t) frame->addr;
+}
+
+static void push_husk(pmap_t phys_pgdir)
+{
+	struct pf_info *frame = phys_to_info((unsigned long)phys_pgdir);
+	list_add(&frame->chain, &husk_list);
+	husks++;
+}
+
+static pmap_t make_new_pgdir(void)
+{
+	struct pf_info *frames[NR_HIGH_PAGES];
 	pmap_t pgdir, pgtab;
-	unsigned pdi;
+	unsigned int pdi;
+	int i;
 
-	if ((f_pgdir = kalloc_frame(VM_ZERO)) == NULL)
-		goto nomem0;
-	if ((f_pgtab = kalloc_frame(VM_ZERO)) == NULL)
-		goto nomem1;
-	if ((pgdir = kmap_tmp_page(f_pgdir->addr)) == NULL)
-		goto nomem2;
-	if ((pgtab = kmap_tmp_page(f_pgtab->addr)) == NULL)
-		goto nomem3;
+	for (i = 0; i < NR_HIGH_PAGES; i++) {
+		if (!(frames[i] = kalloc_frame(VM_ZERO))) {
+			for (i = i - 1; i >= 0; i--)
+				kfree_frame(frames[i]);
+			return NULL;
+		}
+	}
+	pgdir = kmap_tmp_page(frames[NR_HIGH_PAGES-1]->addr);
+	pgtab = kmap_tmp_page(frames[NR_HIGH_PAGES-2]->addr);
 
-	/* map page directory to last page */
-	pgdir[1023] = f_pgtab->addr | PE_P | PE_RW; /* pgtab mapping 0xFFC00000+ */
-	pgtab[1023] = f_pgdir->addr | PE_P | PE_RW; /* pgdir at 0xFFFFF000 */
-	pgtab[1022] = f_pgtab->addr | PE_P | PE_RW; /* tmp_pgtab at 0xFFFFE000 */
+	pgdir[1023] = frames[NR_HIGH_PAGES-2]->addr | PE_P | PE_RW;
+	for (int i = 0; i < NR_HIGH_PAGES; i++)
+		pgtab[(1024 - NR_HIGH_PAGES) + i] = frames[i]->addr | PE_P | PE_RW;
 
-	/* map kernel memory */
-	for (pdi = addr_to_pdi((ulong)&KERNEL_PAGE_OFFSET);
+	for (pdi = addr_to_pdi(kernel_base);
 			kernel_pgdir[pdi] & PE_P;
 			pdi++)
 		pgdir[pdi] = kernel_pgdir[pdi];
 
 	kunmap_tmp_page(pgtab);
 	kunmap_tmp_page(pgdir);
-	return (pmap_t) f_pgdir->addr;
+	return (pmap_t) frames[NR_HIGH_PAGES-1]->addr;
+}
 
-nomem3:	kunmap_tmp_page(pgdir);
-nomem2:	kfree_frame(f_pgtab);
-nomem1:	kfree_frame(f_pgdir);
-nomem0:	return NULL;
+pmap_t new_pgdir(void)
+{
+	if (husks > 0)
+		return pop_husk();
+	return make_new_pgdir();
 }
 
 /*
  * Free all frames mapped in a page table.
  */
-static int del_pgtab(ulong phys_pgtab)
+static int del_pgtab(unsigned long phys_pgtab)
 {
 	pmap_t pgtab = kmap_tmp_page(phys_pgtab);
-
-	if (pgtab == NULL)
-		return -ENOMEM;
 
 	for (int i = 0; i < 1024; i++) {
 		if (!(pgtab[i] & PE_P))
@@ -471,13 +447,10 @@ static int del_pgtab(ulong phys_pgtab)
 /*
  * Free all frames mapped in a page directory.
  */
-int del_pgdir(pmap_t phys_pgdir)
+static int del_pgdir(pmap_t phys_pgdir)
 {
 	int rc;
-	pmap_t pgdir = kmap_tmp_page((ulong)phys_pgdir);
-
-	if (pgdir == NULL)
-		return -ENOMEM;
+	pmap_t pgdir = kmap_tmp_page((unsigned long)phys_pgdir);
 
 	for (unsigned i = 0; i < kernel_pdi; i++) {
 		if (!(pgdir[i] & PE_P))
@@ -486,8 +459,53 @@ int del_pgdir(pmap_t phys_pgdir)
 			return rc;
 	}
 	kfree_frame(phys_to_info(pgdir[1023] & ~0xFFF));
-	kfree_frame(phys_to_info((ulong)phys_pgdir));
+	kfree_frame(phys_to_info((unsigned long)phys_pgdir));
 	kunmap_tmp_page(pgdir);
+	return 0;
+}
+
+static inline void free_pte(unsigned long pte)
+{
+	kfree_frame(phys_to_info(pte & ~0xFFF));
+}
+
+static int free_husk(pmap_t phys_pgdir)
+{
+	pmap_t pgdir, pgtab;
+	pgdir = kmap_tmp_page((unsigned long)phys_pgdir);
+	pgtab = kmap_tmp_page(pgdir[1023] & ~0xFFF);
+	for (int i = 0; i < NR_HIGH_PAGES; i++)
+		free_pte(pgtab[(1024 - NR_HIGH_PAGES) + i]);
+	kunmap_tmp_page(pgtab);
+	kunmap_tmp_page(pgdir);
+	return 0;
+}
+
+/*
+ * Free all user-space memory.  In theory, this is a no-op (pm_unmap() should
+ * have freed everything before this is called), but we do it anyways.
+ */
+static int husk_pgdir(pmap_t phys_pgdir)
+{
+	int error = 0;
+	pmap_t pgdir = kmap_tmp_page((unsigned long)phys_pgdir);
+	for (unsigned int i = 0; i < kernel_pdi; i++) {
+		if (!(pgdir[i] & PE_P))
+			continue;
+		if ((error = del_pgtab(pgdir[i] & ~0xFFF)))
+			break;
+		pgdir[i] = 0;
+	}
+	kunmap_tmp_page(pgdir);
+	return error;
+}
+
+int free_pgdir(pmap_t phys_pgdir)
+{
+	if (husks >= MAX_HUSKS)
+		free_husk(pop_husk());
+	husk_pgdir(phys_pgdir);
+	push_husk(phys_pgdir);
 	return 0;
 }
 
@@ -508,8 +526,6 @@ static int pm_apply_pgtab(struct vma *vma, unsigned int pdi,
 		last = addr_to_pti(vma->end-1);
 
 	pgtab = kmap_tmp_page(phys_pgtab);
-	if (!pgtab)
-		return -ENOMEM;
 	for (; pti <= last; pti++) {
 		void *addr = (void*) pti_to_addr(pdi, pti);
 		if (!(pgtab[pti] & PE_P))
@@ -527,8 +543,6 @@ static int pm_apply(struct vma *vma, apply_fn fn)
 	unsigned int last = addr_to_pdi(vma->end-1);
 	pmap_t pgdir = kmap_tmp_page((unsigned long)vma->mmap->pgdir);
 
-	if (!pgdir)
-		return -ENOMEM;
 	for (unsigned int pdi = addr_to_pdi(vma->start); pdi <= last; pdi++) {
 		if (!(pgdir[pdi] & PE_P))
 			continue;
@@ -571,9 +585,7 @@ static unsigned long pm_copy_fn(struct vma *vma, void *addr, unsigned long pte)
 
 	if (!(frame = kalloc_frame(vma->flags)))
 		panic("pm_copy_fn: out of memory...");
-	if (!(tmp = kmap_tmp_page(frame->addr)))
-		panic("pm_copy_fn: out of memory...");
-
+	tmp = kmap_tmp_page(frame->addr);
 	memcpy(tmp, addr, FRAME_SIZE);
 	kunmap_tmp_page(tmp);
 
@@ -586,10 +598,20 @@ int pm_copy(struct vma *vma)
 	return pm_apply(vma, pm_copy_fn);
 }
 
+int pm_copy_to(pmap_t phys_pgdir, void *dst, const void *src, size_t len)
+{
+	void *addr = kmap_tmp_range(phys_pgdir, (unsigned long)dst, len, VM_WRITE);
+	if (!addr)
+		return -ENOMEM;
+	memcpy(addr, src, len);
+	kunmap_tmp_range(addr, len);
+	return 0;
+}
+
 /*
  * Allocate a page from the frame pool.
  */
-struct pf_info *kalloc_frame(ulong flags)
+struct pf_info *kalloc_frame(unsigned long flags)
 {
 	void *vaddr;
 	struct pf_info *page;
@@ -601,10 +623,7 @@ struct pf_info *kalloc_frame(ulong flags)
 	page->ref = 1;
 
 	if (flags & VM_ZERO) {
-		if (!(vaddr = kmap_tmp_page(page->addr))) {
-			kfree_frame(page);
-			return NULL;
-		}
+		vaddr = kmap_tmp_page(page->addr);
 		memset(vaddr, 0, FRAME_SIZE);
 		kunmap_tmp_page(vaddr);
 	}
@@ -623,7 +642,7 @@ void _kfree_frame(struct pf_info *page)
  * Map the page table for the given address, allocating it if one does not
  * already exist.
  */
-static pmap_t umap_page_table(pmap_t pgdir, ulong addr)
+static pmap_t umap_page_table(pmap_t pgdir, unsigned long addr)
 {
 	pte_t *pde = addr_to_pde(pgdir, addr);
 
@@ -634,34 +653,43 @@ static pmap_t umap_page_table(pmap_t pgdir, ulong addr)
 	return kmap_tmp_page(*pde & ~0xFFF);
 }
 
+static void do_map_pgtab(unsigned long phys_pgdir, unsigned long phys_pgtab,
+		unsigned long addr)
+{
+	pmap_t pgdir = kmap_tmp_page(phys_pgdir);
+	*(addr_to_pde(pgdir, addr)) = phys_pgtab | PE_P | PE_RW;
+	kunmap_tmp_page(pgdir);
+}
+
 /*
  * Map the page table for the given (kernel) address.  If the page table does
  * not yet exist, it is allocated and added to all process page directories.
  */
-static pmap_t kmap_page_table(ulong addr)
+static pmap_t kmap_page_table(unsigned long addr)
 {
 	pte_t *pde = addr_to_pde(kernel_pgdir, addr);
 
-	/* allocate page table if one does not already exist */
+	// allocate page table if one does not already exist
 	if (!(*pde & PE_P)) {
+		struct pf_info *husk;
 		struct pf_info *frame = kalloc_frame(VM_ZERO);
 		*pde = frame->addr | PE_P | PE_RW;
-		/* update process page direcories */
-		for (uint i = 0; i < PT_SIZE; i++) {
+		// update process page direcories
+		for (unsigned int i = 0; i < PT_SIZE; i++) {
 			struct pcb *p = &proctab[i];
-			if (p->state != PROC_DEAD) {
-				pmap_t pgdir = kmap_tmp_page((ulong)p->mm.pgdir);
-				pte_t *upde = addr_to_pde(pgdir, addr);
-				*upde = frame->addr | PE_P | PE_RW;
-				kunmap_tmp_page(pgdir);
-			}
+			if (p->state == PROC_DEAD)
+				continue;
+			do_map_pgtab((unsigned long)p->mm.pgdir, frame->addr, addr);
+		}
+		list_for_each_entry(husk, &husk_list, chain) {
+			do_map_pgtab(husk->addr, frame->addr, addr);
 		}
 	}
 
 	return kmap_tmp_page(*pde & ~0xFFF);
 }
 
-static pmap_t knext_page_table(uint i, pmap_t pgtab)
+static pmap_t knext_page_table(unsigned int i, pmap_t pgtab)
 {
 	if (i % 1024 != 0)
 		return pgtab;
@@ -678,18 +706,19 @@ static pmap_t unext_page_table(unsigned i, pmap_t pgdir, pmap_t pgtab)
 }
 
 #define for_each_upage(i, pgdir, pgtab, start, pages) \
-	for (uint i = start; i < (start) + (pages); \
+	for (unsigned int i = start; i < (start) + (pages); \
 			i++, pgtab = unext_page_table(i, pgdir, pgtab))
 
 /*
  * Map 'pages' pages starting at the virtual address 'dst' into the (physical)
  * page directory 'pgdir'.
  */
-int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
+int map_pages(pmap_t phys_pgdir, unsigned long dst, unsigned int pages,
+		unsigned long flags)
 {
 	struct pf_info *frame;
-	uchar attr = vma_to_page_flags(flags);
-	pmap_t pgdir = kmap_tmp_page((ulong)phys_pgdir);
+	unsigned char attr = vma_to_page_flags(flags);
+	pmap_t pgdir = kmap_tmp_page((unsigned long)phys_pgdir);
 	pmap_t pgtab = umap_page_table(pgdir, dst);
 
 	for_each_upage(i, pgdir, pgtab, dst / FRAME_SIZE, pages) {
@@ -703,20 +732,18 @@ int map_pages(pmap_t phys_pgdir, ulong dst, unsigned pages, ulong flags)
 	return 0;
 }
 
-int map_frame(struct pf_info *frame, void *addr, ulong flags)
+int map_frame(struct pf_info *frame, void *addr, unsigned long flags)
 {
 	pmap_t pgtab;
-	uchar attr = vma_to_page_flags(flags);
+	unsigned char attr = vma_to_page_flags(flags);
 
-	pgtab = umap_page_table(current_pgdir, (ulong) addr);
-	if (!pgtab)
-		return -ENOMEM;
-	pgtab[addr_to_pti((ulong)addr)] = frame->addr | PE_P | attr;
+	pgtab = umap_page_table(current_pgdir, (unsigned long) addr);
+	pgtab[addr_to_pti((unsigned long)addr)] = frame->addr | PE_P | attr;
 	kunmap_tmp_page(pgtab);
 	return 0;
 }
 
-int map_page(void *addr, ulong flags)
+int map_page(void *addr, unsigned long flags)
 {
 	struct pf_info *frame = kalloc_frame(flags);
 	if (!frame)
@@ -724,15 +751,15 @@ int map_page(void *addr, ulong flags)
 	return map_frame(frame, addr, flags);
 }
 
-int copy_page(void *addr, ulong flags)
+int copy_page(void *addr, unsigned long flags)
 {
 	void *tmp;
 	pmap_t pgtab;
 	struct pf_info *frame;
-	uchar attr = vma_to_page_flags(flags);
+	unsigned char attr = vma_to_page_flags(flags);
 	unsigned int pti = addr_to_pti((unsigned long)addr);
 
-	pgtab = umap_page_table(current_pgdir, (ulong) addr);
+	pgtab = umap_page_table(current_pgdir, (unsigned long) addr);
 	if (!pgtab)
 		return -ENOMEM;
 	// no need to copy if frame is only referenced once
@@ -746,12 +773,7 @@ int copy_page(void *addr, ulong flags)
 		return -ENOMEM;
 	}
 	tmp = kmap_tmp_page(frame->addr);
-	if (!tmp) {
-		kfree_frame(frame);
-		kunmap_tmp_page(pgtab);
-		return -ENOMEM;
-	}
-	memcpy(tmp, (void*)page_base((ulong)addr), FRAME_SIZE);
+	memcpy(tmp, (void*)page_base(addr), FRAME_SIZE);
 	kunmap_tmp_page(tmp);
 
 	kfree_frame(phys_to_info(pgtab[pti] & ~0xFFF));
@@ -765,11 +787,11 @@ success:
 /*
  * Allocate and map n consecutive pages in the kernel's address space.
  */
-void *kalloc_pages(uint n)
+void *kalloc_pages(unsigned int n)
 {
-	uint count = 0;
-	uint start = 0;
-	uint i = first_free;
+	unsigned int count = 0;
+	unsigned int start = 0;
+	unsigned int i = first_free;
 	pmap_t pgtab = kmap_page_table(i * FRAME_SIZE);
 
 	/* find n consecutive, free pages */
@@ -812,12 +834,12 @@ void *kalloc_pages(uint n)
 	return (void*) (start * FRAME_SIZE);
 }
 
-void kfree_pages(void *addr, uint n)
+void kfree_pages(void *addr, unsigned int n)
 {
-	uint start = (ulong)addr / FRAME_SIZE;
-	pmap_t pgtab = kmap_page_table((ulong)addr);
+	unsigned int start = (unsigned long)addr / FRAME_SIZE;
+	pmap_t pgtab = kmap_page_table((unsigned long)addr);
 
-	for (uint i = start; i < start + n; i++, pgtab = knext_page_table(i, pgtab)) {
+	for (unsigned int i = start; i < start + n; i++, pgtab = knext_page_table(i, pgtab)) {
 		struct pf_info *frame = phys_to_info(pgtab[i % 1024] & ~0xFFF);
 		pgtab[i % 1024] = 0;
 		kfree_frame(frame);
@@ -828,5 +850,5 @@ void kfree_pages(void *addr, uint n)
 	if (start < first_free)
 		first_free = start;
 
-	flush_pages((ulong)addr, n);
+	flush_pages((unsigned long)addr, n);
 }

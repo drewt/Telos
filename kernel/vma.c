@@ -43,7 +43,8 @@ static void vm_sysinit(void)
 }
 EXPORT_KINIT(vm, SUB_LAST, vm_sysinit);
 
-static struct vma *new_vma(ulong start, ulong end, ulong flags)
+static struct vma *new_vma(unsigned long start, unsigned long end,
+		unsigned long flags)
 {
 	struct vma *vma;
 	if (!(vma = alloc_vma()))
@@ -111,7 +112,7 @@ void mm_fini(struct mm_struct *mm)
 	list_for_each_entry_safe(vma, n, &mm->map, chain) {
 		vm_unmap(vma);
 	}
-	del_pgdir(mm->pgdir);
+	free_pgdir(mm->pgdir);
 }
 
 int mm_clone(struct mm_struct *dst, struct mm_struct *src)
@@ -147,13 +148,13 @@ struct vma *vma_find(const struct mm_struct *mm, const void *addr)
 	struct vma *area;
 
 	list_for_each_entry(area, &mm->map, chain) {
-		if (area->end > (ulong)addr)
+		if (area->end > (unsigned long)addr)
 			return area;
 	}
 	return NULL;
 }
 
-int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
+int vma_grow_up(struct vma *vma, size_t amount, unsigned long flags)
 {
 	if (flags != vma->flags) {
 		if (vma_map(vma->mmap, vma->end, amount, flags) == NULL)
@@ -169,11 +170,12 @@ int vma_grow_up(struct vma *vma, size_t amount, ulong flags)
 	return 0;
 }
 
-int vma_bisect(struct vma *vma, ulong split, ulong lflags, ulong rflags)
+int vma_bisect(struct vma *vma, unsigned long split, unsigned long lflags,
+		unsigned long rflags)
 {
 	int error;
 	struct vma *right;
-	ulong orig_flags = vma->flags;
+	unsigned long orig_flags = vma->flags;
 
 	if (!(right = alloc_vma()))
 		return -ENOMEM;
@@ -198,7 +200,8 @@ int vma_bisect(struct vma *vma, ulong split, ulong lflags, ulong rflags)
 	return 0;
 }
 
-int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
+int vma_split(struct vma *vma, unsigned long start, unsigned long end,
+		unsigned long flags)
 {
 	int error;
 	struct vma *mid, *right;
@@ -241,7 +244,8 @@ int vma_split(struct vma *vma, ulong start, ulong end, ulong flags)
 	return 0;
 }
 
-struct vma *vma_map(struct mm_struct *mm, ulong dst, size_t len, ulong flags)
+struct vma *vma_map(struct mm_struct *mm, unsigned long dst, size_t len,
+		unsigned long flags)
 {
 	struct vma *vma;
 	unsigned nr_pages = pages_in_range(dst, len);
@@ -328,7 +332,7 @@ int vm_split(struct vma *new, struct vma *old)
 }
 
 int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
-		ulong flags)
+		unsigned long flags)
 {
 	struct vma *vma;
 	if (!(vma = vma_get(mm, start))) {
@@ -339,7 +343,7 @@ int vm_verify(const struct mm_struct *mm, const void *start, size_t len,
 		kprintf("%p bad access!\n", start);
 		return -1; // bad access
 	}
-	if ((ulong)start - vma->start < len) {
+	if ((unsigned long)start - vma->start < len) {
 		kprintf("%p bad length!\n", start);
 		return -1; // invalid length
 	}
@@ -362,7 +366,7 @@ int vm_copy_from(const struct mm_struct *mm, void *dst, const void *src,
 	struct vma *vma;
 	if (!(vma = vma_get(mm, src)))
 		return -EFAULT;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)src, len, vma->flags)))
+	if (!(addr = kmap_tmp_range(mm->pgdir, (unsigned long)src, len, vma->flags)))
 		return -ENOMEM;
 	memcpy(dst, addr, len);
 	kunmap_tmp_range(addr, len);
@@ -376,7 +380,7 @@ int vm_copy_to(const struct mm_struct *mm, void *dst, const void *src,
 	struct vma *vma;
 	if (!(vma = vma_get(mm, dst)))
 		return -EFAULT;
-	if (!(addr = kmap_tmp_range(mm->pgdir, (ulong)dst, len, vma->flags)))
+	if (!(addr = kmap_tmp_range(mm->pgdir, (unsigned long)dst, len, vma->flags)))
 		return -ENOMEM;
 	memcpy(addr, src, len);
 	kunmap_tmp_range(addr, len);

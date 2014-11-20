@@ -131,20 +131,10 @@ static struct pcb *pcb_clone(struct pcb *src)
 	return p;
 }
 
-#define HEAP_START   0x00100000UL
-#define HEAP_SIZE    FRAME_SIZE
-#define STACK_START  0x0F000000UL
-#define STACK_SIZE   (FRAME_SIZE*8)
-#define STACK_END    (STACK_START+STACK_SIZE)
-#define KSTACK_START (STACK_START+STACK_SIZE)
-#define KSTACK_SIZE  (FRAME_SIZE*4)
-#define KSTACK_END   (KSTACK_START + KSTACK_SIZE)
-
 #define DATA_FLAGS   (VM_READ | VM_WRITE | VM_KEEP)
 #define RODATA_FLAGS (VM_READ | VM_KEEP)
 #define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO)
 #define USTACK_FLAGS (VM_READ | VM_WRITE | VM_EXEC | VM_ZERO | VM_KEEP)
-#define KSTACK_FLAGS (USTACK_FLAGS | VM_ALLOC | VM_KEEP | VM_SHARE)
 
 struct vma *get_heap(struct mm_struct *mm)
 {
@@ -160,8 +150,6 @@ static int address_space_init(struct mm_struct *mm)
 	if (!vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS))
 		goto abort;
 	if (!vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS))
-		goto abort;
-	if (!vma_map(mm, KSTACK_START, KSTACK_SIZE, KSTACK_FLAGS))
 		goto abort;
 	if (!vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS | VM_SHARE))
 		goto abort;
@@ -194,11 +182,13 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 
 	if ((error = mm_init(&p->mm)) < 0)
 		return error;;
-	if ((error = address_space_init(&p->mm)) < 0)
-		goto abort;
+	if ((error = address_space_init(&p->mm)) < 0) {
+		mm_fini(&p->mm);
+		return error;
+	}
 	if (!vma_map(&p->mm, krostart, kroend - krostart, RODATA_FLAGS)) {
-		error = -ENOMEM;
-		goto abort;
+		mm_fini(&p->mm);
+		return -ENOMEM;
 	}
 
 	p->esp = ((char*)KSTACK_END - KFRAME_ROOM);
@@ -206,13 +196,10 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	put_iret_kframe(frame, (ulong)func);
 	frame->stack[0] = (ulong) exit;
 	frame->stack[1] = (ulong) arg;
-	vm_copy_to(&p->mm, p->esp, frame, KFRAME_ROOM);
+	pm_copy_to(p->mm.pgdir, p->esp, frame, KFRAME_ROOM);
 
 	ready(p);
 	return p->pid;
-abort:
-	mm_fini(&p->mm);
-	return error;
 }
 
 void create_init(void(*func)(void*))
@@ -245,7 +232,6 @@ void create_init(void(*func)(void*))
 	put_iret_uframe(p->esp, (ulong)func, esp);
 
 	ready(p);
-
 }
 
 static int verify_exec_args(struct exec_args *args)
