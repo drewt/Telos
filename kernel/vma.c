@@ -34,7 +34,6 @@ static void vm_sysinit(void)
 	kernel_mm.pgdir = (uintptr_t)&_kernel_pgd;
 
 	INIT_LIST_HEAD(&kernel_mm.map);
-	INIT_LIST_HEAD(&kernel_mm.kheap);
 	if (!vma_map(&kernel_mm, krostart, kroend - krostart, 0))
 		panic("Failed to map kernel memory");
 	if (!vma_map(&kernel_mm, krwstart, krwend - krwstart, VM_WRITE))
@@ -151,7 +150,6 @@ int mm_init(struct mm_struct *mm)
 	if (!(mm->pgdir = new_pgdir()))
 		return -ENOMEM;
 	INIT_LIST_HEAD(&mm->map);
-	INIT_LIST_HEAD(&mm->kheap);
 	return 0;
 }
 
@@ -173,7 +171,6 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 		return -ENOMEM;
 
 	INIT_LIST_HEAD(&dst->map);
-	INIT_LIST_HEAD(&dst->kheap);
 	list_for_each_entry(vma, &src->map, chain) {
 		struct vma *new = new_vma(vma->start, vma->end, vma->flags);
 		if (!new) {
@@ -184,7 +181,6 @@ int mm_clone(struct mm_struct *dst, struct mm_struct *src)
 		list_add_tail(&new->chain, &dst->map);
 		vm_clone(new, vma);
 	}
-	// TODO: dst->kheap
 	dst->brk = src->brk;
 	return 0;
 abort:

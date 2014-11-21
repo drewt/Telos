@@ -59,7 +59,6 @@ struct vma_operations {
 struct mm_struct {
 	uintptr_t pgdir;
 	struct list_head map;
-	struct list_head kheap;
 	uintptr_t brk;
 };
 

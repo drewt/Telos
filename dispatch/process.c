@@ -388,13 +388,8 @@ void do_exit(struct pcb *p, int status)
 {
 	struct pcb *pit;
 	struct proc_status *sit, *n;
-	struct mem_header *hit;
 
 	report_status(p, _WEXITED, status);
-
-	// free memory allocated to process
-	dequeue_iterate(hit, struct mem_header, chain, &current->mm.kheap)
-		kfree(hit->data);
 
 	for (int i = 0; i < NR_FILES; i++)
 		if (current->filp[i] != NULL)
