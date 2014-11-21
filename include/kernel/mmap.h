@@ -91,6 +91,7 @@ extern unsigned long _kroend;   // end of kernel read-only memory
 extern unsigned long _krwstart; // start of kernel read-write memory
 extern unsigned long _krwend;   // end of kernel read-write memory
 
+#define user_base   0x1000
 #define kernel_base ((unsigned long)&KERNEL_PAGE_OFFSET)
 #define kstack      ((unsigned long)&_kstack)
 #define kstart      ((unsigned long)&_kstart)

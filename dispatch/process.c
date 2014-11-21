@@ -276,24 +276,16 @@ static size_t exec_mem_needed(struct exec_args *args)
 
 static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 {
-	int error;
 	char *mem, *kmem;
 	char **argv;
 	char **envp;
-	ssize_t diff;
-	struct vma *heap;
+	struct vma *vma;
 	size_t size = exec_mem_needed(args);
 
-	if (!(heap = get_heap(&current->mm)))
+	vma = vma_create_high(&current->mm, user_base, kernel_base, size,
+			VM_READ | VM_WRITE | VM_ZERO);
+	if (!vma)
 		return -ENOMEM;
-	diff = size - vma_size(heap);
-
-	// need more memory in heap
-	if (diff > 0) {
-		error = vma_grow_up(heap, diff, heap->flags);
-		if (error)
-			return error;
-	}
 
 	// copy args/env into kernel memory
 	kmem = kmalloc(size);
@@ -310,8 +302,8 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	}
 
 	// copy back into user memory and populate argv/envp
-	memcpy((void*) heap->start, kmem, size);
-	argv = (char**) heap->start;
+	memcpy((void*) vma->start, kmem, size);
+	argv = (char**) vma->start;
 	envp = argv + args->argc + 1;
 	mem = (char*) (envp + args->envc + 1);
 	for (size_t i = 0; i < args->argc; i++) {

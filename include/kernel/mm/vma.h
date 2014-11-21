@@ -25,13 +25,13 @@
  * as mmap, etc. assume they have the usual meaning.
  */
 enum {
-	VM_EXEC    = 0x1,  /* execute permission */
-	VM_WRITE   = 0x2,  /* write permission */
-	VM_READ    = 0x4,  /* read permission */
-	VM_ZERO    = 0x8,  /* area should be initialized with zeros */
-	VM_KEEP    = 0x10, /* never unmap */
-	VM_CLOEXEC = 0x20, /* unmap on exec */
-	VM_SHARE   = 0x40, /* share across fork */
+	VM_EXEC     = 0x1,  /* execute permission */
+	VM_WRITE    = 0x2,  /* write permission */
+	VM_READ     = 0x4,  /* read permission */
+	VM_ZERO     = 0x8,  /* area should be initialized with zeros */
+	VM_KEEP     = 0x10, /* never unmap */
+	VM_KEEPEXEC = 0x20, /* don't unmap on exec */
+	VM_SHARE    = 0x40, /* share across fork */
 };
 
 struct vma_operations;
@@ -67,10 +67,12 @@ int mm_init(struct mm_struct *mm);
 void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
 
-struct vma *create_vma(struct mm_struct *mm, uintptr_t start, uintptr_t end,
-		size_t len, int flags);
-struct vma *create_vma_high(struct mm_struct *mm, uintptr_t start, uintptr_t end,
-		size_t len, int flags);
+struct vma *vma_create_low(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len, int flags);
+struct vma *vma_create_high(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len, int flags);
+struct vma *vma_create_fixed(struct mm_struct *mm, uintptr_t start, size_t len,
+		int flags);
 struct vma *vma_find(const struct mm_struct *mm, const void *addr);
 struct vma *vma_map(struct mm_struct *mm, uintptr_t dst, size_t len, int flags);
 int vma_grow_up(struct vma *vma, size_t amount, int flags);

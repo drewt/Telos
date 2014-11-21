@@ -150,15 +150,9 @@ struct vma_operations mmap_shared_vma_ops = {
 
 static struct vma *mmap_create_vma(void *addr, size_t len, int prot, int flags)
 {
-	uintptr_t start, end;
-	if (flags & MAP_FIXED) {
-		start = (uintptr_t)addr;
-		end   = (uintptr_t)addr + page_align(len);
-	} else {
-		start = 0;
-		end   = kernel_base;
-	}
-	return create_vma_high(&current->mm, start, end, len, prot);
+	if (flags & MAP_FIXED)
+		return vma_create_fixed(&current->mm, (uintptr_t)addr, len, prot);
+	return vma_create_high(&current->mm, user_base, kernel_base, len, prot);
 }
 
 int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
@@ -180,7 +174,7 @@ int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
 	return 0;
 }
 
-int do_mmap_anon(void **addr, size_t len, int prot, int flags)
+static int do_mmap_anon(void **addr, size_t len, int prot, int flags)
 {
 	struct vma *vma = mmap_create_vma(*addr, len, prot | VM_ZERO, flags);
 	if (!vma)

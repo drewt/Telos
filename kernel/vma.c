@@ -103,8 +103,8 @@ static uintptr_t vma_find_space(struct mm_struct *mm, uintptr_t start,
 	return start;
 }
 
-struct vma *create_vma_high(struct mm_struct *mm, uintptr_t start, uintptr_t end,
-		size_t len, int flags)
+struct vma *vma_create_high(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len, int flags)
 {
 	uintptr_t addr;
 	struct vma *vma;
@@ -118,8 +118,8 @@ struct vma *create_vma_high(struct mm_struct *mm, uintptr_t start, uintptr_t end
 	return vma;
 }
 
-struct vma *create_vma(struct mm_struct *mm, uintptr_t start, uintptr_t end,
-		size_t len, int flags)
+struct vma *vma_create_low(struct mm_struct *mm, uintptr_t start,
+		uintptr_t end, size_t len, int flags)
 {
 	uintptr_t addr;
 	struct vma *vma;
@@ -127,6 +127,19 @@ struct vma *create_vma(struct mm_struct *mm, uintptr_t start, uintptr_t end,
 	if (!addr)
 		return NULL;
 	vma = new_vma(addr, page_align(addr+len), flags);
+	if (!vma)
+		return NULL;
+	vma_insert(mm, vma);
+	return vma;
+}
+
+struct vma *vma_create_fixed(struct mm_struct *mm, uintptr_t start, size_t len,
+		int flags)
+{
+	struct vma *vma = vma_find(mm, (void*)start);
+	if (vma && (vma_contains(vma, (void*)start) || vma->start - start < len))
+		return NULL;
+	vma = new_vma(start, page_align(start+len), flags);
 	if (!vma)
 		return NULL;
 	vma_insert(mm, vma);
