@@ -148,34 +148,44 @@ struct vma_operations mmap_shared_vma_ops = {
 	.split = mmap_split,
 };
 
-int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
-		unsigned long off)
+static struct vma *mmap_create_vma(void *addr, size_t len, int prot, int flags)
 {
 	uintptr_t start, end;
-	struct vma *vma;
-	struct mmap_private *private;
-
-	private = alloc_private(file, off, len);
-	if (!private)
-		return -ENOMEM;
-
 	if (flags & MAP_FIXED) {
-		start = (uintptr_t)*addr;
-		end   = (uintptr_t)*addr + len;
+		start = (uintptr_t)addr;
+		end   = (uintptr_t)addr + len;
 	} else {
 		start = 0;
 		end   = kernel_base;
 	}
+	return create_vma_high(&current->mm, start, end, len, prot);
+}
 
-	vma = create_vma_high(&current->mm, start, end, len, prot | VM_CLOEXEC);
+int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
+		unsigned long off)
+{
+	struct vma *vma;
+	struct mmap_private *private;
+	private = alloc_private(file, off, len);
+	if (!private)
+		return -ENOMEM;
+	vma = mmap_create_vma(*addr, len, prot, flags);
 	if (!vma) {
 		slab_free(mmap_private_cachep, private);
 		return -ENOMEM;
 	}
-	*addr = (void*) vma->start;
-
-	vma->private = private;
 	vma->op = (flags & MAP_SHARED) ? &mmap_shared_vma_ops : &mmap_vma_ops;
+	vma->private = private;
+	*addr = (void*) vma->start;
+	return 0;
+}
+
+int do_mmap_anon(void **addr, size_t len, int prot, int flags)
+{
+	struct vma *vma = mmap_create_vma(*addr, len, prot | VM_ZERO, flags);
+	if (!vma)
+		return -ENOMEM;
+	*addr = (void*) vma->start;
 	return 0;
 }
 
@@ -184,10 +194,13 @@ long sys_mmap(struct __mmap_args *args)
 	struct file *file;
 	if (vm_verify(&current->mm, args, sizeof(*args), VM_READ | VM_WRITE))
 		return -EFAULT;
-	if (!(file = fd_file(current, args->fd)))
-		return -EBADF;
 	if (args->flags & MAP_FIXED)
 		return -ENOTSUP;
+	if (args->flags & MAP_ANONYMOUS)
+		return do_mmap_anon(&args->addr, args->len, args->prot & 7,
+				args->flags);
+	if (!(file = fd_file(current, args->fd)))
+		return -EBADF;
 	return do_mmap(file, &args->addr, args->len, args->prot & 7,
 			args->flags, args->off);
 }

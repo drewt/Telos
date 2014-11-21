@@ -41,9 +41,10 @@ enum {
 };
 
 enum {
-	MAP_PRIVATE,
-	MAP_SHARED,
-	MAP_FIXED,
+	MAP_PRIVATE   = 0,
+	MAP_SHARED    = 1,
+	MAP_FIXED     = 2,
+	MAP_ANONYMOUS = 4,
 };
 
 struct __mmap_args {

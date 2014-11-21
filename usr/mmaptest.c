@@ -25,7 +25,7 @@
 
 static _Noreturn void die(const char *msg)
 {
-	fprintf(stderr, msg);
+	fprintf(stderr, "mmaptest: %s\n", msg);
 	exit(EXIT_FAILURE);
 }
 
@@ -44,56 +44,62 @@ int main(void)
 	printf("Testing mmap()... ");
 	fd = open("/test", O_CREAT | O_TRUNC, O_RDWR);
 	if (fd < 0)
-		die("mmaptest: failed to open /test\n");
+		die("failed to open /test");
 	if (write(fd, "test\n", 5) < 0)
-		die("mmaptest: write failed\n");
+		die("write failed");
 	addr = mmap(NULL, 5, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (addr == MAP_FAILED)
-		die("mmaptest: mmap returned MAP_FAILED\n");
+		die("mmap returned MAP_FAILED");
 	// fork a child to check that mmap works across a fork()
 	if ((child = fork())) {
 		wait(NULL);
 		return 0;
 	}
 	if (memcmp(addr, "test\n", 5))
-		die("mmaptest: unexpected contents in mapped memory\n");
+		die("unexpected contents in mapped memory");
 	// make sure writeback works
 	memcpy(addr, "mmap\n", 5);
 	if (munmap(addr, 5))
-		die("mmaptest: munmap failed\n");
+		die("munmap failed");
 	if (pread(fd, buf, 5, 0) < 0)
-		die("mmaptest: pread failed\n");
+		die("pread failed");
 	if (memcmp(buf, "mmap\n", 5))
-		die("mmaptest: unexpected contents in file\n");
+		die("unexpected contents in file");
 
 	// test VM_KEEP restriction by trying to unmap kernel stack
 	if (!munmap((void*)0xFFFFD000, 1))
-		die("mmaptest: succeeded in unmapping kernel stack?\n");
+		die("succeeded in unmapping kernel stack?");
 
 	// test multi-page mapping
 	addr = mmap(NULL, 4096 * 3, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (addr == MAP_FAILED)
-		die("mmaptest: mmap returned MAP_FAILED\n");
+		die("mmap returned MAP_FAILED");
 	memset(addr, 'a', 4096*3);
 	// unmap middle page to induce VMA split
 	if (munmap((void*)((unsigned long)addr + 4096), 1))
-		die("mmaptest: munmap failed\n");
+		die("munmap failed");
 	memset(addr, 'b', 4096);
 	memset((void*)((unsigned long)addr + 4096*2), 'c', 4096);
 	if (munmap(addr, 4096*3))
-		die("mmaptest: munmap failed\n");
+		die("munmap failed");
 	if (pread(fd, buf, 5, 0) < 0)
-		die("mmaptest: pread failed\n");
+		die("pread failed");
 	if (memcmp(buf, "bbbbb", 5))
-		die("not b's!\n");
+		die("not b's!");
 	if (pread(fd, buf, 5, 4096) < 0)
-		die("mmaptest: pread failed\n");
+		die("pread failed");
 	if (memcmp(buf, "aaaaa", 5))
-		die("not a's!\n");
+		die("not a's!");
 	if (pread(fd, buf, 5, 4096*2) < 0)
-		die("mmaptest: pread failed\n");
+		die("pread failed");
 	if (memcmp(buf, "ccccc", 5))
-		die("not c's!\n");
+		die("not c's!");
+	addr = mmap(NULL, 6, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
+	if (addr == MAP_FAILED)
+		die("mmap returned MAP_FAILED");
+	if (memcmp(addr, "\0\0\0\0\0\0", 6))
+		die("anonymous mapping is not zeroed");
+	memset(addr, 1, 6);
 	printf("OK\n");
 	return 0;
 }
