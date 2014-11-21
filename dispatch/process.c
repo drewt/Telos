@@ -396,18 +396,18 @@ void do_exit(struct pcb *p, int status)
 			sys_close(i);
 
 	// re-parent orphans to init
-	list_for_each_entry(pit, &current->children, child_chain) {
+	list_for_each_entry(pit, &p->children, child_chain) {
 		pit->parent_pid = 1;
 	}
 	// give status events to new parent
 	if (!(pit = get_pcb(1)))
 		panic("No init process");
-	list_for_each_entry_safe(sit, n, &current->child_stats, chain) {
+	list_for_each_entry_safe(sit, n, &p->child_stats, chain) {
 		list_del(&sit->chain);
 		assert_status(pit, sit);
 	}
 
-	mm_fini(&current->mm);
+	mm_fini(&p->mm);
 	zombie(p);
 }
 
