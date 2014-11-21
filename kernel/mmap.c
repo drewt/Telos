@@ -153,7 +153,7 @@ static struct vma *mmap_create_vma(void *addr, size_t len, int prot, int flags)
 	uintptr_t start, end;
 	if (flags & MAP_FIXED) {
 		start = (uintptr_t)addr;
-		end   = (uintptr_t)addr + len;
+		end   = (uintptr_t)addr + page_align(len);
 	} else {
 		start = 0;
 		end   = kernel_base;
@@ -194,8 +194,8 @@ long sys_mmap(struct __mmap_args *args)
 	struct file *file;
 	if (vm_verify(&current->mm, args, sizeof(*args), VM_READ | VM_WRITE))
 		return -EFAULT;
-	if (args->flags & MAP_FIXED)
-		return -ENOTSUP;
+	if (args->flags & MAP_FIXED && !page_aligned(args->addr))
+		return -EINVAL;
 	if (args->flags & MAP_ANONYMOUS)
 		return do_mmap_anon(&args->addr, args->len, args->prot & 7,
 				args->flags);
