@@ -71,60 +71,46 @@ long sys_chdir(const char *pathname, size_t name_len)
 	return 0;
 }
 
+int file_open(struct inode *inode, int flags, int mode, struct file **res)
+{
+	struct file *file;
+	if (!(file = get_empty_file()))
+		return -ENFILE;
+	file->f_inode = inode;
+	file->f_flags = flags;
+	file->f_mode = mode;
+	file->f_pos = 0;
+	file->f_rdev = inode->i_rdev;
+	file->f_op = inode->i_op ? inode->i_op->default_file_ops : NULL;
+	if (file->f_op && file->f_op->open) {
+		int error = file->f_op->open(inode, file);
+		if (error) {
+			free_file(file);
+			return error;
+		}
+	}
+	*res = file;
+	return 0;
+}
+
 long sys_open(const char *pathname, size_t name_len, int flags, int mode)
 {
 	int fd, error;
 	struct inode *inode;
-	struct file *filp;
-
 	error = verify_user_string(pathname, name_len);
 	if (error)
 		return error;
-	for (fd = 0; fd < NR_FILES; fd++)
-		if (!current->filp[fd])
-			break;
-	if (fd == NR_FILES)
-		return -EMFILE;
-
-	if (!(filp = get_empty_file()))
-		return -ENFILE;
-
-	current->filp[fd] = filp;
-	filp->f_flags = flags;
-	// TODO: f_mode
+	if ((fd = get_fd(current, 0)) < 0)
+		return fd;
 	error = open_namei(pathname, flags, mode, &inode, NULL);
+	if (error)
+		return error;
+	error = file_open(inode, flags, mode, &current->filp[fd]);
 	if (error) {
-		current->filp[fd] = NULL;
-		free_file(filp);
+		iput(inode);
 		return error;
 	}
-
-	filp->f_inode = inode;
-	filp->f_pos = 0;
-	filp->f_op = NULL;
-	filp->f_rdev = inode->i_rdev;
-	if (inode->i_op)
-		filp->f_op = inode->i_op->default_file_ops;
-	if (filp->f_op && filp->f_op->open) {
-		error = filp->f_op->open(inode, filp);
-		if (error) {
-			iput(inode);
-			current->filp[fd] = NULL;
-			free_file(filp);
-			return error;
-		}
-	}
 	return fd;
-}
-
-static int close_fp(struct file *filp, unsigned int fd)
-{
-	if (filp->f_count == 0) {
-		kprintf("VFS: Close: file count is 0\n");
-		return 0;
-	}
-	file_unref(filp);
-	return 0;
 }
 
 long sys_close(unsigned int fd)
@@ -136,5 +122,9 @@ long sys_close(unsigned int fd)
 	if (!(filp = current->filp[fd]))
 		return -EBADF;
 	current->filp[fd] = NULL;
-	return close_fp(filp, fd);
+	if (filp->f_count == 0)
+		kprintf("VFS: close: file count is 0\n");
+	else
+		file_unref(filp);
+	return 0;
 }

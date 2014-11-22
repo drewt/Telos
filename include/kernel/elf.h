@@ -22,6 +22,30 @@
 
 #define EI_NIDENT 16
 
+enum {
+	EI_MAGIC0     = 0,
+	EI_MAGIC1     = 1,
+	EI_MAGIC2     = 2,
+	EI_MAGIC3     = 3,
+	EI_CLASS      = 4,
+	EI_DATA       = 5,
+	EI_VERSION    = 6,
+	EI_OSABI      = 7,
+	EI_ABIVERSION = 8,
+};
+
+enum {
+	ELF_CLASS_NONE = 0,
+	ELF_CLASS_32   = 1,
+	ELF_CLASS_64   = 2,
+};
+
+enum {
+	ELF_DATA_NONE = 0,
+	ELF_DATA_LSB  = 1,
+	ELF_DATA_MSB  = 2,
+};
+
 /* ELF object types */
 enum {
 	ELF_TYPE_NONE	= 0,
@@ -34,7 +58,7 @@ enum {
 };
 
 struct elf32_hdr {
-	unsigned char e_ident[EI_NIDENT];
+	unsigned char ident[EI_NIDENT];
 	uint16_t type;
 	uint16_t machine;
 	uint32_t version;

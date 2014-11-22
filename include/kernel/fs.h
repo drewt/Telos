@@ -182,6 +182,7 @@ static inline struct inode *get_empty_inode(void)
 	return slab_alloc(inode_cachep);
 }
 
+int file_open(struct inode *inode, int flags, int mode, struct file **res);
 void mount_root(void);
 
 struct inode *iget(struct super_block *sb, unsigned long ino);
@@ -218,5 +219,9 @@ int register_chrdev(unsigned int major, const char * name, struct file_operation
 int register_blkdev(unsigned int major, const char * name, struct file_operations *fops);
 int unregister_chrdev(unsigned int major, const char * name);
 int unregister_blkdev(unsigned int major, const char * name);
+
+// FIXME: doesn't belong here...
+int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,
+		unsigned long off);
 
 #endif

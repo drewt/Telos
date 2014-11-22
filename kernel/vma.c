@@ -188,6 +188,15 @@ abort:
 	return error;
 }
 
+void mm_exec(struct mm_struct *mm)
+{
+	struct vma *vma, *n;
+	list_for_each_entry_safe(vma, n, &mm->map, chain) {
+		if (!(vma->flags & VM_KEEPEXEC))
+			vm_unmap(vma);
+	}
+}
+
 struct vma *vma_find(const struct mm_struct *mm, const void *addr)
 {
 	struct vma *area;

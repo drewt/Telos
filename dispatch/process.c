@@ -29,6 +29,8 @@
 #include <kernel/mm/vma.h>
 #include <kernel/drivers/console.h>
 #include <sys/exec.h>
+#include <sys/fcntl.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <string.h>
 
@@ -323,10 +325,116 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	return 0;
 }
 
+static bool elf_header_valid(struct elf32_hdr *hdr)
+{
+	static const char elf_magic[] = { 0x7F, 'E', 'L', 'F' };
+	if (memcmp(hdr->ident, elf_magic, 4))
+		return false;
+	if (hdr->ident[EI_CLASS] != ELF_CLASS_32)
+		return false;
+	if (hdr->ident[EI_DATA] != ELF_DATA_LSB)
+		return false;
+	return true;
+}
+
+static int elf_read_program_header(struct file *file, struct elf32_phdr *hdr,
+		unsigned long phoff)
+{
+	ssize_t bytes;
+	bytes = file->f_op->read(file, (char*)hdr, sizeof(*hdr), &phoff);
+	if (bytes < 0)
+		return bytes;
+	if ((size_t)bytes < sizeof(*hdr))
+		return -EINVAL;
+	return 0;
+}
+
+static int elf_program_header_valid(struct elf32_phdr *hdr)
+{
+	if (hdr->type == ELF_PHTYPE_DYNAMIC ||
+			hdr->type == ELF_PHTYPE_INTERP ||
+			hdr->type == ELF_PHTYPE_SHLIB)
+		return false;
+	return true;
+}
+
+#if 1
+static int elf_map_segment(struct file *file, struct elf32_phdr *hdr)
+{
+	void *vaddr = (void*)hdr->vaddr;
+	int error = do_mmap(file, &vaddr, hdr->memsz, hdr->flags & 7,
+			MAP_PRIVATE | MAP_FIXED, hdr->offset);
+	if (error)
+		return error;
+	if (hdr->memsz > hdr->filesz)
+		memset((char*)vaddr + hdr->filesz, 0, hdr->memsz - hdr->filesz);
+	return 0;
+}
+#else
+static int elf_map_segment(struct file *file, struct elf32_phdr *hdr)
+{
+	ssize_t bytes;
+	unsigned long pos = hdr->offset;
+	struct vma *vma = vma_create_fixed(&current->mm, hdr->vaddr,
+			hdr->memsz, hdr->flags & 7);
+	if (!vma)
+		return -ENOMEM;
+	disable_write_protect();
+	bytes = file->f_op->read(file, (char*)vma->start, hdr->filesz, &pos);
+	enable_write_protect();
+	if (bytes < 0)
+		return bytes;
+	if ((size_t)bytes < hdr->filesz)
+		return -EINVAL;
+	if (hdr->memsz > hdr->filesz) {
+		disable_write_protect();
+		memset((char*)vma->start + hdr->filesz, 0, hdr->memsz - hdr->filesz);
+		enable_write_protect();
+	}
+	return 0;
+}
+#endif
+
+static void *load_elf(struct inode *inode)
+{
+	int error;
+	ssize_t bytes;
+	struct file *file;
+	struct elf32_hdr hdr;
+	unsigned long pos = 0;
+
+	error = file_open(inode, O_RDONLY, 0, &file);
+	if (error)
+		return NULL;
+	if (!file->f_op || !file->f_op->read)
+		return NULL;
+	bytes = file->f_op->read(file, (char*)&hdr, sizeof(hdr), &pos);
+	if (bytes < 0 || (size_t)bytes < sizeof(hdr))
+		return NULL;
+	if (!elf_header_valid(&hdr))
+		return NULL;
+
+	pos = hdr.phoff;
+	for (int i = 0; i < hdr.phnum; i++, pos += hdr.phentsize) {
+		struct elf32_phdr phdr;
+		error = elf_read_program_header(file, &phdr, pos);
+		if (error)
+			return NULL;
+		if (!elf_program_header_valid(&phdr))
+			return NULL;
+		if (phdr.type != ELF_PHTYPE_LOAD)
+			continue;
+		error = elf_map_segment(file, &phdr);
+		if (error)
+			return NULL;
+	}
+	return (void*)hdr.entry;
+}
+
 long sys_execve(struct exec_args *args)
 {
 	int error;
-	void *argv, *envp;
+	void *argv, *envp, *entry;
 	unsigned long esp;
 	unsigned long *main_args;
 	struct inode *inode;
@@ -337,18 +445,28 @@ long sys_execve(struct exec_args *args)
 	error = namei(args->pathname.str, &inode);
 	if (error)
 		return error;
-	if (!S_ISFUN(inode->i_mode))
+	if (!S_ISFUN(inode->i_mode) && !S_ISREG(inode->i_mode))
 		return -EACCES;
+	mm_exec(&current->mm);
 	error = execve_copy(args, &argv, &envp);
 	if (error)
-		return error;
+		return error; // FIXME: all memory is unmapped at this point!
+
+	// load process image
+	if (S_ISFUN(inode->i_mode))
+		entry = inode->i_private;
+	else if (S_ISREG(inode->i_mode))
+		entry = load_elf(inode);
+
+	if (!entry)
+		return -ENOMEM; // FIXME: wrong, will segfault (as above)
 
 	sig_exec(&current->sig);
 	current->ifp = (char*) KSTACK_END - 16;
 	current->esp = (char*) current->ifp - sizeof(struct ucontext);
 
 	esp = STACK_END - 16;
-	put_iret_uframe(current->esp, (ulong)inode->i_private, esp);
+	put_iret_uframe(current->esp, (unsigned long)entry, esp);
 
 	main_args = (unsigned long*) esp;
 	main_args[0] = (unsigned long) exit;

@@ -65,6 +65,7 @@ struct mm_struct {
 int mm_init(struct mm_struct *mm);
 void mm_fini(struct mm_struct *mm);
 int mm_clone(struct mm_struct *dst, struct mm_struct *src);
+void mm_exec(struct mm_struct *mm);
 
 struct vma *vma_create_low(struct mm_struct *mm, uintptr_t start,
 		uintptr_t end, size_t len, int flags);
