@@ -69,7 +69,7 @@ static int mmap_map(struct vma *vma, void *addr)
 	char *vaddr;
 	struct mmap_private *private = vma->private;
 	uintptr_t base = page_base((uintptr_t)addr);
-	unsigned long pos = private->off + (vma->start - base);
+	unsigned long pos = private->off + (base - vma->start);
 
 	// FIXME: should wait until memory is available...
 	if (!(frame = kalloc_frame(vma->flags)))
