@@ -12,12 +12,13 @@
 	movw \reg, %gs
 .endm
 
+# current in %ebx afterwards
 .macro save_all
 	pushl %gs
 	pushl %fs
 	pushl %es
 	pushl %ds
-	pushl %ebp
+	subl  $4, %esp
 	pushl %ebp
 	pushl %eax
 	pushl %esi
@@ -25,9 +26,16 @@
 	pushl %edx
 	pushl %ecx
 	pushl %ebx
+	movl  current, %ebx
+	movl  PCB_ESP(%ebx), %ecx
+	movl  %ecx, 0x1C(%esp)
+	movl  %esp, PCB_ESP(%ebx)
 .endm
 
+# XXX: assumes current in %ebx
 .macro restore_all
+	movl 0x1C(%esp), %ecx
+	movl %ecx, PCB_ESP(%ebx)
 	popl %ebx
 	popl %ecx
 	popl %edx
@@ -35,7 +43,7 @@
 	popl %esi
 	popl %eax
 	popl %ebp
-	popl %ebp
+	addl $4, %esp
 	popl %ds
 	popl %es
 	popl %fs
@@ -63,20 +71,18 @@ isr_entry kbd_entry,   int_keyboard
 .global syscall_entry
 syscall_entry:
 	save_all
-	set_segs $SEG_KDATA, %bx
-	movl current,       %ebx
+	set_segs $SEG_KDATA, %cx
 	movl $-1,           EAX(%esp)
 	cmpl NR_SYSCALLS,   %eax
 	jae  return_to_user
-	movl %esp,          PCB_ESP(%ebx)
 	call *systab(,%eax,4)
 	movl %eax,          EAX(%esp)
 return_to_user:
 	call handle_signal
 _return_to_user:
 	movl PCB_ESP(%ebx), %esp
-	movl PCB_IFP(%ebx), %ebx
-	movl %ebx,          (tss + 4)
+	movl PCB_IFP(%ebx), %ecx
+	movl %ecx,          (tss + 4)
 	restore_all
 	iret
 
