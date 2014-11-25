@@ -1,7 +1,21 @@
+/*  Copyright 2013 Drew Thoreson
+ *
+ *  This file is part of Telos.
+ *
+ *  Telos is free software: you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, version 2 of the License.
+ *
+ *  Telos is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ *  details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#define __ASM__
 #include <kernel/i386.h>
-#include <kernel/interrupt.h>
 #include <kernel/process.h>
 
 .macro set_segs val reg
@@ -12,8 +26,7 @@
 	movw \reg, %gs
 .endm
 
-# current in %ebx afterwards
-.macro save_all
+.macro save_all_regs
 	pushl %gs
 	pushl %fs
 	pushl %es
@@ -26,16 +39,18 @@
 	pushl %edx
 	pushl %ecx
 	pushl %ebx
+.endm
+
+# current in %ebx afterwards
+.macro save_all
+	save_all_regs
 	movl  current, %ebx
 	movl  PCB_ESP(%ebx), %ecx
-	movl  %ecx, 0x1C(%esp)
+	movl  %ecx, ESP(%esp)
 	movl  %esp, PCB_ESP(%ebx)
 .endm
 
-# XXX: assumes current in %ebx
-.macro restore_all
-	movl 0x1C(%esp), %ecx
-	movl %ecx, PCB_ESP(%ebx)
+.macro restore_all_regs
 	popl %ebx
 	popl %ecx
 	popl %edx
@@ -50,17 +65,51 @@
 	popl %gs
 .endm
 
+# XXX: assumes current in %ebx
+.macro restore_all
+	movl ESP(%esp), %ecx
+	movl %ecx, PCB_ESP(%ebx)
+	restore_all_regs
+.endm
+
 .macro isr_entry entry handler
 .global \entry
 \entry:	save_all
-	set_segs $SEG_KDATA, %bx
-	movl current, %ebx
-	movl %esp, PCB_ESP(%ebx)
+	set_segs $SEG_KDATA, %cx
 	call \handler
 	jmp return_to_user
 .endm
 
-.set EAX, 0x14
+.macro exn_entry nr
+.global exn\nr
+exn\nr:	save_all
+	set_segs $SEG_KDATA, %cx
+	pushl $\nr
+	call exn_err
+	jmp return_to_user
+.endm
+
+exn_entry 0
+exn_entry 1
+exn_entry 2
+exn_entry 3
+exn_entry 4
+exn_entry 5
+exn_entry 6
+exn_entry 7
+exn_entry 8
+exn_entry 9
+exn_entry 10
+exn_entry 11
+exn_entry 12
+exn_entry 13
+exn_entry 14
+exn_entry 15
+exn_entry 16
+exn_entry 17
+exn_entry 18
+exn_entry 19
+exn_entry 20
 
 isr_entry pgf_entry,   exn_page_fault
 isr_entry fpe_entry,   exn_fpe
@@ -122,3 +171,4 @@ sys_exit:
 	pushl %ebx
 	call  do_exit
 	call  schedule
+

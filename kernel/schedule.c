@@ -17,14 +17,17 @@
 
 #include <kernel/i386.h>
 #include <kernel/list.h>
-#include <kernel/interrupt.h>
 #include <kernel/dispatch.h>
 
 pid_t idle_pid;
 extern void init(void*);
 extern void create_init(void(*func)(void*));
 
-struct pcb *current = NULL;
+static struct pcb dummy_init = {
+	.pid = -1,
+};
+
+struct pcb *current = &dummy_init;
 static LIST_HEAD(ready_queue);
 static LIST_HEAD(zombies);
 

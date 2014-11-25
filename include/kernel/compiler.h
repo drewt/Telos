@@ -23,10 +23,9 @@
 #define barrier() __asm__ __volatile__("": : :"memory")
 
 #define __always_inline __attribute__((always_inline))
-
 #define __used __attribute__((used))
-
 #define __printf(fmt,args) __attribute__((format(printf,fmt,args)))
+#define __packed __attribute__((packed))
 
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)

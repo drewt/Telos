@@ -72,7 +72,7 @@ struct elf32_hdr {
 	uint16_t shentsize;
 	uint16_t shnum;
 	uint16_t shstrndx;
-} __attribute__((packed));
+} __packed;
 
 /* ELF program header types */
 enum {
@@ -97,7 +97,7 @@ struct elf32_phdr {
 	uint32_t memsz;
 	uint32_t flags;
 	uint32_t align;
-} __attribute__((packed));
+} __packed;
 
 /* ELF section header types */
 enum {
@@ -139,7 +139,7 @@ struct elf32_shdr {
 	uint32_t info;
 	uint32_t addralign;
 	uint32_t entsize;
-} __attribute__((packed));
+} __packed;
 
 static inline struct elf32_phdr *elf32_get_phtab(struct elf32_hdr *hdr)
 {

@@ -23,7 +23,7 @@
 #define PCB_IFP 0x10
 #define PCB_PGD 0x14
 
-#ifndef __ASM__
+#ifndef __ASSEMBLER__
 
 #include <kernel/list.h>
 #include <kernel/fs.h>
@@ -54,12 +54,6 @@ enum {
 	PFLAG_SUPER     = 1,
 };
 
-struct pbuf {
-	void *buf;
-	int  len;
-	int  id;
-};
-
 /* process control block */
 struct pcb {
 	struct list_head  chain;
@@ -68,11 +62,10 @@ struct pcb {
 	void              *ifp;
 	struct mm_struct  mm;
 	/* metadata */
-	int               pid;
-	int               parent_pid;
+	pid_t             pid;
+	pid_t             parent_pid;
 	unsigned long     flags;
 	unsigned int      state;
-	struct pbuf       pbuf;
 	struct list_head  child_stats;
 	struct list_head  children;
 	struct list_head  child_chain;
@@ -90,17 +83,15 @@ struct pcb {
 	struct inode      *root;
 };
 
-extern struct pcb proctab[PT_SIZE];
-
 #define assert_pcb_offset(member, offset) \
-	_Static_assert(offsetof(struct pcb, member) == offset, \
-			"Misaligned PCB member: " #member)
+	assert_struct_offset(struct pcb, member, offset)
 assert_pcb_offset(rc,    PCB_RC);
 assert_pcb_offset(esp,   PCB_ESP);
 assert_pcb_offset(ifp,   PCB_IFP);
 assert_pcb_offset(mm,    PCB_PGD);
-_Static_assert(offsetof(struct mm_struct, pgdir) == 0,
-		"Misaligned PCB member: pgdir");
+assert_struct_offset(struct mm_struct, pgdir, 0);
+
+extern struct pcb proctab[PT_SIZE];
 
 int create_user_process(void(*func)(void*), void *arg, unsigned long flags);
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags);
@@ -133,5 +124,5 @@ static inline int get_fd(struct pcb *p, int start)
 	return -EMFILE;
 }
 
-#endif /* __ASM__ */
+#endif /* __ASSEMBLER__ */
 #endif /* _KERNEL_PROCESS_H_ */

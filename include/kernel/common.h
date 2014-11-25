@@ -28,8 +28,6 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-#define SYSERR (-1)
-
 /* linux */
 #define WARN_ON_ONCE(x) x
 
@@ -47,7 +45,8 @@ int _kprintf(unsigned char attr, const char *fmt, ...) __printf(2,3);
 #define kprintf(fmt, ...) _kprintf(TXT_CLR, fmt, ## __VA_ARGS__)
 #define warn(fmt, ...) _kprintf(0xC, "WARNING: "fmt"\n", ## __VA_ARGS__)
 
-_Noreturn void panic(const char *fmt, ...) __printf(1,2);
+_Noreturn void _panic(const char *fmt, ...) __printf(1,2);
+#define panic(fmt, ...) _panic("panic! "fmt"\n", ## __VA_ARGS__)
 
 /* initialization order */
 enum {
@@ -65,13 +64,6 @@ struct kinit_struct {
 	void(*func)(void);
 };
 
-static inline void breakpoint(void)
-{
-	asm("int $3");
-}
-
-/* export declarations */
-
 #define EXPORT(set, sym) \
 	asm(".section .set." #set ",\"aw\""); \
 	asm(".long " #sym); \
@@ -83,5 +75,9 @@ static inline void breakpoint(void)
 		.func = fun, \
 	}; \
 	EXPORT(kinit, uniq ## _kinit);
+
+#define assert_struct_offset(type, member, offset) \
+	_Static_assert(offsetof(type, member) == offset, \
+			"Misaligned "#type" member: "#member)
 
 #endif

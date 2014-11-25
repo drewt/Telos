@@ -15,14 +15,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <kernel/bitops.h>
 #include <kernel/dispatch.h>
-#include <kernel/interrupt.h>
-#include <kernel/list.h>
 #include <syscall.h>
-
-/* routines defined in other files */
-extern void tick(void);
 
 const int NR_SYSCALLS = SYSCALL_MAX;
 

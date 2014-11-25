@@ -31,7 +31,45 @@
 #define SEG_UDATA (SEGNR_UDATA << 3)
 #define SEG_TSS   (SEGNR_TSS   << 3)
 
-#ifndef __ASM__
+#define EXN_DBZ   0x00
+#define EXN_DBG   0x01
+#define EXN_NMI   0x02
+#define EXN_BP    0x03
+#define EXN_OF    0x04
+#define EXN_BRE   0x05
+#define EXN_ILLOP 0x06
+#define EXN_DNA   0x07
+#define EXN_DF    0x08
+#define EXN_CSO   0x09
+#define EXN_TSS   0x0A
+#define EXN_SNP   0x0B
+#define EXN_SF    0x0C
+#define EXN_GP    0x0D
+#define EXN_PF    0x0E
+#define EXN_RSRV  0x0F
+#define EXN_FPU   0x10
+#define EXN_AC    0x11
+#define EXN_MC    0x12
+#define EXN_SIMD  0x13
+
+#define INTR_TIMER   0x20
+#define INTR_KBD     0x21
+#define INTR_SYSCALL 0x80
+
+#define EBX 0x00
+#define ECX 0x04
+#define EDX 0x08
+#define EDI 0x0C
+#define ESI 0x10
+#define EAX 0x14
+#define EBP 0x18
+#define ESP 0x1C
+#define DS  0x20
+#define ES  0x24
+#define FS  0x28
+#define GS  0x2C
+
+#ifndef __ASSEMBLER__
 
 #define EFLAGS_IOPL(x) ((x) << 12)
 #define EFLAGS_IF 0x0200
@@ -52,6 +90,21 @@ struct gp_regs {
 	unsigned long gs;
 	unsigned long stack[];
 };
+
+#define assert_reg_offset(member, offset) \
+	assert_struct_offset(struct gp_regs, member, offset)
+assert_reg_offset(ebx, EBX);
+assert_reg_offset(ecx, ECX);
+assert_reg_offset(edx, EDX);
+assert_reg_offset(edi, EDI);
+assert_reg_offset(esi, ESI);
+assert_reg_offset(eax, EAX);
+assert_reg_offset(ebp, EBP);
+assert_reg_offset(esp, ESP);
+assert_reg_offset(ds,  DS);
+assert_reg_offset(es,  ES);
+assert_reg_offset(fs,  FS);
+assert_reg_offset(gs,  GS);
 
 struct ucontext {
 	struct gp_regs reg;
@@ -99,17 +152,20 @@ struct tss_entry {
 	unsigned long ldt;
 	unsigned short trap;
 	unsigned short iomap_base;
-} __attribute__((packed));
+} __packed;
 
 extern struct tss_entry tss;
 
-/* wrapper for outb instruction */
+static inline bool is_kernel_context(struct ucontext *cx)
+{
+	return cx->iret_cs >> 3 == SEGNR_KCODE;
+}
+
 static inline void outb(port_t port, unsigned char data)
 {
 	asm volatile("outb %1, %0" : : "d" (port), "a" (data));
 }
 
-/* wrapper for inb instruction */
 static inline unsigned char inb(port_t port)
 {
 	unsigned char ret;
@@ -125,62 +181,6 @@ static inline _Noreturn void halt(void)
 
 #define MOV(reg,loc) \
 	asm volatile("mov %%"reg", %0" : "=g" (loc) : : )
-
-#define GET_REG(reg,dst) \
-	asm volatile("movl %%"reg", %0\n" : "=g" (dst) : : )
-
-#define GET_SELECTOR(sel,dst) \
-	asm volatile("movw %%"sel", %0\n" : "=g" (dst) : : )
-
-/* from osdev.org wiki inline asm examples */
-/*-----------------------------------------------------------------------------
- * Loads the interrupt descriptor table given by (base,size) */
-//-----------------------------------------------------------------------------
-static inline void load_idt(void *base, unsigned short size)
-{
-	volatile struct {
-		u16 length;
-		u32 base;
-	} __attribute__((__packed__)) idtr = { size, (u32) base };
-	asm volatile("lidt (%0)" : : "g" (&idtr));
-}
-
-/* from osdev.org wiki inline asm examples (modified to update selectors) */
-/*-----------------------------------------------------------------------------
- * Loads the global descriptor table given by (base,size) and updates the
- * segment selectors */
-//-----------------------------------------------------------------------------
-static inline void load_gdt(void *base, unsigned short size)
-{
-	volatile struct {
-		u16 length;
-		u32 base;
-	} __attribute__((__packed__)) gdtr = { size, (u32) base };
-	asm volatile(
-	"lgdt (%0)		\n"
-	"ljmp %1,   $setcs	\n"
-"setcs:				\n"
-	"movw %2,   %%ax	\n"
-	"movw %%ax, %%ds	\n" 
-	"movw %%ax, %%es	\n"
-	"movw %%ax, %%ss	\n"
-	:
-	: "g" (&gdtr), "i" (SEG_KCODE), "i" (SEG_KDATA)
-	: "%eax"
-	);
-}
-
-/*-----------------------------------------------------------------------------
- * Loads the TSS register with a given value */
-//-----------------------------------------------------------------------------
-static inline void load_tss(unsigned short val)
-{
-	asm volatile(
-	"movw %0, %%ax	\n"
-	"ltr  %%ax	\n"
-	: : "g" (val) : "%eax"
-	);
-}
 
 static inline void enable_paging(void)
 {
@@ -256,8 +256,6 @@ static inline void put_iret_kframe(struct kcontext *f, unsigned long eip)
 
 extern void gdt_install(void);
 extern void idt_install(void);
-extern void set_gate(unsigned int num, unsigned long handler,
-		unsigned short selector, unsigned int dpl);
 extern void pic_init(u16 off1, u16 off2);
 extern void enable_irq(unsigned char irq, bool disable);
 extern void pic_eoi(void);
@@ -268,5 +266,5 @@ struct tm;
 void rtc_date(struct tm *date);
 void clock_init(void);
 
-#endif /* __ASM__ */
+#endif /* __ASSEMBLER__ */
 #endif /* _KERNEL_I386_H_ */

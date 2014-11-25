@@ -69,7 +69,6 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 
 	bprintf("Initializing machine state...\n");
 	idt_install();
-	isr_init();
 	gdt_install();
 	pic_init(0x20, 0x28);	// map IRQs after exceptions/reserved vectors
 	pit_init(100);		// 10ms timer

@@ -74,6 +74,36 @@ struct tss_entry tss = {
 	.gs	= SEG_KDATA | 3
 };
 
+/* from osdev.org wiki inline asm examples (modified to update selectors) */
+static inline void load_gdt(void *base, unsigned short size)
+{
+	volatile struct {
+		uint16_t length;
+		uint32_t base;
+	} __packed gdtr = { size, (uint32_t) base };
+	asm volatile(
+	"lgdt (%0)		\n"
+	"ljmp %1,   $setcs	\n"
+"setcs:				\n"
+	"movw %2,   %%ax	\n"
+	"movw %%ax, %%ds	\n"
+	"movw %%ax, %%es	\n"
+	"movw %%ax, %%ss	\n"
+	:
+	: "g" (&gdtr), "i" (SEG_KCODE), "i" (SEG_KDATA)
+	: "%eax"
+	);
+}
+
+static inline void load_tss(unsigned short val)
+{
+	asm volatile(
+	"movw %0, %%ax	\n"
+	"ltr  %%ax	\n"
+	: : "g" (val) : "%eax"
+	);
+}
+
 /*-----------------------------------------------------------------------------
  * Routine to create and load the kernel's global descriptor table */
 //-----------------------------------------------------------------------------

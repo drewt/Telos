@@ -80,7 +80,7 @@ struct multiboot_mmap {
 	unsigned long len_low;
 	unsigned long len_high;
 	unsigned long type;
-} __attribute__((packed));
+} __packed;
 
 struct multiboot_mod_list {
 	unsigned long start;
