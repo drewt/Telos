@@ -58,38 +58,27 @@ static DEFINE_SLAB_CACHE(posix_timers_cachep, sizeof(struct posix_timer));
 #define get_posix_timer() slab_alloc(posix_timers_cachep)
 #define free_posix_timer(p) slab_free(posix_timers_cachep, p)
 
-/*
- * Wakes a sleeping process.
- */
 static void wake_action(void *data)
 {
 	wake(data, 0);
 }
 
-/*
- * Sends SIGALRM to the process.
- */
 static void alrm_action(void *data)
 {
 	struct pcb *p = (struct pcb*) data;
 	__kill(p, SIGALRM, 0);
 }
 
-/*
- * Puts the current process to sleep for a given number of milliseconds.
- */
 long sys_sleep(unsigned long ticks)
 {
-	current->state = PROC_SLEEPING;
 	ktimer_init(&current->t_sleep, wake_action, current, TF_STATIC);
 	ktimer_start(&current->t_sleep, ticks);
-	return schedule();
+	current->state = PROC_INTERRUPTIBLE;
+	if (schedule())
+		return ktimer_remove(&current->t_sleep);
+	return 0;
 }
 
-/*
- * Registers an alarm for the current process, to go off in the given number of
- * seconds.
- */
 long sys_alarm(unsigned long ticks)
 {
 	long rc;

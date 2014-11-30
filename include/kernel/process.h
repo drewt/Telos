@@ -38,16 +38,15 @@
 
 /* process status codes */
 enum {
-	PROC_DEAD            = 0,
-	PROC_NASCENT         = 1,
-	PROC_READY           = 1 << 1,
-	PROC_RUNNING         = 1 << 2,
-	PROC_STOPPED         = 1 << 3,
-	PROC_ZOMBIE          = 1 << 4,
-	PROC_SIGWAIT         = 1 << 5,
-	PROC_SIGSUSPEND      = 1 << 6,
-	PROC_SLEEPING        = 1 << 7,
-	PROC_WAITING         = 1 << 8,
+	PROC_DEAD,
+	PROC_NASCENT,
+	PROC_READY,
+	PROC_RUNNING,
+	PROC_STOPPED,
+	PROC_ZOMBIE,
+	PROC_SIGWAIT,
+	PROC_WAITING,
+	PROC_INTERRUPTIBLE,
 };
 
 enum {

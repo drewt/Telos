@@ -286,17 +286,16 @@ long sys_sigwait(sigset_t set, int *sig)
 	set &= ~SIG_NOIGNORE;
 	if (current->sig.pending & set) {
 		signo = fls(current->sig.pending & set);
-		goto end;
+	} else {
+		for (;;) {
+			current->state = PROC_SIGWAIT;
+			signo = schedule();
+			if (sigismember(&set, signo))
+				break;
+			if (signal_accepted(&current->sig, signo))
+				return -EINTR;
+		}
 	}
-	for (;;) {
-		current->state = PROC_SIGWAIT;
-		signo = schedule();
-		if (sigismember(&set, signo))
-			break;
-		if (signal_accepted(&current->sig, signo))
-			return -EINTR;
-	}
-end:
 	*sig = signo;
 	clear_bit(signo-1, &current->sig.pending);
 	return 0;
@@ -308,15 +307,22 @@ long sys_sigsuspend(sigset_t mask)
 	current->sig.restore = current->sig.mask;
 	current->sig.mask = mask;
 
-	current->state = PROC_SIGSUSPEND;
+	current->state = PROC_INTERRUPTIBLE;
 	schedule();
 	return -EINTR;
+}
+
+static inline bool needs_wake(struct pcb *p, int sig_no)
+{
+	return p->state == PROC_SIGWAIT ||
+		(p->state == PROC_INTERRUPTIBLE && signal_accepted(&p->sig, sig_no)) ||
+		(p->state == PROC_WAITING &&
+			(sig_no == SIGCHLD || signal_accepted(&p->sig, sig_no)));
 }
 
 void __kill(struct pcb *p, int sig_no, int code)
 {
 	set_bit(sig_no-1, &p->sig.pending);
-
 	if (p->sig.actions[sig_no].sa_flags & SA_SIGINFO) {
 		struct ucontext *cx = p->esp;
 		p->sig.infos[sig_no].si_code = code;
@@ -324,19 +330,8 @@ void __kill(struct pcb *p, int sig_no, int code)
 		p->sig.infos[sig_no].si_pid   = current->pid;
 		p->sig.infos[sig_no].si_addr = (void*) cx->iret_eip;
 	}
-
-	// we always wake a sigwaiting process; it will make the final
-	// determination as to whether it should return, or sleep again
-	if (p->state == PROC_SIGWAIT)
+	if (needs_wake(p, sig_no))
 		wake(p, sig_no);
-	else if (p->state == PROC_SIGSUSPEND && signal_accepted(&p->sig, sig_no))
-		wake(p, sig_no);
-	else if (p->state == PROC_WAITING &&
-			(sig_no == SIGCHLD || signal_accepted(&p->sig, sig_no)))
-		wake(p, sig_no);
-	// sleeping processes are only awoken if the signal is accepted
-	else if (p->state == PROC_SLEEPING && signal_accepted(&p->sig, sig_no))
-		wake(p, ktimer_destroy(&p->t_sleep));
 }
 
 long sys_kill(pid_t pid, int sig)
