@@ -35,16 +35,7 @@ struct __mmap_args;
 
 struct ucontext;
 
-extern struct pcb *current;
-
 extern int idle_pid;
-
-_Noreturn void switch_to(struct pcb *p);
-void ready(struct pcb *p);
-void zombie(struct pcb *p);
-void reap(struct pcb *p);
-void wake(struct pcb *p, long rc);
-long schedule(void);
 
 void __kill(struct pcb *p, int sig_no, int code);
 
@@ -65,7 +56,7 @@ void exn_ill_instr(void);
 
 void int_keyboard(void);
 
-/* service routines */
+/* syscall routines */
 long sys_sbrk(long inc, ulong *oldbrk);
 long sys_mmap(struct __mmap_args *args);
 long sys_munmap(void *addr, size_t len);

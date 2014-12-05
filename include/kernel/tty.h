@@ -20,6 +20,7 @@
 
 #include <kernel/list.h>
 #include <kernel/fs.h>
+#include <kernel/wait.h>
 
 #define NR_TTYS 64
 #define TTY_BUFFER_SIZE 16
@@ -57,7 +58,7 @@ struct tty {
 	unsigned int index;
 	struct tty_driver *driver;
 	struct tty_buffer *buffer;
-	struct list_head readers;
+	struct wait_queue wait;
 	struct list_head flushed;
 	void *tty_private;
 };

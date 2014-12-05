@@ -68,6 +68,7 @@ struct pcb {
 	struct list_head  child_stats;
 	struct list_head  children;
 	struct list_head  child_chain;
+	struct list_head  wait_chain;
 	/* time */
 	unsigned int      timestamp;
 	struct timer      t_alarm;
@@ -91,9 +92,18 @@ assert_pcb_offset(mm,    PCB_PGD);
 assert_struct_offset(struct mm_struct, pgdir, 0);
 
 extern struct pcb proctab[PT_SIZE];
+extern struct pcb *current;
 
 int create_user_process(void(*func)(void*), void *arg, unsigned long flags);
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags);
+
+/* scheduling */
+_Noreturn void switch_to(struct pcb *p);
+void ready(struct pcb *p);
+void zombie(struct pcb *p);
+void reap(struct pcb *p);
+void wake(struct pcb *p, long rc);
+long schedule(void);
 
 static inline struct pcb *get_pcb(pid_t pid)
 {

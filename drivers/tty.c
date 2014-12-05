@@ -33,7 +33,7 @@ static struct tty *init_tty(struct tty *tty)
 	tty->flags = 1;
 	tty->driver = NULL;
 	tty->buffer = NULL;
-	INIT_LIST_HEAD(&tty->readers);
+	INIT_WAIT_QUEUE(&tty->wait);
 	INIT_LIST_HEAD(&tty->flushed);
 	return tty;
 }
@@ -115,11 +115,8 @@ static ssize_t tty_read(struct file *f, char *buf, size_t len,
 	while (bytes < len) {
 		struct tty_buffer *tty_buf;
 		while (list_empty(&tty->flushed)) {
-			list_add_tail(&current->chain, &tty->readers);
-			if (schedule()) {
-				list_del(&current->chain);
+			if (wait_interruptible(&tty->wait))
 				return -EINTR;
-			}
 		}
 
 		tty_buf = list_first_entry(&tty->flushed, struct tty_buffer, chain);
@@ -226,8 +223,7 @@ void tty_register_driver(struct tty_driver *driver)
 static void tty_buffer_flush(struct tty *tty)
 {
 	list_add_tail(&tty->buffer->chain, &tty->flushed);
-	if (!list_empty(&tty->readers))
-		wake(list_pop(&tty->readers, struct pcb, chain), 0);
+	wake_first(&tty->wait, 0);
 	tty->buffer = alloc_tty_buffer();
 }
 
