@@ -30,12 +30,12 @@
 
 #define slab_set ((struct slab_init_struct **) &_slab_set)
 #define slab_set_length __set_length(&_slab_set, &_slab_set_end)
-static void slab_sysinit(void)
+
+SYSINIT(slab, SUB_SLAB)
 {
 	for (unsigned i = 0; i < slab_set_length; i++)
 		*(slab_set[i]->cache) = slab_cache_create(slab_set[i]->object_size);
 }
-EXPORT_KINIT(slab_layer, SUB_SLAB, slab_sysinit);
 
 struct slab {
 	struct list_head chain;

@@ -69,12 +69,14 @@ struct kinit_struct {
 	asm(".long " #sym); \
 	asm(".previous")
 
-#define EXPORT_KINIT(uniq, subsys, fun) \
+#define SYSINIT(name, set) \
+	static void name##_sysinit(void); \
 	static struct kinit_struct uniq ## _kinit __used = { \
-		.subsystem = subsys, \
-		.func = fun, \
+		.subsystem = set, \
+		.func = name##_sysinit, \
 	}; \
-	EXPORT(kinit, uniq ## _kinit);
+	EXPORT(kinit, uniq ## _kinit); \
+	static void name##_sysinit(void)
 
 #define assert_struct_offset(type, member, offset) \
 	_Static_assert(offsetof(type, member) == offset, \

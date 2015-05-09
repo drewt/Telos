@@ -81,8 +81,7 @@ static struct super_block *modfs_read_super(struct super_block *sb, void *data,
 	return sb;
 }
 
-static void modfs_sysinit(void)
+SYSINIT(modfs, SUB_VFS)
 {
 	register_filesystem(modfs_read_super, "modfs", 0);
 }
-EXPORT_KINIT(modfs, SUB_VFS, modfs_sysinit);

@@ -123,8 +123,7 @@ static struct super_block *binfs_read_super(struct super_block *sb, void *data,
 	return sb;
 }
 
-static void binfs_sysinit(void)
+SYSINIT(binfs, SUB_VFS)
 {
 	register_filesystem(binfs_read_super, "binfs", 0);
 }
-EXPORT_KINIT(sysfs, SUB_VFS, binfs_sysinit);

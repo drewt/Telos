@@ -76,7 +76,7 @@ void report_status(struct pcb *p, int how, int val)
 	assert_status(parent, status);
 }
 
-static void proctab_init (void)
+SYSINIT(proctab, SUB_PROCESS)
 {
 	for (int i = 0; i < PT_SIZE; i++) {
 		proctab[i].pid   = i - PT_SIZE;
@@ -84,7 +84,6 @@ static void proctab_init (void)
 	}
 	proctab[0].pid = 0; // 0 is a reserved pid
 }
-EXPORT_KINIT(process, SUB_PROCESS, proctab_init);
 
 static struct pcb *pcb_common_init(struct pcb *p)
 {
@@ -457,6 +456,8 @@ long sys_execve(struct exec_args *args)
 		entry = inode->i_private;
 	else if (S_ISREG(inode->i_mode))
 		entry = load_elf(inode);
+	else
+		return -EINVAL;
 
 	if (!entry)
 		return -ENOMEM; // FIXME: wrong, will segfault (as above)

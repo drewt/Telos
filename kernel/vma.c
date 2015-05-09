@@ -29,7 +29,7 @@ static DEFINE_SLAB_CACHE(area_cachep, sizeof(struct vma));
 
 struct mm_struct kernel_mm;
 
-static void vm_sysinit(void)
+SYSINIT(vm, SUB_LAST)
 {
 	kernel_mm.pgdir = (uintptr_t)&_kernel_pgd;
 
@@ -40,7 +40,6 @@ static void vm_sysinit(void)
 		panic("Failed to map kernel memory");
 
 }
-EXPORT_KINIT(vm, SUB_LAST, vm_sysinit);
 
 static struct vma *new_vma(uintptr_t start, uintptr_t end, int flags)
 {

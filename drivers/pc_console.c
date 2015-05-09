@@ -246,9 +246,8 @@ struct tty_driver pc_console_driver = {
 	.op = &console_tty_ops,
 };
 
-static void console_sysinit(void)
+SYSINIT(console, SUB_DRIVER)
 {
 	tty_register_driver(&pc_console_driver);
 	enable_irq(1, 0);
 }
-EXPORT_KINIT(pc_console, SUB_DRIVER, console_sysinit);

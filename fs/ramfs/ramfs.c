@@ -557,8 +557,7 @@ struct super_block *ramfs_read_super(struct super_block *sb, void *data,
 	return sb;
 }
 
-static void ramfs_sysinit(void)
+SYSINIT(ramfs, SUB_VFS)
 {
 	register_filesystem(ramfs_read_super, "ramfs", 0);
 }
-EXPORT_KINIT(ramfs, SUB_VFS, ramfs_sysinit);

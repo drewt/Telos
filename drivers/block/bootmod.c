@@ -80,7 +80,7 @@ int register_moddev(struct multiboot_mod_list *mod)
 	return i;
 }
 
-static void modblk_sysinit(void)
+SYSINIT(modblk, SUB_DRIVER)
 {
 	register_block_driver(MOD_MAJOR, "mod", get_device, NULL);
 
@@ -90,4 +90,3 @@ static void modblk_sysinit(void)
 			break;
 	}
 }
-EXPORT_KINIT(memblk, SUB_DRIVER, modblk_sysinit);

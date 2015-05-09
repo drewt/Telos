@@ -95,7 +95,7 @@ static void fix_multiboot_info(struct multiboot_info *info)
 		info->mmap_addr = phys_to_kernel(info->mmap_addr);
 }
 
-static void mem_init(void)
+SYSINIT(mem, SUB_MEMORY)
 {
 	struct mem_header *heap;
 
@@ -117,7 +117,6 @@ static void mem_init(void)
 
 	paging_init(kernel_to_phys(kheap_end), page_base(MULTIBOOT_MEM_MAX(mb_info)));
 }
-EXPORT_KINIT(memory, SUB_MEMORY, mem_init);
 
 /*
  * Allocates size bytes of memory, returning a pointer to the start of the
