@@ -4,6 +4,7 @@
 #include <kernel/list.h>
 #include <kernel/dirent.h>
 #include <kernel/mm/slab.h>
+#include <kernel/wait.h>
 
 enum {
 	SEEK_SET,
@@ -64,6 +65,24 @@ enum {
 struct inode;
 struct file;
 struct super_block;
+
+enum {
+	BUF_UPTODATE = 1,
+	BUF_DIRTY    = 2,
+};
+
+struct buffer {
+	struct list_head b_chain;
+	struct hlist_node b_hash;
+	struct wait_queue b_wait;
+	void *b_data;
+	blksize_t b_size;
+	dev_t b_dev;
+	unsigned long b_flags;
+	blkcnt_t b_blocknr;
+	unsigned short b_count;
+	bool b_lock;
+};
 
 struct file_operations {
 	off_t (*lseek)(struct inode *, struct file *, off_t, int);
@@ -213,12 +232,22 @@ extern int open_namei(const char *pathname, int flag, int mode,
 		struct inode **res_inode, struct inode *base);
 
 /* devices.c */
-struct file_operations * get_blkfops(unsigned int major);
-struct file_operations * get_chrfops(unsigned int major);
+struct file_operations *get_blkfops(unsigned int major);
+struct file_operations *get_chrfops(unsigned int major);
 int register_chrdev(unsigned int major, const char * name, struct file_operations *fops);
 int register_blkdev(unsigned int major, const char * name, struct file_operations *fops);
 int unregister_chrdev(unsigned int major, const char * name);
 int unregister_blkdev(unsigned int major, const char * name);
+
+struct buffer *read_block(dev_t dev, blkcnt_t block, blksize_t size);
+void clear_buffer_cache(void);
+int submit_block(int rw, struct buffer *buf);
+void buffer_wait(struct buffer *buf);
+
+static inline void release_buffer(struct buffer *buf)
+{
+	buf->b_count--;
+}
 
 // FIXME: doesn't belong here...
 int do_mmap(struct file *file, void **addr, size_t len, int prot, int flags,

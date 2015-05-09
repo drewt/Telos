@@ -33,6 +33,8 @@ struct mount;
 struct exec_args;
 struct __mmap_args;
 
+struct dirent;
+
 struct ucontext;
 
 extern int idle_pid;

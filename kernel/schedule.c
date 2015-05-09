@@ -18,6 +18,7 @@
 #include <kernel/i386.h>
 #include <kernel/list.h>
 #include <kernel/dispatch.h>
+#include <kernel/wait.h>
 
 pid_t idle_pid;
 extern void init(void*);
@@ -90,4 +91,14 @@ static struct pcb *next_process(void)
 struct pcb *_schedule(void)
 {
 	return (current = next_process());
+}
+
+int wait_interruptible(struct wait_queue *q)
+{
+	int rc;
+	current->state = PROC_INTERRUPTIBLE;
+	list_add_tail(&current->wait_chain, &q->waiting);
+	rc = schedule();
+	list_del(&current->wait_chain);
+	return rc;
 }

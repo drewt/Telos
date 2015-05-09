@@ -20,6 +20,7 @@ enum {
 	FLOPPY_MAJOR	= 2,
 	HD_MAJOR	= 3,
 	TTY_MAJOR	= 4,
+	MOD_MAJOR       = 5,
 };
 
 #endif

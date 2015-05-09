@@ -40,8 +40,8 @@
 #define _GID_T_TYPE unsigned long
 #define _ID_T_TYPE unsigned long
 #define _OFF_T_TYPE long
-#define _BLKSIZE_T_TYPE unsigned long
-#define _BLKCNT_T_TYPE unsigned long
+#define _BLKSIZE_T_TYPE long
+#define _BLKCNT_T_TYPE long
 #define _DEV_T_TYPE unsigned long
 #define _SIG_ATOMIC_T_TYPE int
 #define _SIGSET_T_TYPE unsigned long

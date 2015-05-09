@@ -35,16 +35,6 @@ static inline void INIT_WAIT_QUEUE(struct wait_queue *wait)
 	INIT_LIST_HEAD(&wait->waiting);
 }
 
-static inline int wait_interruptible(struct wait_queue *q)
-{
-	int rc;
-	current->state = PROC_INTERRUPTIBLE;
-	list_add_tail(&current->wait_chain, &q->waiting);
-	rc = schedule();
-	list_del(&current->wait_chain);
-	return rc;
-}
-
 static inline bool wait_queue_empty(struct wait_queue *q)
 {
 	return list_empty(&q->waiting);
@@ -69,5 +59,7 @@ static inline void wake_all(struct wait_queue *q, int rc)
 		wake(p, rc);
 	}
 }
+
+int wait_interruptible(struct wait_queue *q);
 
 #endif

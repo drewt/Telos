@@ -26,7 +26,6 @@
 #ifndef __ASSEMBLER__
 
 #include <kernel/list.h>
-#include <kernel/fs.h>
 #include <kernel/signal.h>
 #include <kernel/timer.h>
 #include <kernel/mm/vma.h>
@@ -52,6 +51,9 @@ enum {
 enum {
 	PFLAG_SUPER     = 1,
 };
+
+struct inode;
+struct file;
 
 /* process control block */
 struct pcb {
