@@ -117,6 +117,8 @@ ssize_t read(int fd, void *buf, size_t nbyte)
 
 ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset)
 {
+	if (offset < 0)
+		return -1;
 	int rv = syscall4(SYS_PREAD, fd, buf, nbyte, offset);
 	if (rv < 0)
 		return -1;
@@ -126,6 +128,16 @@ ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset)
 ssize_t write(int fd, const void *buf, size_t nbyte)
 {
 	int rv = syscall3(SYS_WRITE, fd, buf, nbyte);
+	if (rv < 0)
+		return -1;
+	return rv;
+}
+
+ssize_t pwrite(int fd, const void *buf, size_t nbyte, off_t offset)
+{
+	if (offset < 0)
+		return -1;
+	int rv = syscall4(SYS_PWRITE, fd, buf, nbyte, offset);
 	if (rv < 0)
 		return -1;
 	return rv;

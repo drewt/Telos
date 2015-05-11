@@ -42,6 +42,7 @@ syscall_t systab[SYSCALL_MAX] = {
 	[SYS_READ]          = sys_read,
 	[SYS_PREAD]         = sys_pread,
 	[SYS_WRITE]         = sys_write,
+	[SYS_PWRITE]        = sys_pwrite,
 	[SYS_LSEEK]         = sys_lseek,
 	[SYS_READDIR]       = sys_readdir,
 	[SYS_IOCTL]         = sys_ioctl,

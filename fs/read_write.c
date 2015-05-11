@@ -75,15 +75,13 @@ long sys_read(unsigned int fd, char * buf, size_t count)
 	return file->f_op->read(file, buf, count, &file->f_pos);
 }
 
-long sys_pread(unsigned int fd, char *buf, size_t count, off_t pos)
+long sys_pread(unsigned int fd, char *buf, size_t count, unsigned long pos)
 {
 	struct file *file;
 	unsigned long unused = pos;
 
 	if (vm_verify(&current->mm, buf, count, VM_WRITE))
 		return -EFAULT;
-	if (pos < 0)
-		return -EINVAL;
 	if (fd >= NR_FILES || !(file = current->filp[fd])
 			|| !file->f_inode)
 		return -EBADF;
@@ -107,4 +105,21 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 	if (!count)
 		return 0;
 	return file->f_op->write(file, buf, count, &file->f_pos);
+}
+
+long sys_pwrite(unsigned int fd, char *buf, size_t count, unsigned long pos)
+{
+	struct file *file;
+	struct inode *inode;
+
+	if (vm_verify(&current->mm, buf, count, VM_READ))
+		return -EFAULT;
+	if (fd >= NR_FILES || !(file = current->filp[fd])
+			|| !(inode = file->f_inode))
+		return -EBADF;
+	if (!file->f_op || !file->f_op->write)
+		return -EINVAL;
+	if (!count)
+		return 0;
+	return file->f_op->write(file, buf, count, &pos);
 }
