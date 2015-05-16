@@ -6,6 +6,7 @@
 
 int permission(struct inode *inode, int mask)
 {
+	// TODO
 	return 1;
 }
 
@@ -20,11 +21,14 @@ int lookup(struct inode *dir, const char *name, int len,
 		return -ENOENT;
 
 	perm = permission(dir, MAY_EXEC);
+
+	// '..' at root/mount point are special cases handled by VFS
 	if (len == 2 && name[0] == '.' && name[1] == '.') {
 		if (dir == current->root) {
 			*result = dir;
 			return 0;
-		} else if ((sb = dir->i_sb) && (dir == sb->s_mounted)) {
+		}
+		if ((sb = dir->i_sb) && (dir == sb->s_mounted)) {
 			sb = dir->i_sb;
 			iput(dir);
 			dir = sb->s_covered;

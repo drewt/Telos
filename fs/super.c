@@ -325,7 +325,12 @@ static long unpacked_mount(const char *dev_name, const char *dir_name,
 		return -ENODEV;
 
 	if (fstype->requires_dev) {
-		return -ENOTSUP;
+		int error = namei(dev_name, &inode);
+		if (error)
+			return error;
+		if (!S_ISBLK(inode->i_mode))
+			return -ENOTBLK;
+		dev = inode->i_rdev;
 	} else {
 		if (!(dev = get_unnamed_dev()))
 			return -EMFILE;

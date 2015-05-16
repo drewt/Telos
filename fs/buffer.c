@@ -70,14 +70,26 @@ static struct buffer *make_buffer(dev_t dev, blkcnt_t block, blksize_t size)
 
 /*
  * Get a buffer for a given device/block number, allocating one if the buffer
- * is not in the hash table.
+ * is not in the hash table.  The returned buffer may not be up to date.
  */
-struct buffer *get_buffer(dev_t dev, blkcnt_t block, blksize_t size)
+static struct buffer *get_buffer(dev_t dev, blkcnt_t block, blksize_t size)
 {
 	struct buffer *b;
 	if ((b = find_buffer(dev, block, size)))
 		return b;
 	return make_buffer(dev, block, size);
+}
+
+/*
+ * Bring a buffer up-to-date.
+ */
+static struct buffer *read_buffer(struct buffer *buffer)
+{
+	if (!(buffer->b_flags & BUF_UPTODATE)) {
+		submit_block(READ, buffer);
+		buffer_wait(buffer);
+	}
+	return buffer;
 }
 
 /*
@@ -88,11 +100,7 @@ struct buffer *read_block(dev_t dev, blkcnt_t block, blksize_t size)
 	struct buffer *b;
 	if (!(b = get_buffer(dev, block, size)))
 		return NULL;
-	if (b->b_flags & BUF_UPTODATE)
-		return b;
-	submit_block(READ, b);
-	buffer_wait(b);
-	return b;
+	return read_buffer(b);
 }
 
 static void flush_buffer(struct buffer *buf)

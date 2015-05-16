@@ -17,6 +17,7 @@
 
 #include <kernel/fs.h>
 #include <kernel/wait.h>
+#include <kernel/mm/kmalloc.h>
 #include <sys/major.h>
 #include <string.h>
 #include "block.h"
@@ -31,7 +32,7 @@ static DEFINE_SLAB_CACHE(request_cachep, sizeof(struct request));
 static struct block_driver blkdev[MAX_BLKDEV];
 
 /*
- * Wait until a buffer is up to date.
+ * Wait until a buffer is unlocked.
  */
 void buffer_wait(struct buffer *buf)
 {
@@ -98,64 +99,143 @@ void block_request_completed(struct block_device *dev, struct request *req)
 	dev->handle_request(next);
 }
 
+blksize_t blkdev_blksize(dev_t devno)
+{
+	struct block_device *dev = get_device(devno);
+	if (!dev)
+		return -1;
+	return dev->blksize;
+}
+
 /*
- * Generic block device file operations.
+ * Use a slab cache for allocating small bio_vecs (the common case for
+ * directory/small file block lists), and fall back on kmalloc for larger
+ * allocations.
+ */
+#define SMALL_BIO_MAX 8
+#define BIO_VEC_SIZE(blkcnt) \
+	(sizeof(struct bio_vec) + sizeof(blkcnt_t)*blkcnt)
+
+static DEFINE_SLAB_CACHE(small_bio_cachep, BIO_VEC_SIZE(SMALL_BIO_MAX));
+
+struct bio_vec *alloc_bio_vec(dev_t dev, blkcnt_t blkcnt, blksize_t blksize)
+{
+	struct bio_vec *bio = blkcnt <= SMALL_BIO_MAX
+		? slab_alloc(small_bio_cachep)
+		: kmalloc(BIO_VEC_SIZE(blkcnt));
+	bio->dev = dev;
+	bio->blkcnt = blkcnt;
+	bio->blksize = blksize;
+	return bio;
+}
+
+void free_bio_vec(struct bio_vec *bio)
+{
+	if (bio->blkcnt <= SMALL_BIO_MAX)
+		slab_free(small_bio_cachep, bio);
+	else
+		kfree(bio);
+}
+
+/*
+ * Scatter/gather block I/O.
  */
 
-static ssize_t blkdev_generic_io(struct file *f, char *dst, size_t len,
-		unsigned long *pos, void (*do_io)(char*, char*, size_t))
+static ssize_t bio_do_io(struct bio_vec *vec, char *iobuf, size_t len,
+		size_t pos, int rw)
 {
 	size_t nr_bytes = 0;
-	struct block_device *dev = get_device(f->f_rdev);
-	len = MIN(len, dev->blksize*dev->blkcount - *pos);
+	blkcnt_t blocks = io_block_count(vec->blksize, pos, len);
+	blkcnt_t first_block = io_off_to_block(vec->blksize, pos);
+	off_t start = io_block_off(vec->blksize, pos);
+	off_t end = MIN((unsigned long)vec->blksize, start + len);
 
-	blkcnt_t blocks = io_block_count(dev->blksize, *pos, len);
-	blkcnt_t first_block = io_off_to_block(dev->blksize, *pos);
-	off_t start = *pos - io_block_start(dev->blksize, *pos);
-	off_t end = MIN(dev->blksize, start + len);
-
-	/*
-	 * At each iteration of the loop, we do I/O on a single block.  @start
-	 * and @end give the range of data within the block that is part of the
-	 * I/O request.  @nr_bytes tracks the number of bytes completed so far.
-	 */
 	for (blkcnt_t b = first_block; b - first_block < blocks; b++) {
-		// do I/O on a single block
-		struct buffer *buf = read_block(f->f_rdev, b, dev->blksize);
-		if (!buf)
-			return -EIO;
-		do_io(dst + nr_bytes, buf->b_data + start, end - start);
-		release_buffer(buf);
+		// do I/O within a single block
+		struct buffer *buffer = read_block(vec->dev, vec->block[b],
+				vec->blksize);
+		if (rw == READ) {
+			memcpy(iobuf+nr_bytes, buffer->b_data+start, end-start);
+		} else {
+			memcpy(buffer->b_data+start, iobuf+nr_bytes, end-start);
+			buffer->b_flags |= BUF_DIRTY;
+		}
+		release_buffer(buffer);
 
 		// update counts
 		nr_bytes += end - start;
 		start = 0;
-		end = MIN(dev->blksize, len - nr_bytes);
+		end = MIN((unsigned long)vec->blksize, len - nr_bytes);
 	}
-	*pos += nr_bytes;
 	return nr_bytes;
 }
 
-static void do_read(char *dst, char *src, size_t len)
+ssize_t bio_read(struct bio_vec *vec, char *iobuf, size_t len,
+		unsigned long *pos)
 {
-	memcpy(dst, src, len);
+	ssize_t r = bio_do_io(vec, iobuf, len, *pos, READ);
+	if (r < 0)
+		return r;
+	*pos += r;
+	return r;
 }
 
-static void do_write(char *src, char *dst, size_t len)
+ssize_t bio_write(struct bio_vec *vec, char *iobuf, size_t len,
+		unsigned long *pos)
 {
-	memcpy(dst, src, len);
+	ssize_t r = bio_do_io(vec, iobuf, len, *pos, WRITE);
+	if (r < 0)
+		return r;
+	*pos += r;
+	return r;
+}
+
+/*
+ * Sequential block I/O
+ */
+
+static ssize_t blkdev_generic_io(dev_t rdev, char *iobuf, size_t len,
+		unsigned long *pos, int rw)
+{
+	struct block_device *dev = get_device(rdev);
+	len = MIN(len, dev->blksize*dev->blkcount - *pos);
+	blkcnt_t count = io_block_count(dev->blksize, *pos, len);
+	blkcnt_t first = io_off_to_block(dev->blksize, *pos);
+	unsigned long io_off = io_block_off(dev->blksize, *pos);
+
+	// populate bio_vec with sequential blocks
+	struct bio_vec *bio = alloc_bio_vec(rdev, count, dev->blksize);
+	for (blkcnt_t i = 0; i < count; i++)
+		bio->block[i] = first + i;
+
+	ssize_t r = bio_do_io(bio, iobuf, len, io_off, rw);
+	if (r > 0)
+		*pos += r;
+
+	free_bio_vec(bio);
+	return r;
+}
+
+ssize_t blkdev_read(dev_t dev, void *dst, size_t len, unsigned long pos)
+{
+	return blkdev_generic_io(dev, dst, len, &pos, READ);
+}
+
+ssize_t blkdev_write(dev_t dev, void *src, size_t len, unsigned long pos)
+{
+	return blkdev_generic_io(dev, src, len, &pos, WRITE);
 }
 
 static ssize_t blkdev_generic_read(struct file *f, char *dst, size_t len,
 		unsigned long *pos)
 {
-	return blkdev_generic_io(f, dst, len, pos, do_read);
+	return blkdev_generic_io(f->f_rdev, dst, len, pos, READ);
 }
 
-static ssize_t blkdev_generic_write(struct file *f, const char *buf, size_t len,
+static ssize_t blkdev_generic_write(struct file *f, const char *src, size_t len,
 		unsigned long *pos)
 {
-	return blkdev_generic_io(f, (char*)buf, len, pos, do_write);
+	return blkdev_generic_io(f->f_rdev, (char*)src, len, pos, WRITE);
 }
 
 struct file_operations blkdev_generic_fops = {

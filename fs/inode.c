@@ -78,6 +78,8 @@ struct inode *__iget(struct super_block *sb, ino_t ino, bool crossmntp)
 	inode->i_dev = sb->s_dev;
 	inode->i_ino = ino;
 	inode->i_flags = sb->s_flags;
+	inode->i_count = 1;
+	inode->i_bio = NULL;
 	hash_add(inodes, &inode->i_hash, ino);
 	read_inode(inode);
 	return inode;
@@ -88,7 +90,10 @@ void iput(struct inode *inode)
 	if (!inode)
 		return;
 	if (--inode->i_count == 0 && !(inode->i_flags & MS_MEMFS)) {
-		kprintf("FREEING INODE: %lu\n", inode->i_ino);
+		struct super_operations *ops = inode->i_sb->s_op;
+		if (ops && ops->put_inode)
+			ops->put_inode(inode);
+		hash_del(&inode->i_hash);
 		slab_free(inode_cachep, inode);
 	}
 }

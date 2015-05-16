@@ -27,7 +27,7 @@
 
 #define MAX_MODDEV 16
 
-#define MOD_BLKSIZE 512
+#define MOD_BLKSIZE 1024
 
 struct mod_device {
 	struct block_device blkdev;

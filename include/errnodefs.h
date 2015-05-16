@@ -97,7 +97,8 @@ enum errno_values {
 	ETIMEDOUT,
 	ETXTBSY,
 	EWOULDBLOCK,
-	EXDEV
+	EXDEV,
+	ENOTBLK,
 };
 
 #endif

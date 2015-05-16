@@ -84,6 +84,17 @@ struct buffer {
 	bool b_lock;
 };
 
+/*
+ * Block I/O vectors: scatter/gather I/O on block devices.
+ */
+
+struct bio_vec {
+	dev_t dev;
+	blkcnt_t blkcnt;
+	blksize_t blksize;
+	blkcnt_t block[];
+};
+
 struct file_operations {
 	off_t (*lseek)(struct inode *, struct file *, off_t, int);
 	ssize_t (*read)(struct file *, char *, size_t, unsigned long *pos);
@@ -133,6 +144,7 @@ struct inode {
 	unsigned short		i_count;
 	unsigned short		i_flags;
 	bool			i_dirt;
+	struct bio_vec          *i_bio;
 	struct inode		*i_mount;
 	struct inode_operations	*i_op;
 	struct super_block	*i_sb;
@@ -243,10 +255,20 @@ struct buffer *read_block(dev_t dev, blkcnt_t block, blksize_t size);
 void clear_buffer_cache(void);
 int submit_block(int rw, struct buffer *buf);
 void buffer_wait(struct buffer *buf);
+ssize_t blkdev_read(dev_t dev, void *dst, size_t len, unsigned long pos);
+blksize_t blkdev_blksize(dev_t devno);
+
+struct bio_vec *alloc_bio_vec(dev_t dev, blkcnt_t blkcnt, blksize_t blksize);
+void free_bio_vec(struct bio_vec *bio);
+ssize_t bio_read(struct bio_vec *vec, char *iobuf, size_t len,
+		unsigned long *pos);
+ssize_t bio_write(struct bio_vec *vec, char *iobuf, size_t len,
+		unsigned long *pos);
 
 static inline void release_buffer(struct buffer *buf)
 {
-	buf->b_count--;
+	if (buf)
+		buf->b_count--;
 }
 
 // FIXME: doesn't belong here...

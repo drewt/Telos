@@ -62,6 +62,11 @@ static inline off_t io_block_start(blksize_t blksize, unsigned long off)
 	return off & ~(blksize-1);
 }
 
+static inline unsigned long io_block_off(blksize_t blksize, unsigned long off)
+{
+	return off - io_block_start(blksize, off);
+}
+
 static inline off_t io_block_to_off(blksize_t blksize, blkcnt_t blocknr)
 {
 	return blocknr << ilog2(blksize);
