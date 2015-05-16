@@ -43,11 +43,11 @@ static void fs_init(void)
 	int fd;
 	char buf[6];
 
-	if ((fd = open("/file", O_CREAT, S_IRWXU)) < 0)
+	if ((fd = open("/file", O_RDWR | O_CREAT, S_IRWXU)) < 0)
 		die("fs_init: open failed");
 	if (close(fd))
 		die("fs_init: close failed");
-	if ((fd = open("/test", O_CREAT, S_IRWXU)) < 0)
+	if ((fd = open("/test", O_RDWR | O_CREAT, S_IRWXU)) < 0)
 		die("fs_init: open failed");
 	if (write(fd, "test\n", 5) != 5)
 		die("fs_init: write failed");
@@ -73,8 +73,8 @@ int main(void)
 	fs_init();
 
 	open("/dev/cons0", O_RDONLY);
-	open("/dev/cons0", 0);
-	open("/dev/cons0", 0);
+	open("/dev/cons0", O_WRONLY);
+	open("/dev/cons0", O_WRONLY);
 
 	sigfillset(&set);
 	sigprocmask(SIG_SETMASK, &set, NULL);

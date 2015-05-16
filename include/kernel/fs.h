@@ -14,27 +14,33 @@ enum {
 };
 
 /*
- * These are the fs-independent mount-flags: up to 16 flags are supported
+ * fs-independent mount-flags: up to 16 flags are supported
  */
 enum {
-	MS_RDONLY	=  1, /* mount read-only */
-	MS_NOSUID	=  2, /* ignore suid and sgid bits */
-	MS_NODEV	=  4, /* disallow access to device special files */
-	MS_NOEXEC	=  8, /* disallow program execution */
-	MS_SYNC		= 16, /* writes are synced at once */
-	MS_REMOUNT	= 32, /* alter flags of a mounted FS */
-	MS_MEMFS        = 64, /* do not free inodes */
+	MS_RDONLY	=  1, // mount read-only
+	MS_NOSUID	=  2, // ignore suid and sgid bits
+	MS_NODEV	=  4, // disallow access to device special files
+	MS_NOEXEC	=  8, // disallow program execution
+	MS_SYNC		= 16, // writes are synced at once
+	MS_REMOUNT	= 32, // alter flags of a mounted FS
+	MS_MEMFS        = 64, // do not free inodes
 };
 
+/*
+ * Flags for the permission function.
+ */
 enum {
 	MAY_EXEC  = 1,
 	MAY_WRITE = 2,
 	MAY_READ  = 4,
 };
 
+/*
+ * Symbolic constants for submit_buffer, etc.
+ */
 enum {
-	READ  = 0,
-	WRITE = 1,
+	READ  = 1,
+	WRITE = 2,
 };
 
 /*

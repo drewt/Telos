@@ -8,10 +8,10 @@
 #include <kernel/fs.h>
 #include <kernel/stat.h>
 #include <kernel/mm/vma.h>
+#include <sys/fcntl.h>
 
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)
 {
-	int error;
 	struct file *file;
 	struct inode *inode;
 
@@ -21,11 +21,9 @@ long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)
 			!(inode = file->f_inode))
 		return -EBADF;
 
-	error = -ENOTDIR;
-	if (file->f_op && file->f_op->readdir) {
-		error = file->f_op->readdir(inode, file, dirent, count);
-	}
-	return error;
+	if (file->f_op && file->f_op->readdir)
+		return file->f_op->readdir(inode, file, dirent, count);
+	return -ENOTDIR;
 }
 
 long sys_lseek(unsigned int fd, off_t offset, unsigned int whence)
@@ -62,6 +60,8 @@ long sys_lseek(unsigned int fd, off_t offset, unsigned int whence)
 static long do_read(struct file *file, char *buf, size_t count,
 		unsigned long *pos)
 {
+	if (!(file->f_mode & O_READ))
+		return -EBADF;
 	if (!count)
 		return 0;
 	if (file->f_op && file->f_op->read)
@@ -100,6 +100,20 @@ long sys_pread(unsigned int fd, char *buf, size_t count, unsigned long pos)
 	return do_read(file, buf, count, &pos);
 }
 
+static long do_write(struct file *file, char *buf, size_t count,
+		unsigned long *pos)
+{
+	if (!(file->f_mode & O_WRITE))
+		return -EBADF;
+	if (file->f_inode && IS_RDONLY(file->f_inode))
+		return -ENOSPC;
+	if (!count)
+		return 0;
+	if (file->f_op && file->f_op->write)
+		return file->f_op->write(file, buf, count, pos);
+	return -EINVAL;
+}
+
 long sys_write(unsigned int fd, char * buf, size_t count)
 {
 	struct file *file;
@@ -110,11 +124,7 @@ long sys_write(unsigned int fd, char * buf, size_t count)
 	if (fd >= NR_FILES || !(file = current->filp[fd])
 			|| !(inode = file->f_inode))
 		return -EBADF;
-	if (!file->f_op || !file->f_op->write)
-		return -EINVAL;
-	if (!count)
-		return 0;
-	return file->f_op->write(file, buf, count, &file->f_pos);
+	return do_write(file, buf, count, &file->f_pos);
 }
 
 long sys_pwrite(unsigned int fd, char *buf, size_t count, unsigned long pos)
@@ -127,9 +137,5 @@ long sys_pwrite(unsigned int fd, char *buf, size_t count, unsigned long pos)
 	if (fd >= NR_FILES || !(file = current->filp[fd])
 			|| !(inode = file->f_inode))
 		return -EBADF;
-	if (!file->f_op || !file->f_op->write)
-		return -EINVAL;
-	if (!count)
-		return 0;
-	return file->f_op->write(file, buf, count, &pos);
+	return do_write(file, buf, count, &pos);
 }

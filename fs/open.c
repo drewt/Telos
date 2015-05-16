@@ -93,19 +93,20 @@ int file_open(struct inode *inode, int flags, int mode, struct file **res)
 	return 0;
 }
 
-long sys_open(const char *pathname, size_t name_len, int flags, int mode)
+long sys_open(const char *pathname, size_t name_len, int flags, int create_mode)
 {
 	int fd, error;
 	struct inode *inode;
+	int file_mode = flags & (O_READ | O_WRITE);
 	error = verify_user_string(pathname, name_len);
 	if (error)
 		return error;
 	if ((fd = get_fd(current, 0)) < 0)
 		return fd;
-	error = open_namei(pathname, flags, mode, &inode, NULL);
+	error = open_namei(pathname, flags, create_mode, &inode, NULL);
 	if (error)
 		return error;
-	error = file_open(inode, flags, mode, &current->filp[fd]);
+	error = file_open(inode, flags, file_mode, &current->filp[fd]);
 	if (error) {
 		iput(inode);
 		return error;
