@@ -61,6 +61,7 @@ enum {
 
 struct kinit_struct {
 	ulong subsystem;
+	const char *name;
 	void(*func)(void);
 };
 
@@ -69,14 +70,15 @@ struct kinit_struct {
 	asm(".long " #sym); \
 	asm(".previous")
 
-#define SYSINIT(name, set) \
-	static void name##_sysinit(void); \
-	static struct kinit_struct uniq ## _kinit __used = { \
+#define SYSINIT(uniq, set) \
+	static void uniq##_sysinit(void); \
+	static struct kinit_struct uniq##_kinit __used = { \
 		.subsystem = set, \
-		.func = name##_sysinit, \
+		.name = #uniq, \
+		.func = uniq##_sysinit, \
 	}; \
-	EXPORT(kinit, uniq ## _kinit); \
-	static void name##_sysinit(void)
+	EXPORT(kinit, uniq##_kinit); \
+	static void uniq##_sysinit(void)
 
 #define assert_struct_offset(type, member, offset) \
 	_Static_assert(offsetof(type, member) == offset, \

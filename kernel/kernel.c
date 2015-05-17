@@ -43,7 +43,9 @@ static void init_subsystems(void)
 	}
 
 	for (unsigned i = 0; i < kinit_set_length; i++) {
+		kprintf("Initializing %s... ", kinit_set[i]->name);
 		kinit_set[i]->func();
+		kprintf("done.\n");
 	}
 }
 
@@ -80,7 +82,7 @@ void kmain(struct multiboot_info *info, unsigned long magic)
 	bprintf("\n----------- MEMORY -----------\n");
 	bprintf("Kernel:    %p - %p\n", &_kstart, &_kend);
 	bprintf("Userspace: %p - %p\n", &_ustart, &_uend);
-	bprintf("Total:     %lu bytes\n", MULTIBOOT_MEM_MAX(mb_info));
+	bprintf("Total:     %lx bytes\n", MULTIBOOT_MEM_MAX(mb_info));
 
 	mount_root();
 
