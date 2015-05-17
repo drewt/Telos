@@ -410,10 +410,9 @@ static uintptr_t make_new_pgdir(void)
 	for (int i = 0; i < NR_HIGH_PAGES; i++)
 		pgtab[(1024 - NR_HIGH_PAGES) + i] = frames[i]->addr | PE_P | PE_RW;
 
-	for (pdi = addr_to_pdi(kernel_base);
-			kernel_pgdir[pdi] & PE_P;
-			pdi++)
+	for (pdi = addr_to_pdi(kernel_base); pdi < 1023; pdi++) {
 		pgdir[pdi] = kernel_pgdir[pdi];
+	}
 
 	kunmap_tmp_page(pgtab);
 	kunmap_tmp_page(pgdir);
@@ -616,7 +615,7 @@ struct pf_info *kalloc_frame(int flags)
 	struct pf_info *page;
 
 	if (list_empty(&frame_pool))
-		return NULL; /* TODO: try to free some memory */
+		panic("out of memory!"); // TODO: try to free some memory
 
 	page = list_pop(&frame_pool, struct pf_info, chain);
 	page->ref = 1;
