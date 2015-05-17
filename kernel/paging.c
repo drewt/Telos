@@ -20,13 +20,15 @@
 #include <kernel/elf.h>
 #include <kernel/mmap.h>
 #include <kernel/process.h>
-#include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 
 #include <string.h>
 
 #define PAGE_TABLE(name) \
 	pte_t name[1024] __attribute__((aligned(0x1000)))
+
+#define PAGE_TABLES(name, n) \
+	pte_t name[n][1024] __attribute__((aligned(0x1000)))
 
 #define TMP_PGTAB_BASE 0xFFC00000
 
@@ -131,20 +133,40 @@ static void page_attr_on(pmap_t pgdir, uintptr_t start, uintptr_t end,
 		*pte |= flags;
 }
 
+#define NR_FT_PGTABS 2
+static PAGE_TABLES(ft_pgtabs, NR_FT_PGTABS);
+
 static int frame_pool_init(uintptr_t start, uintptr_t end)
 {
+	uintptr_t v_start = phys_to_kernel(start);
 	unsigned nr_frames = (end - start) / FRAME_SIZE;
-	frame_table = kmalloc(nr_frames * sizeof(struct pf_info));
-	if (frame_table == NULL)
-		return -1;
+	unsigned ft_needed = (nr_frames * sizeof(struct pf_info)) / FRAME_SIZE + 1;
+	if (ft_needed > NR_FT_PGTABS*1024)
+		panic("too much memory!!?!?");
 
+	// map ft_needed pages for the frame table memory itself
+	kernel_pgdir[addr_to_pdi(v_start)] = kernel_to_phys(ft_pgtabs[0]) | PE_P | PE_RW;
+	kernel_pgdir[addr_to_pdi(v_start)+1] = kernel_to_phys(ft_pgtabs[1]) | PE_P | PE_RW;
+	for (unsigned i = 0; i < ft_needed; i++) {
+		ft_pgtabs[i/1024][i%1024] = (start + i*FRAME_SIZE) | PE_P | PE_RW;
+		flush_page(v_start + i*FRAME_SIZE);
+	}
+
+	frame_table = (void*)v_start;
 	fp_start = start;
 
-	for (unsigned i = 0; i < nr_frames; i++) {
+	// the pages mapping the frame table are already allocated
+	for (unsigned i = 0; i < ft_needed; i++) {
+		frame_table[i].addr = start + i*FRAME_SIZE;
+		frame_table[i].ref = 1;
+	}
+	// everything else goes into the frame pool
+	for (unsigned i = ft_needed; i < nr_frames; i++) {
 		frame_table[i].addr = start + i*FRAME_SIZE;
 		frame_table[i].ref = 0;
 		list_add_tail(&frame_table[i].chain, &frame_pool);
 	}
+	first_free = v_start/FRAME_SIZE + ft_needed;
 	return 0;
 }
 
@@ -154,8 +176,6 @@ static int frame_pool_init(uintptr_t start, uintptr_t end)
 int paging_init(uintptr_t start, uintptr_t end)
 {
 	frame_pool_init(start, end);
-
-	first_free = kheap_end / FRAME_SIZE;
 
 	/* disable R/W flag for read-only sections */
 	page_attr_off(kernel_pgdir, urostart, uroend, PE_RW);
