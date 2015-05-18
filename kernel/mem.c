@@ -31,10 +31,10 @@
 /* free list for kernel heap */
 static LIST_HEAD(free_list);
 
-ulong kheap_start;
-ulong kheap_end;
-
 /*
+ * Get the address at which the kernel heap should start.  This is the first
+ * 4MB aligned address after the kerne/multiboot stuff.
+ *
  * XXX: assumes bootloader puts modules, etc. in sane places (i.e. reasonably
  *      close to the kernel).  If it puts them somewhere dumb, like the end of
  *      memory, this will fail catastrophically.
@@ -60,15 +60,8 @@ static uintptr_t get_heap_start(struct multiboot_info *info)
 	if (MULTIBOOT_MMAP_VALID(info))
 		max = MAX(max, info->mmap_addr + info->mmap_length);
 
-	return page_align(max);
-}
-
-/*
- * Returns a 4MB aligned address, at least 1MB after start.
- */
-static uintptr_t get_heap_end(uintptr_t start)
-{
-	return (start + 0x00500000) & 0xFFC00000;
+	// align to 4MB and convert to physical address
+	return kernel_to_phys((page_align(max) + 0x00500000) & 0xFFC00000);
 }
 
 /*
@@ -97,8 +90,6 @@ static void fix_multiboot_info(struct multiboot_info *info)
 
 SYSINIT(mem, SUB_MEMORY)
 {
-	struct mem_header *heap;
-
 	mb_info = (void*) phys_to_kernel(mb_info);
 
 	fix_multiboot_info(mb_info);
@@ -107,15 +98,12 @@ SYSINIT(mem, SUB_MEMORY)
 		mb_info->mem_upper = 0x800000;
 	}
 
-	kheap_start = get_heap_start(mb_info);
-	kheap_end = get_heap_end(kheap_start);
+	paging_init(get_heap_start(mb_info), page_base(MULTIBOOT_MEM_MAX(mb_info)));
+}
 
-	heap = (void*) kheap_start;
-	heap->size = get_heap_end(kheap_start) - kheap_start;
-	heap->magic = MAGIC_FREE;
-	list_add(&heap->chain, &free_list);
-
-	paging_init(kernel_to_phys(kheap_end), page_base(MULTIBOOT_MEM_MAX(mb_info)));
+static unsigned pages_needed(size_t size)
+{
+	return align_up(size+sizeof(struct mem_header), FRAME_SIZE) / FRAME_SIZE;
 }
 
 /*
@@ -127,27 +115,29 @@ SYSINIT(mem, SUB_MEMORY)
 void *hmalloc(size_t size, struct mem_header **hdr)
 {
 	struct mem_header *p, *r;
-	struct list_head *it;
 
 	size = align_up(size, 16);
 
-	/* find a large enough segment of free memory */
-	list_for_each(it, &free_list) {
-		p = (struct mem_header*) it;
+	// find a large enough segment of free memory
+	list_for_each_entry(p, &free_list, chain) {
 		if (p->size >= size)
 			break;
 	}
 
-	/* not enough memory */
-	if (&p->chain == &free_list)
-		return NULL;
+	// not enough memory
+	if (&p->chain == &free_list) {
+		unsigned pages = pages_needed(size);
+		p = kalloc_pages(pages);
+		p->size = pages*FRAME_SIZE - sizeof(struct mem_header);
+		list_add(&p->chain, &free_list);
+	}
 
-	/* if p is a perfect fit... */
-	if (p->size - size <= sizeof(struct mem_header)) {
+	// if p is a perfect fit...
+	if (p->size - size <= sizeof(struct mem_header) + 16) {
 		p->magic = MAGIC_OK;
 		list_del(&p->chain);
 	} else {
-		/* split p into adjacent segments p and r */
+		// split p into adjacent segments p and r
 		r = (struct mem_header*) (p->data + size);
 		*r = *p;
 
@@ -156,7 +146,7 @@ void *hmalloc(size_t size, struct mem_header **hdr)
 		r->magic = MAGIC_FREE;
 		p->magic = MAGIC_OK;
 
-		/* replace p with r in the free list */
+		// replace p with r in the free list
 		list_replace(&p->chain, &r->chain);
 	}
 
@@ -166,12 +156,13 @@ void *hmalloc(size_t size, struct mem_header **hdr)
 	return p->data;
 }
 
-/* Returns a segment of previously allocated memory to the free list, given the
+/*
+ * Returns a segment of previously allocated memory to the free list, given the
  * header for the segment.
  */
 void hfree(struct mem_header *hdr)
 {
-	/* check that the supplied address is sane */
+	// check that the supplied address is sane
 	if (hdr->magic == MAGIC_FREE) {
 		kprintf("kfree(): detected double free\n");
 		return;
@@ -181,6 +172,6 @@ void hfree(struct mem_header *hdr)
 		return;
 	}
 
-	/* insert freed at the beginning of the free list */
+	// insert freed at the beginning of the free list
 	list_add(&hdr->chain, &free_list);
 }

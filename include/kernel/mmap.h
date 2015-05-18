@@ -41,12 +41,8 @@ extern unsigned long _kstack;
    +-------------------+ <-- 0xFFC00000
    |                   |
    :    kernel heap    :
-   :  (kalloc_pages)   :
    |                   |
-   +-------------------+ <-- kheap_end
-   |    kernel heap    |
-   |     (kmalloc)     |
-   +-------------------+ <-- kheap_start
+   +-------------------+ <-- ????????
    |                   |
    |    kernel text    |
    |                   |
@@ -118,9 +114,6 @@ extern unsigned long _slab_set_end;
 
 #define kinit_set ((struct kinit_struct**) &_kinit_set)
 #define kinit_set_length __set_length(&_kinit_set, &_kinit_set_end)
-
-extern unsigned long kheap_start;
-extern unsigned long kheap_end;
 
 #define HEAP_START   0x00100000UL
 #define HEAP_SIZE    FRAME_SIZE
