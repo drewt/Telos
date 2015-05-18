@@ -133,68 +133,6 @@ static void page_attr_on(pmap_t pgdir, uintptr_t start, uintptr_t end,
 		*pte |= flags;
 }
 
-#define NR_FT_PGTABS 2
-static PAGE_TABLES(ft_pgtabs, NR_FT_PGTABS);
-
-static int frame_pool_init(uintptr_t start, uintptr_t end)
-{
-	uintptr_t v_start = phys_to_kernel(start);
-	unsigned nr_frames = (end - start) / FRAME_SIZE;
-	unsigned ft_needed = (nr_frames * sizeof(struct pf_info)) / FRAME_SIZE + 1;
-	if (ft_needed > NR_FT_PGTABS*1024)
-		panic("too much memory!!?!?");
-
-	// map ft_needed pages for the frame table memory itself
-	kernel_pgdir[addr_to_pdi(v_start)] = kernel_to_phys(ft_pgtabs[0]) | PE_P | PE_RW;
-	kernel_pgdir[addr_to_pdi(v_start)+1] = kernel_to_phys(ft_pgtabs[1]) | PE_P | PE_RW;
-	for (unsigned i = 0; i < ft_needed; i++) {
-		ft_pgtabs[i/1024][i%1024] = (start + i*FRAME_SIZE) | PE_P | PE_RW;
-		flush_page(v_start + i*FRAME_SIZE);
-	}
-
-	frame_table = (void*)v_start;
-	fp_start = start;
-
-	// the pages mapping the frame table are already allocated
-	for (unsigned i = 0; i < ft_needed; i++) {
-		frame_table[i].addr = start + i*FRAME_SIZE;
-		frame_table[i].ref = 1;
-	}
-	// everything else goes into the frame pool
-	for (unsigned i = ft_needed; i < nr_frames; i++) {
-		frame_table[i].addr = start + i*FRAME_SIZE;
-		frame_table[i].ref = 0;
-		list_add_tail(&frame_table[i].chain, &frame_pool);
-	}
-	first_free = v_start/FRAME_SIZE + ft_needed;
-	return 0;
-}
-
-/*
- * Initialize the frame pool.
- */
-int paging_init(uintptr_t start, uintptr_t end)
-{
-	frame_pool_init(start, end);
-
-	/* disable R/W flag for read-only sections */
-	page_attr_off(kernel_pgdir, urostart, uroend, PE_RW);
-	page_attr_off(kernel_pgdir, krostart, kroend, PE_RW);
-
-	/* set up page table for temporary mappings */
-	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
-		kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
-	/* map _tmp_pgtab at 0xFFFFE000 */
-	_tmp_pgtab[1022] = kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
-	/* map kernel_pgdir at 0xFFFFF000 */
-	_tmp_pgtab[1023] = kernel_to_phys(kernel_pgdir) | PE_P | PE_RW;
-
-	for (int i = 0; i < 16; i++)
-		kernel_pgdir[i] = 0;
-
-	return 0;
-}
-
 static inline int vma_to_page_flags(int flags)
 {
 	return ((flags & VM_READ) ? PE_U : 0) | ((flags & VM_WRITE) ? PE_RW : 0);
@@ -869,3 +807,132 @@ void kfree_pages(void *addr, unsigned int n)
 
 	flush_pages((uintptr_t)addr, n);
 }
+
+/* Initialization {{{ */
+/*
+ * Map memory between start and end, where start is >= KERNEL_PAGE_OFFSET,
+ * to physical memory at (start - KERNEL_PAGE_OFFSET).
+ */
+void direct_map(uintptr_t start, uintptr_t end, int flags)
+{
+	pmap_t pgtab = kmap_page_table(start);
+	const unsigned nr_pages = align_up(end - start, FRAME_SIZE) / FRAME_SIZE;
+	const unsigned first_page = start / FRAME_SIZE;
+
+	for (unsigned i = 0; i < nr_pages;
+			i++, pgtab = knext_page_table(first_page+i, pgtab)) {
+		uintptr_t addr = kernel_to_phys(start) + i*FRAME_SIZE;
+		pgtab[(first_page+i) % 1024] = addr | flags;
+		flush_page(start + i*FRAME_SIZE);
+	}
+}
+
+/* Page tables for frame table memory */
+#define NR_FT_PGTABS 2
+static PAGE_TABLES(ft_pgtabs, NR_FT_PGTABS);
+
+/*
+ * Initialize the frame pool/kernel heap.
+ */
+static int frame_pool_init(uintptr_t start, uintptr_t end)
+{
+	uintptr_t v_start = phys_to_kernel(start);
+	unsigned nr_frames = align_up(end - start, FRAME_SIZE) / FRAME_SIZE;
+	unsigned ft_needed = (nr_frames * sizeof(struct pf_info)) / FRAME_SIZE + 1;
+	if (ft_needed > NR_FT_PGTABS*1024)
+		panic("too much memory!!?!?");
+
+	// map ft_needed pages for the frame table memory itself
+	// NB: we can't use direct map here, since it calls kalloc_frame
+	kernel_pgdir[addr_to_pdi(v_start)] = kernel_to_phys(ft_pgtabs[0]) | PE_P | PE_RW;
+	kernel_pgdir[addr_to_pdi(v_start)+1] = kernel_to_phys(ft_pgtabs[1]) | PE_P | PE_RW;
+	for (unsigned i = 0; i < ft_needed; i++) {
+		ft_pgtabs[i/1024][i%1024] = (start + i*FRAME_SIZE) | PE_P | PE_RW;
+		flush_page(v_start + i*FRAME_SIZE);
+	}
+
+	frame_table = (void*)v_start;
+	fp_start = start;
+
+	// the pages mapping the frame table are already allocated
+	for (unsigned i = 0; i < ft_needed; i++) {
+		frame_table[i].addr = start + i*FRAME_SIZE;
+		frame_table[i].ref = 1;
+	}
+	// everything else goes into the frame pool
+	for (unsigned i = ft_needed; i < nr_frames; i++) {
+		frame_table[i].addr = start + i*FRAME_SIZE;
+		frame_table[i].ref = 0;
+		list_add_tail(&frame_table[i].chain, &frame_pool);
+	}
+	first_free = v_start/FRAME_SIZE + ft_needed;
+	return 0;
+}
+
+/*
+ * This gets pretty hairy.  See the kernel portion of the memory map diagram in
+ * <kernel/mmap.h> to get a sense of the layout this function sets up.
+ */
+SYSINIT(mem, SUB_MEMORY)
+{
+	// keep track of the highest address used for the kernel / multiboot
+	// structures -- the kernel heap will start after this address
+	uintptr_t heap = page_align(kend);
+
+	// translate multiboot_info physical addresses to virtual addresses
+	mb_info = (void*) phys_to_kernel(mb_info);
+	if (MULTIBOOT_MODS_VALID(mb_info)) {
+		struct multiboot_mod_list *mods;
+		mb_info->mods_addr = phys_to_kernel(mb_info->mods_addr);
+		heap = MAX(heap, mb_info->mods_addr);
+
+		mods = (void*) mb_info->mods_addr;
+		for (unsigned i = 0; i < mb_info->mods_count; i++) {
+			mods[i].start = phys_to_kernel(mods[i].start);
+			mods[i].end = phys_to_kernel(mods[i].end);
+			heap = MAX(heap, mods[i].end);
+		}
+	}
+	if (MULTIBOOT_ELFSEC_VALID(mb_info)) {
+		mb_info->elf_sec.addr = phys_to_kernel(mb_info->elf_sec.addr);
+		struct elf_section_header_table *tab = (void*)&mb_info->elf_sec;
+		heap = MAX(heap, tab->addr + tab->num*tab->size);
+	}
+	if (MULTIBOOT_MMAP_VALID(mb_info)) {
+		mb_info->mmap_addr = phys_to_kernel(mb_info->mmap_addr);
+		heap = MAX(heap, mb_info->mmap_addr + mb_info->mmap_length);
+	}
+	// align to 4MB and convert to physical address
+	heap = kernel_to_phys((page_align(heap) + 0x00500000) & 0xFFC00000);
+
+	if (!MULTIBOOT_MEM_VALID(mb_info)) {
+		warn("failed to detect memory limits; assuming 8MB total");
+		mb_info->mem_upper = 0x800000;
+	}
+
+	frame_pool_init(heap, page_base(MULTIBOOT_MEM_MAX(mb_info)));
+
+	// disable R/W flag for read-only sections
+	page_attr_off(kernel_pgdir, urostart, uroend, PE_RW);
+	page_attr_off(kernel_pgdir, krostart, kroend, PE_RW);
+
+	// set up page table for temporary mappings
+	kernel_pgdir[addr_to_pdi(TMP_PGTAB_BASE)] =
+		kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
+	// map _tmp_pgtab at 0xFFFFE000
+	_tmp_pgtab[1022] = kernel_to_phys(_tmp_pgtab) | PE_P | PE_RW;
+	// map kernel_pgdir at 0xFFFFF000
+	_tmp_pgtab[1023] = kernel_to_phys(kernel_pgdir) | PE_P | PE_RW;
+
+	for (int i = 0; i < 16; i++)
+		kernel_pgdir[i] = 0;
+
+	// only the first 4MB are direct-mapped at boot.  This is enough for
+	// the kernel, but multiboot modules may exceed this limit.
+	if (!MULTIBOOT_MODS_VALID(mb_info))
+		return;
+	struct multiboot_mod_list *mods = (void*) mb_info->mods_addr;
+	for (unsigned i = 0; i < mb_info->mods_count; i++)
+		direct_map(mods[i].start, mods[i].end, PE_P | PE_RW);
+}
+/* Initialization }}} */

@@ -42,10 +42,15 @@ extern unsigned long _kstack;
    |                   |
    :    kernel heap    :
    |                   |
-   +-------------------+ <-- ????????
+   +-------------------+
+   |    frame table    |
+   +-------------------+
    |                   |
-   |    kernel text    |
+   |       boot        |
+   |      modules      |
    |                   |
+   +-------------------+
+   |    kernel image   |
    +===================+ <-- 0xC0000000
    |                   |
    |    user stack     |
@@ -69,6 +74,17 @@ extern unsigned long _kstack;
    :                   :
    :                   :
    +-------------------+
+
+   Kernel Memory
+   -------------
+
+   current pgdir - the page directory of the current process
+   temp pgtab    - (per-process) page table used for temporary mappings
+   kernel stack  - (per-process) stack for kernel-mode execution
+   kernel heap   - kernel heap memory (for kmalloc, etc.)
+   frame table   - table of pf_info structures describing  all of physical memory
+   boot modules  - modules loaded into memory by the bootloader
+   kernel image  - the kernel image
 
 */
 
