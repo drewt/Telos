@@ -14,6 +14,7 @@
 #define SBT_SIZE 100
 
 #define ROOT_DEV 1
+#define ROOT_FS  "ramfs"
 
 static int root_mountflags = 0;
 
@@ -22,8 +23,6 @@ extern struct file_operations * get_blkfops(unsigned int);
 struct super_block super_blocks[SBT_SIZE];
 
 struct inode *root_inode;
-
-static int do_remount_sb(struct super_block *sb, int flags, char * data);
 
 static struct super_block *get_super(dev_t dev)
 {
@@ -98,7 +97,7 @@ static dev_t get_unnamed_dev(void)
 	for (i = 0; i < sizeof unnamed_dev_in_use/sizeof unnamed_dev_in_use[0]; i++) {
 		if (unnamed_dev_in_use[i] == 0) {
 			unnamed_dev_in_use[i] = 1;
-			return (UNNAMED_MAJOR << 8) | i;
+			return makedev(UNNAMED_MAJOR, i);
 		}
 	}
 	return 0;
@@ -107,8 +106,6 @@ static dev_t get_unnamed_dev(void)
 static void put_unnamed_dev(dev_t dev)
 {
 	if (!dev)
-		return;
-	if (unnamed_dev_in_use[dev] == 0)
 		return;
 	unnamed_dev_in_use[dev] = 0;
 }
@@ -224,13 +221,14 @@ long sys_umount(const char *name, size_t name_len)
  * We also have to flush all inode-data for this device, as the new mount
  * might need new info.
  */
-static int do_mount(dev_t dev, const char * dir, const char * type, int flags, void * data)
+static int do_mount(dev_t dev, const char * dir, const char * type, int flags,
+		void * data)
 {
 	struct inode *dir_i;
 	struct super_block *sb;
 	int error;
 
-	error = namei(dir,&dir_i);
+	error = namei(dir, &dir_i);
 	if (error)
 		return error;
 	if (dir_i->i_count != 1 || dir_i->i_mount) {
@@ -252,7 +250,7 @@ static int do_mount(dev_t dev, const char * dir, const char * type, int flags, v
 	}
 	sb->s_covered = dir_i;
 	dir_i->i_mount = sb->s_mounted;
-	return 0;		/* we don't iput(dir_i) - see umount */
+	return 0; // we don't iput(dir_i) - see umount
 }
 
 /*
@@ -260,72 +258,61 @@ static int do_mount(dev_t dev, const char * dir, const char * type, int flags, v
  * is used as a reference - file system type and the device are ignored.
  * FS-specific mount options can't be altered by remounting.
  */
-/*static int do_remount_sb(struct super_block *sb, int flags, char *data)
+static int do_remount_sb(struct super_block *sb, int flags, const void *data)
 {
-	int retval;
+	int error;
 	
 	// If we are remounting RDONLY, make sure there are no rw files open
 	if ((flags & MS_RDONLY) && !(sb->s_flags & MS_RDONLY))
 		if (!fs_may_remount_ro(sb->s_dev))
 			return -EBUSY;
 	if (sb->s_op && sb->s_op->remount_fs) {
-		retval = sb->s_op->remount_fs(sb, &flags, data);
-		if (retval)
-			return retval;
+		error = sb->s_op->remount_fs(sb, &flags, data);
+		if (error)
+			return error;
 	}
 	sb->s_flags = (sb->s_flags & ~MS_RMT_MASK) |
 		(flags & MS_RMT_MASK);
 	return 0;
 }
 
-static int do_remount(const char *dir,int flags,char *data)
+static int do_remount(const char *dir, int flags, const void *data)
 {
 	struct inode *dir_i;
-	int retval;
+	int error;
 
-	retval = namei(dir,&dir_i);
-	if (retval)
-		return retval;
+	error = namei(dir,&dir_i);
+	if (error)
+		return error;
 	if (dir_i != dir_i->i_sb->s_mounted) {
 		iput(dir_i);
 		return -EINVAL;
 	}
-	retval = do_remount_sb(dir_i->i_sb, flags, data);
+	error = do_remount_sb(dir_i->i_sb, flags, data);
 	iput(dir_i);
-	return retval;
-}*/
-
-/*
- * Flags is a 16-bit value that allows up to 16 non-fs dependent flags to
- * be given to the mount() call (ie: read-only, no-dev, no-suid etc).
- *
- * data is a (void *) that can point to any structure up to
- * PAGE_SIZE-1 bytes, which can contain arbitrary fs-dependent
- * information (or be NULL).
- *
- * NOTE! As old versions of mount() didn't use this setup, the flags
- * has to have a special 16-bit magic number in the hight word:
- * 0xC0ED. If this magic word isn't present, the flags and data info
- * isn't used, as the syscall assumes we are talking to an older
- * version that didn't understand them.
- */
+	return error;
+}
 
 static long unpacked_mount(const char *dev_name, const char *dir_name,
-		const char *type, unsigned long new_flags, const void *data)
+		const char *type, unsigned long flags, const void *data)
 {
 	struct file_system_type *fstype;
 	struct inode *inode;
 	struct file_operations *fops;
 	dev_t dev;
-	int retval;
-	ulong flags = 0;
+	int error;
 
-	fstype = get_fs_type(type);
-	if (!fstype)
+	if (flags & MS_REMOUNT) {
+		return do_remount(dir_name, flags, data);
+	}
+	flags &= MS_MOUNT_MASK;
+	if (!type || !(fstype = get_fs_type(type)))
 		return -ENODEV;
 
 	if (fstype->requires_dev) {
-		int error = namei(dev_name, &inode);
+		if (!dev_name)
+			return -ENOTBLK;
+		error = namei(dev_name, &inode);
 		if (error)
 			return error;
 		if (!S_ISBLK(inode->i_mode))
@@ -338,17 +325,16 @@ static long unpacked_mount(const char *dev_name, const char *dir_name,
 	}
 	fops = get_blkfops(major(dev));
 	if (fops && fops->open) {
-		if ((retval = fops->open(inode, NULL))) {
+		if ((error = fops->open(inode, NULL))) {
 			iput(inode);
-			return retval;
+			return error;
 		}
 	}
-	/* TODO: flags */
-	retval = do_mount(dev, dir_name, type, flags, NULL);
-	if (retval && fops && fops->release)
+	error = do_mount(dev, dir_name, type, flags, NULL);
+	if (error && fops && fops->release)
 		fops->release(inode, NULL);
 	iput(inode);
-	return retval;
+	return error;
 }
 
 long sys_mount(const struct mount *mount)
@@ -356,17 +342,25 @@ long sys_mount(const struct mount *mount)
 	int error;
 	if (vm_verify(&current->mm, mount, sizeof(*mount), VM_READ))
 		return -EFAULT;
+	// data may be null, or else point to 4096 bytes of readable memory
+	if (mount->data && vm_verify(&current->mm, mount->data, 4096, VM_READ))
+		return -EFAULT;
+	// target is always required
+	error = verify_user_string(mount->dir.str, mount->dir.len);
+	if (error)
+		return error;
+	// source may be null (e.g. ramfs)
 	if (mount->dev.str) {
 		error = verify_user_string(mount->dev.str, mount->dev.len);
 		if (error)
 			return error;
 	}
-	error = verify_user_string(mount->dir.str, mount->dir.len);
-	if (error)
-		return error;
-	error = verify_user_string(mount->type.str, mount->type.len);
-	if (error)
-		return error;
+	// filesystemtype may be null (e.g. remounting a filesytem)
+	if (mount->type.str) {
+		error = verify_user_string(mount->type.str, mount->type.len);
+		if (error)
+			return error;
+	}
 	return unpacked_mount(mount->dev.str, mount->dir.str, mount->type.str,
 			mount->flags, mount->data);
 }
@@ -377,7 +371,7 @@ void mount_root(void)
 	struct inode *inode;
 
 	memset(super_blocks, 0, sizeof(super_blocks));
-	if (!(sb = read_super(ROOT_DEV, "ramfs", root_mountflags, NULL, 1)))
+	if (!(sb = read_super(ROOT_DEV, ROOT_FS, root_mountflags, NULL, 1)))
 		panic("VFS: unable to mount root");
 
 	root_inode = inode = sb->s_mounted;

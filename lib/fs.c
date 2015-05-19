@@ -119,11 +119,11 @@ int mount(const char *dev_name, const char *dir_name, const char *type,
 		},
 		.dir = {
 			.str = dir_name,
-			.len = strlen(dir_name),
+			.len = dir_name ? strlen(dir_name) : 0,
 		},
 		.type = {
 			.str = type,
-			.len = strlen(type),
+			.len = type ? strlen(type) : 0,
 		},
 		.flags = flags,
 		.data = data,

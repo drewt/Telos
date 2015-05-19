@@ -18,11 +18,58 @@
 #include <kernel/fs.h>
 #include <kernel/hashtable.h>
 #include <kernel/mm/slab.h>
+#include <sys/stat.h>
+#include <sys/fcntl.h>
 
 static DEFINE_HASHTABLE(inodes, 9);
 
-DEFINE_SLAB_CACHE(file_cachep, sizeof(struct file));
-DEFINE_SLAB_CACHE(inode_cachep, sizeof(struct inode));
+static DEFINE_SLAB_CACHE(file_cachep, sizeof(struct file));
+static DEFINE_SLAB_CACHE(inode_cachep, sizeof(struct inode));
+
+static LIST_HEAD(files);
+
+struct file *get_empty_file(void)
+{
+	struct file *filp = slab_alloc(file_cachep);
+	if (filp) {
+		filp->f_count = 1;
+		list_add(&filp->chain, &files);
+	}
+	return filp;
+}
+
+void free_file(struct file *filp)
+{
+	list_del(&filp->chain);
+	slab_free(file_cachep, filp);
+}
+
+void file_unref(struct file *file)
+{
+	if (--file->f_count > 0)
+		return;
+	if (file->f_op && file->f_op->release)
+		file->f_op->release(file->f_inode, file);
+	iput(file->f_inode);
+	free_file(file);
+}
+
+struct inode *get_empty_inode(void)
+{
+	return slab_alloc(inode_cachep);
+}
+
+bool fs_may_remount_ro(dev_t dev)
+{
+	struct file *file;
+	list_for_each_entry(file, &files, chain) {
+		if (!file->f_count || !file->f_inode || file->f_inode->i_dev != dev)
+			continue;
+		if (S_ISREG(file->f_inode->i_mode) && file->f_mode & O_WRITE)
+			return false;
+	}
+	return true;
+}
 
 static void write_inode(struct inode *inode)
 {

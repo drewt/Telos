@@ -5,25 +5,13 @@
 #include <kernel/dirent.h>
 #include <kernel/mm/slab.h>
 #include <kernel/wait.h>
+#include <sys/mount.h>
 
 enum {
 	SEEK_SET,
 	SEEK_CUR,
 	SEEK_END,
 	_SEEK_MAX
-};
-
-/*
- * fs-independent mount-flags: up to 16 flags are supported
- */
-enum {
-	MS_RDONLY	=  1, // mount read-only
-	MS_NOSUID	=  2, // ignore suid and sgid bits
-	MS_NODEV	=  4, // disallow access to device special files
-	MS_NOEXEC	=  8, // disallow program execution
-	MS_SYNC		= 16, // writes are synced at once
-	MS_REMOUNT	= 32, // alter flags of a mounted FS
-	MS_MEMFS        = 64, // do not free inodes
 };
 
 /*
@@ -163,7 +151,7 @@ struct super_operations {
 	void(*put_inode)(struct inode *);
 	void(*put_super)(struct super_block *);
 	void(*write_super)(struct super_block *);
-	int(*remount_fs)(struct super_block *, int *, char *);
+	int(*remount_fs)(struct super_block *, int *, const void *);
 };
 
 struct super_block {
@@ -185,39 +173,14 @@ struct file_system_type {
 extern struct inode_operations chrdev_inode_operations;
 extern struct inode_operations blkdev_inode_operations;
 
-extern struct slab_cache *file_cachep;
-extern struct slab_cache *inode_cachep;
 extern struct inode *root_inode;
 
 void iput(struct inode *inode);
 
-static inline struct file *get_empty_file(void)
-{
-	struct file *filp = slab_alloc(file_cachep);
-	if (filp)
-		filp->f_count = 1;
-	return filp;
-}
-
-static inline void free_file(struct file *filp)
-{
-	slab_free(file_cachep, filp);
-}
-
-static inline void file_unref(struct file *file)
-{
-	if (--file->f_count > 0)
-		return;
-	if (file->f_op && file->f_op->release)
-		file->f_op->release(file->f_inode, file);
-	iput(file->f_inode);
-	free_file(file);
-}
-
-static inline struct inode *get_empty_inode(void)
-{
-	return slab_alloc(inode_cachep);
-}
+struct file *get_empty_file(void);
+void free_file(struct file *filp);
+void file_unref(struct file *file);
+struct inode *get_empty_inode(void);
 
 int file_open(struct inode *inode, int flags, int mode, struct file **res);
 void mount_root(void);
@@ -233,9 +196,9 @@ static void ifree(struct inode *inode)
 }
 
 int permission(struct inode *inode, int mask);
-int fs_may_mount(dev_t dev);
-int fs_may_umount(dev_t dev, struct inode * mount_root);
-extern int fs_may_remount_ro(dev_t dev);
+bool fs_may_mount(dev_t dev);
+bool fs_may_umount(dev_t dev, struct inode * mount_root);
+bool fs_may_remount_ro(dev_t dev);
 
 int register_filesystem(
 	struct super_block *(*read_super)(struct super_block*, void*, int),
