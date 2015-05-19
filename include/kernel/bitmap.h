@@ -24,22 +24,22 @@
  * Generic bitmap implementation, supporting bitmaps of arbitrary length.
  */
 
-static inline void bitmap_set(ulong *bitmap, unsigned idx)
+static inline void bitmap_set(unsigned long *bitmap, unsigned idx)
 {
-	bitmap[idx / BITS_PER_LONG] |= 1 << (idx % BITS_PER_LONG);
+	bitmap[idx / BITS_PER_LONG] |= 1UL << (idx % BITS_PER_LONG);
 }
 
-static inline void bitmap_clear(ulong *bitmap, unsigned idx)
+static inline void bitmap_clear(unsigned long *bitmap, unsigned idx)
 {
-	bitmap[idx / BITS_PER_LONG] &=  ~(1 << (idx % BITS_PER_LONG));
+	bitmap[idx / BITS_PER_LONG] &=  ~(1UL << (idx % BITS_PER_LONG));
 }
 
-static inline void bitmap_change(ulong *bitmap, unsigned idx)
+static inline void bitmap_change(unsigned long *bitmap, unsigned idx)
 {
-	bitmap[idx / BITS_PER_LONG] ^= 1 << (idx % BITS_PER_LONG);
+	bitmap[idx / BITS_PER_LONG] ^= 1UL << (idx % BITS_PER_LONG);
 }
 
-static inline long bitmap_ffz(ulong *bitmap, unsigned len)
+static inline long bitmap_ffz(unsigned long *bitmap, unsigned len)
 {
 	for (unsigned i = 0; i < len; i++) {
 		if (bitmap[i] == ~0UL)
@@ -50,10 +50,10 @@ static inline long bitmap_ffz(ulong *bitmap, unsigned len)
 	return -1;
 }
 
-static inline long bitmap_ffs(ulong *bitmap, unsigned len)
+static inline long bitmap_ffs(unsigned long *bitmap, unsigned len)
 {
 	for (unsigned i = 0; i < len; i++) {
-		if (bitmap[i] == 0)
+		if (bitmap[i] == 0UL)
 			continue;
 		return ffs(bitmap[i]) + i * BITS_PER_LONG;
 	}
