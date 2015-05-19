@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew Thoreson
+/*  Copyright 2013-2015 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -13,6 +13,12 @@
  *
  *  You should have received a copy of the GNU General Public License along
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ *  linux/fs/open.c
+ *
+ *  Copyright (C) 1991, 1992  Linus Torvalds
  */
 
 #include <kernel/dispatch.h>

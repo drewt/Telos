@@ -1,6 +1,6 @@
-/*  Copyright 2013 Drew Thoreson
+/*  Copyright 2013-2015 Drew Thoreson
  *
- *  This file is part of Telos.
+ *  This file is part of the Telos C Library.
  *  
  *  Telos is free software: you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software

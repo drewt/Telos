@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew T
+/*  Copyright 2013-2015 Drew Thoreson
  *
  *  This file is part of Telos.
  *  

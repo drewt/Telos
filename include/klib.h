@@ -1,4 +1,4 @@
-/*  Copyright 2013 Drew Thoreson
+/*  Copyright 2013-2015 Drew Thoreson
  *
  *  This file is part of Telos.
  *  
@@ -22,7 +22,6 @@ char *itoa_2(unsigned int val, char *buf);
 char *itoa_16(unsigned int val, char *buf);
 char *itoa(int val, char *str, int base);
 
-/* mem.c */
 unsigned int kbtoa(unsigned char code);
 int regmatch(const char *regex, char *text);
 
