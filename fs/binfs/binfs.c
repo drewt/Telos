@@ -57,6 +57,7 @@ extern PROGRAM(multi);
 extern PROGRAM(upread);
 extern PROGRAM(upwrite);
 extern PROGRAM(utruncate);
+extern PROGRAM(_mount);
 
 extern PROGRAM(tsh);
 
@@ -96,6 +97,7 @@ static struct program progtab[] = {
 	BINENT(upread,      "pread"),
 	BINENT(upwrite,     "pwrite"),
 	BINENT(utruncate,   "truncate"),
+	BINENT(_mount,      "mount"),
 
 	BINENT(tsh,         "tsh"),
 };
