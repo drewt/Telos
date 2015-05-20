@@ -248,7 +248,9 @@ struct bio_vec *alloc_bio_vec(dev_t dev, blkcnt_t blkcnt, blksize_t blksize);
 void free_bio_vec(struct bio_vec *bio);
 ssize_t bio_read(struct bio_vec *vec, char *iobuf, size_t len,
 		unsigned long *pos);
-ssize_t bio_write(struct bio_vec *vec, char *iobuf, size_t len,
+ssize_t bio_write(struct bio_vec *vec, const char *iobuf, size_t len,
+		unsigned long *pos);
+ssize_t bio_file_read(struct file *file, char *buf, size_t len,
 		unsigned long *pos);
 
 static inline void release_buffer(struct buffer *buf)

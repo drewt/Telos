@@ -83,13 +83,6 @@ static long do_read(struct file *file, char *buf, size_t count,
 		return 0;
 	if (file->f_op && file->f_op->read)
 		return file->f_op->read(file, buf, count, pos);
-	// fall back to bio_read if inode block list is provided
-	if (file->f_inode->i_bio) {
-		if (*pos > file->f_inode->i_size)
-			return 0;
-		count = MIN(count, file->f_inode->i_size - *pos);
-		return bio_read(file->f_inode->i_bio, buf, count, pos);
-	}
 	return -EINVAL;
 }
 

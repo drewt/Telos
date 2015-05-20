@@ -180,14 +180,27 @@ ssize_t bio_read(struct bio_vec *vec, char *iobuf, size_t len,
 	return r;
 }
 
-ssize_t bio_write(struct bio_vec *vec, char *iobuf, size_t len,
+ssize_t bio_write(struct bio_vec *vec, const char *iobuf, size_t len,
 		unsigned long *pos)
 {
-	ssize_t r = bio_do_io(vec, iobuf, len, *pos, WRITE);
+	ssize_t r = bio_do_io(vec, (char*)iobuf, len, *pos, WRITE);
 	if (r < 0)
 		return r;
 	*pos += r;
 	return r;
+}
+
+/*
+ * Generic VFS read function for filesystems that provide bio_vec block lists
+ * to the VFS.
+ */
+ssize_t bio_file_read(struct file *file, char *buf, size_t len,
+		unsigned long *pos)
+{
+	if (*pos > file->f_inode->i_size)
+		return 0;
+	len = MIN(len, file->f_inode->i_size - *pos);
+	return bio_read(file->f_inode->i_bio, buf, len, pos);
 }
 
 /*
