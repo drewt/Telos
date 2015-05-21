@@ -21,11 +21,23 @@
 #include <sys/major.h>
 
 /*
+ * The buffer cache.
+ *
+ * This is the half of the glue between the filesystem code and the block
+ * device code (the other half is in drivers/block/rw_block.c).
+ */
+
+/*
  * Hash table storing all active/cached buffers.
  */
 static DEFINE_HASHTABLE(ht_blocks, 9);
 
 static DEFINE_SLAB_CACHE(buffer_cachep, sizeof(struct buffer));
+
+static long buffer_key(dev_t dev, blkcnt_t block, blksize_t size)
+{
+	return dev+block;
+}
 
 /*
  * Find a buffer in the hash table.
@@ -33,7 +45,8 @@ static DEFINE_SLAB_CACHE(buffer_cachep, sizeof(struct buffer));
 static struct buffer *find_buffer(dev_t dev, blkcnt_t block, blksize_t size)
 {
 	struct buffer *buffer;
-	hash_for_each_possible(ht_blocks, buffer, b_hash, dev+block) {
+	long key = buffer_key(dev, block, size);
+	hash_for_each_possible(ht_blocks, buffer, b_hash, key) {
 		if (buffer->b_dev == dev && buffer->b_blocknr == block) {
 			if (buffer->b_size == size)
 				return buffer;
@@ -64,7 +77,7 @@ static struct buffer *make_buffer(dev_t dev, blkcnt_t block, blksize_t size)
 	b->b_count = 1;
 	b->b_lock = false;
 	INIT_WAIT_QUEUE(&b->b_wait);
-	hash_add(ht_blocks, &b->b_hash, dev+block);
+	hash_add(ht_blocks, &b->b_hash, buffer_key(dev, block, size));
 	return b;
 }
 
@@ -103,24 +116,56 @@ struct buffer *read_block(dev_t dev, blkcnt_t block, blksize_t size)
 	return read_buffer(b);
 }
 
-static void flush_buffer(struct buffer *buf)
+/*
+ * Flush any writes to a buffer to disk.
+ */
+static void flush_buffer(struct buffer *buffer)
 {
-	if (!(buf->b_flags & BUF_DIRTY))
+	if (!(buffer->b_flags & BUF_DIRTY))
 		return;
-	submit_block(WRITE, buf);
-	buffer_wait(buf);
+	submit_block(WRITE, buffer);
+	buffer_wait(buffer);
+}
+
+static void free_buffer(struct buffer *buffer)
+{
+	if (buffer->b_count)
+		panic("tried to free referenced buffer");
+	kfree_pages(buffer->b_data, 1);
+	slab_free(buffer_cachep, buffer);
+	hash_del(&buffer->b_hash);
+}
+
+/*
+ * Flush and free all buffers associated with a given device.
+ */
+int free_device_buffers(dev_t dev)
+{
+	unsigned bkt;
+	struct hlist_node *tmp;
+	struct buffer *buffer;
+	hash_for_each_safe(ht_blocks, bkt, tmp, buffer, b_hash) {
+		if (buffer->b_dev != dev)
+			continue;
+		if (buffer->b_lock)
+			buffer_wait(buffer);
+		if (buffer->b_count)
+			return -EBUSY;
+		flush_buffer(buffer);
+		free_buffer(buffer);
+	}
+	return 0;
 }
 
 void clear_buffer_cache(void)
 {
 	unsigned i;
-	struct buffer *b;
+	struct buffer *buffer;
 	struct hlist_node *tmp;
-	hash_for_each_safe(ht_blocks, i, tmp, b, b_hash) {
-		if (b->b_lock || b->b_count > 0)
+	hash_for_each_safe(ht_blocks, i, tmp, buffer, b_hash) {
+		if (buffer->b_lock || buffer->b_count > 0)
 			continue;
-		flush_buffer(b);
-		kfree_pages(b->b_data, 1);
-		slab_free(buffer_cachep, b);
+		flush_buffer(buffer);
+		free_buffer(buffer);
 	}
 }

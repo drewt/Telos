@@ -53,14 +53,21 @@ static void buffer_unlock(struct buffer *buf)
 	buf->b_lock = false;
 }
 
+#define NR_SECTORS(buffer) ((buffer)->b_size / SECTOR_SIZE)
+#define SECTOR(buffer) ((buffer)->b_blocknr * NR_SECTORS(buffer))
+
 static struct request *make_request(int rw, struct buffer *buf)
 {
 	struct request *req = slab_alloc(request_cachep);
 	if (!req)
 		panic("No memory for block request");
 	// FIXME: block until memory available
-	req->buf = buf;
 	req->rw = rw;
+	req->sector = SECTOR(buf);
+	req->nr_sectors = NR_SECTORS(buf);
+	req->mem = buf->b_data;
+	req->buf = buf;
+	buf->b_count++;
 	return req;
 }
 
@@ -78,7 +85,7 @@ int submit_block(int rw, struct buffer *buf)
 	struct request *req = make_request(rw, buf);
 	buffer_lock(buf);
 	if (request_queue_empty(dev))
-		dev->handle_request(req);
+		dev->handle_request(dev, req);
 	else
 		list_add_tail(&req->chain, &dev->requests);
 	return 0;
@@ -89,14 +96,16 @@ int submit_block(int rw, struct buffer *buf)
  */
 void block_request_completed(struct block_device *dev, struct request *req)
 {
-	struct request *next;
 	req->buf->b_flags |= BUF_UPTODATE;
+	release_buffer(req->buf);
 	buffer_unlock(req->buf);
+	slab_free(request_cachep, req);
+
 	if (request_queue_empty(dev))
 		return;
-	next = list_first_entry(&dev->requests, struct request, chain);
-	list_del(&next->chain);
-	dev->handle_request(next);
+	req = list_first_entry(&dev->requests, struct request, chain);
+	list_del(&req->chain);
+	dev->handle_request(dev, req);
 }
 
 blksize_t blkdev_blksize(dev_t devno)
@@ -105,6 +114,26 @@ blksize_t blkdev_blksize(dev_t devno)
 	if (!dev)
 		return -1;
 	return dev->blksize;
+}
+
+int set_blocksize(dev_t devno, blksize_t size)
+{
+	int error;
+	struct block_device *dev;
+
+	if (size != 512 && size != 1024 && size != 2048 && size != 4096)
+		panic("set_blocksize: invalid block size: %ld\n", size);
+	dev = get_device(devno);
+	if (!dev)
+		return -ENODEV;
+	if (dev->blksize == size)
+		return 0;
+	// clear all buffers from the cache, since they have the wrong size
+	error = free_device_buffers(devno);
+	if (error)
+		return error;
+	dev->blksize = size;
+	return 0;
 }
 
 /*
@@ -211,7 +240,7 @@ static ssize_t blkdev_generic_io(dev_t rdev, char *iobuf, size_t len,
 		unsigned long *pos, int rw)
 {
 	struct block_device *dev = get_device(rdev);
-	len = MIN(len, dev->blksize*dev->blkcount - *pos);
+	len = MIN(len, dev->sectors*SECTOR_SIZE - *pos);
 	blkcnt_t count = io_block_count(dev->blksize, *pos, len);
 	blkcnt_t first = io_off_to_block(dev->blksize, *pos);
 	unsigned long io_off = io_block_off(dev->blksize, *pos);

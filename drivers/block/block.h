@@ -22,18 +22,24 @@
 #include <kernel/list.h>
 #include <kernel/log2.h>
 
+#define SECTOR_SIZE 512
+
 // TODO: allow multi-block requests
 struct request {
 	struct list_head chain;
-	struct buffer *buf;
 	int rw;
+	blkcnt_t sector;
+	blkcnt_t nr_sectors;
+	char *mem;
+	struct buffer *buf;
 };
 
 struct block_device {
 	struct list_head requests;
-	void (*handle_request)(struct request*);
-	unsigned long blksize;
-	unsigned long blkcount;
+	void (*handle_request)(struct block_device *, struct request*);
+	blksize_t blksize;
+	blkcnt_t sectors;
+	void *private;
 };
 
 struct block_driver {
@@ -43,13 +49,13 @@ struct block_driver {
 extern struct file_operations blkdev_generic_fops;
 
 static inline void INIT_BLOCK_DEVICE(struct block_device *dev,
-		void (*handle_request)(struct request*),
-		unsigned long blksize, unsigned long blkcount)
+		void (*handle_request)(struct block_device*, struct request*),
+		unsigned long blksize, unsigned long sectors)
 {
 	INIT_LIST_HEAD(&dev->requests);
 	dev->handle_request = handle_request;
 	dev->blksize = blksize;
-	dev->blkcount = blkcount;
+	dev->sectors = sectors;
 }
 
 static inline bool request_queue_empty(struct block_device *dev)

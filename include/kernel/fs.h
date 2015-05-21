@@ -87,10 +87,10 @@ struct buffer {
 	struct hlist_node b_hash;
 	struct wait_queue b_wait;
 	void *b_data;
-	blksize_t b_size;
 	dev_t b_dev;
-	unsigned long b_flags;
+	blksize_t b_size;
 	blkcnt_t b_blocknr;
+	unsigned long b_flags;
 	unsigned short b_count;
 	bool b_lock;
 };
@@ -238,11 +238,13 @@ int unregister_chrdev(unsigned int major, const char * name);
 int unregister_blkdev(unsigned int major, const char * name);
 
 struct buffer *read_block(dev_t dev, blkcnt_t block, blksize_t size);
+int free_device_buffers(dev_t dev);
 void clear_buffer_cache(void);
 int submit_block(int rw, struct buffer *buf);
 void buffer_wait(struct buffer *buf);
 ssize_t blkdev_read(dev_t dev, void *dst, size_t len, unsigned long pos);
 blksize_t blkdev_blksize(dev_t devno);
+int set_blocksize(dev_t devno, blksize_t size);
 
 struct bio_vec *alloc_bio_vec(dev_t dev, blkcnt_t blkcnt, blksize_t blksize);
 void free_bio_vec(struct bio_vec *bio);

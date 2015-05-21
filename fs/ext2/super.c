@@ -171,20 +171,21 @@ static int do_read_super(struct super_block *sb, struct ext2_sb_private *private
 struct super_block *ext2_read_super(struct super_block *sb, void *data,
 		int silent)
 {
+	struct ext2_superblock tmp;
 	struct ext2_sb_private *private;
 	if (!(private = alloc_sb_private()))
 		goto fail;
 
-	if (do_read_super(sb, private) < 0) {
+	blkdev_read(sb->s_dev, &tmp, sizeof(struct ext2_superblock), 1024);
+	if (set_blocksize(sb->s_dev, ext2_block_size(&tmp))) {
 		if (!silent)
-			kprintf("error reading superblock\n");
+			kprintf("Unable to set block size on device\n");
 		goto fail;
 	}
 
-	if (ext2_block_size(private->sb) != blkdev_blksize(sb->s_dev)) {
-		// FIXME: artifical limitation to simplify the code
+	if (do_read_super(sb, private) < 0) {
 		if (!silent)
-			kprintf("ext2 block size does not match device block size\n");
+			kprintf("error reading superblock\n");
 		goto fail;
 	}
 

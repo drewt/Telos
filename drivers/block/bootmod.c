@@ -27,34 +27,28 @@
 
 #define MAX_MODDEV 16
 
-#define MOD_BLKSIZE 1024
-
 struct mod_device {
-	struct block_device blkdev;
 	unsigned char *mem;
 	off_t len;
 };
 
 struct mod_device moddev[MAX_MODDEV];
+struct block_device modblk[MAX_MODDEV];
 
-static void handle_request(struct request *req)
+static void handle_request(struct block_device *device, struct request *req)
 {
-	struct mod_device *dev = &moddev[minor(req->buf->b_dev)];
-	off_t off = req->buf->b_blocknr * req->buf->b_size;
-	off_t len = MIN(req->buf->b_size, dev->len - off);
+	struct mod_device *dev = device->private;
+	off_t off = req->sector * SECTOR_SIZE;
+	off_t req_size = req->nr_sectors * SECTOR_SIZE;
+	off_t len = MIN(req_size, dev->len - off);
 	if (req->rw == READ) {
-		memcpy(req->buf->b_data, dev->mem+off, len);
-		if (len != req->buf->b_size)
-			memset(req->buf->b_data, 0, req->buf->b_size - len);
+		memcpy(req->mem, dev->mem+off, len);
+		if (len != req_size)
+			memset(req->mem + len, 0, req_size - len);
 	} else {
-		memcpy(dev->mem+off, req->buf->b_data, len);
+		memcpy(dev->mem+off, req->mem, len);
 	}
-	block_request_completed(&dev->blkdev, req);
-}
-
-static struct block_device *get_device(unsigned int minor)
-{
-	return &moddev[minor].blkdev;
+	block_request_completed(device, req);
 }
 
 /*
@@ -71,13 +65,19 @@ int register_moddev(struct multiboot_mod_list *mod)
 	if (i == MAX_MODDEV)
 		return -1;
 
-	blkcnt_t blocks = (mod->end - mod->start) / MOD_BLKSIZE;
-	if ((mod->end - mod->start) % MOD_BLKSIZE)
-		blocks++;
-	INIT_BLOCK_DEVICE(&moddev[i].blkdev, handle_request, MOD_BLKSIZE, blocks);
+	blkcnt_t sectors = (mod->end - mod->start) / SECTOR_SIZE;
+	if ((mod->end - mod->start) % SECTOR_SIZE)
+		sectors++;
+	INIT_BLOCK_DEVICE(&modblk[i], handle_request, SECTOR_SIZE, sectors);
 	moddev[i].mem = (void*)mod->start;;
 	moddev[i].len = mod->end - mod->start;
+	modblk[i].private = &moddev[i];
 	return i;
+}
+
+static struct block_device *get_device(unsigned int minor)
+{
+	return &modblk[minor];
 }
 
 SYSINIT(modblk, SUB_DRIVER)
