@@ -189,7 +189,6 @@ struct super_block *ext2_read_super(struct super_block *sb, void *data,
 		goto fail;
 	}
 
-	sb->s_flags |= MS_RDONLY; // TODO: writes
 	sb->s_op = &ext2_super_ops;
 	sb->s_private = private;
 	sb->s_mounted = iget(sb, EXT2_ROOT_INO);

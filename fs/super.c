@@ -30,8 +30,8 @@
 
 #define SBT_SIZE 100
 
-#define ROOT_DEV 1
-#define ROOT_FS  "ramfs"
+#define ROOT_DEV makedev(MOD_MAJOR, 0)
+#define ROOT_FS  "ext2"
 
 static int root_mountflags = 0;
 
@@ -109,7 +109,6 @@ static dev_t get_unnamed_dev(void)
 		first_use = 1;
 		memset(unnamed_dev_in_use, 0, sizeof(unnamed_dev_in_use));
 		unnamed_dev_in_use[0] = 1; /* minor 0 (nodev) is special */
-		unnamed_dev_in_use[1] = 1; /* ROOT_DEV */
 	}
 	for (i = 0; i < sizeof unnamed_dev_in_use/sizeof unnamed_dev_in_use[0]; i++) {
 		if (unnamed_dev_in_use[i] == 0) {

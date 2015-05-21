@@ -57,6 +57,9 @@ usr:
 lib:
 	+$(call cmd,smake)
 
+initrd:
+	+$(call cmd,smake)
+
 boot/loader.o: boot/loader.s
 	$(call cmd,as)
 
@@ -65,6 +68,10 @@ linker.ld: $(submakes) boot/loader.o
 
 kernel.bin: linker.ld
 	$(call cmd,sld,linker.ld)
+	@objdump -D $@ > dump
+
+initrd.img: initrd
+	./scripts/mkfs.sh initrd/initrd $@
 
 pad:
 	$(call cmd,padgen)
@@ -90,4 +97,4 @@ topdistclean:
 	@cd usr && $(MAKE) distclean
 	@cd lib && $(MAKE) distclean
 
-.PHONY: $(submakes) linker.ld topclean topdistclean
+.PHONY: $(submakes) linker.ld topclean topdistclean initrd initrd.img

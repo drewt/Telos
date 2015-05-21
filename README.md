@@ -30,7 +30,13 @@ You'll need a recent version of gcc with support for the i386 target.
 Running
 -------
 
-To run the kernel in QEMU,
+Telos requires an initial RAM disk to be loaded by the bootloader.  To
+generate an initrd, run as root:
+
+    # make initrd.img
+
+Then Telos may be run in QEMU or loaded by a multiboot-compliant bootloader.
+To run Telos in QEMU, a script is provided:
 
     $ ./qemu
 
