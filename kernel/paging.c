@@ -54,7 +54,7 @@ static unsigned int first_free;
 static inline void flush_pages(uintptr_t addr, unsigned int n)
 {
 	for (unsigned int i = 0; i < n; i++)
-		flush_page(addr + n*FRAME_SIZE);
+		flush_page(addr + i*FRAME_SIZE);
 }
 
 static inline unsigned int addr_to_pdi(uintptr_t addr)
