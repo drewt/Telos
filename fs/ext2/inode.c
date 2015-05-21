@@ -48,6 +48,10 @@ static struct inode_operations *ext2_mode_iops(mode_t mode)
 		return &ext2_reg_iops;
 	if (S_ISDIR(mode))
 		return &ext2_dir_iops;
+	if (S_ISCHR(mode))
+		return &chrdev_inode_operations;
+	if (S_ISBLK(mode))
+		return &blkdev_inode_operations;
 	panic("ext2: bad mode: %lx", mode); // FIXME
 }
 
@@ -60,6 +64,8 @@ void ext2_read_inode(struct inode *vnode)
 
 	// fill out VFS inode from ext2 inode
 	vnode->i_mode = private->inode->mode; // TODO: check these
+	if (S_ISCHR(vnode->i_mode) || S_ISBLK(vnode->i_mode))
+		vnode->i_rdev = private->inode->block[0];
 	vnode->i_size = private->inode->size;
 	vnode->i_nlink = private->inode->links_count;
 	vnode->i_op = ext2_mode_iops(vnode->i_mode);
