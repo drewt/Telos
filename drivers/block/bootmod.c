@@ -77,7 +77,9 @@ int register_moddev(struct multiboot_mod_list *mod)
 
 static struct block_device *get_device(unsigned int minor)
 {
-	return &modblk[minor];
+	if (moddev[minor].mem)
+		return &modblk[minor];
+	return NULL;
 }
 
 SYSINIT(modblk, SUB_DRIVER)

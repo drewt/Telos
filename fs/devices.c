@@ -111,12 +111,12 @@ int blkdev_open(struct inode * inode, struct file * filp)
 
 	i = major(inode->i_rdev);
 	if (i >= MAX_BLKDEV || !blkdevs[i].fops)
-		return -ENODEV;
+		return -ENXIO;
 	filp->f_op = blkdevs[i].fops;
 	if (filp->f_op->open)
 		return filp->f_op->open(inode,filp);
 	return 0;
-}	
+}
 
 /*
  * Dummy default file-operations: the only thing this does

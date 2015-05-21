@@ -280,9 +280,17 @@ static ssize_t blkdev_generic_write(struct file *f, const char *src, size_t len,
 	return blkdev_generic_io(f->f_rdev, (char*)src, len, pos, WRITE);
 }
 
+int blkdev_generic_open(struct inode *inode, struct file *file)
+{
+	if (!get_device(inode->i_rdev))
+		return -ENXIO;
+	return 0;
+}
+
 struct file_operations blkdev_generic_fops = {
 	.read = blkdev_generic_read,
 	.write = blkdev_generic_write,
+	.open = blkdev_generic_open,
 };
 
 void register_block_driver(unsigned int major, const char *name,
