@@ -28,8 +28,8 @@ int do_pread(int fd, size_t nbyte, off_t off)
 	bytes = pread(fd, buf, nbyte, off);
 	if (bytes < 0)
 		return bytes;
-	buf[nbyte] = '\0';
-	printf("%s\n", buf);
+	for (ssize_t i = 0; i < bytes; i++)
+		putchar(buf[i]);
 	return 0;
 }
 
