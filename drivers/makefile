@@ -1,6 +1,8 @@
-objects = block/bootmod.o block/rw_block.o pc_console.o tty.o
-clean = $(objects)
+objects = pc_console.o tty.o
+submakes = block
 
-all: $(objects)
+all: $(objects) $(submakes)
 
-include $(topdir)/rules.mk
+$(submakes):
+	+$(call cmd,smake)
+.PHONY: $(submakes)

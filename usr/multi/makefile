@@ -4,7 +4,5 @@ clean   = $(objects) $(target)
 
 all: $(target)
 
-include $(topdir)/rules.mk
-
 $(target): $(objects)
 	$(call cmd,uld,multi)

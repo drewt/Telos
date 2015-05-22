@@ -8,12 +8,9 @@ objects = cat.o echo.o eventtest.o memtest.o umkdir.o proctest.o sigtest.o \
 	  urmdir.o ustat.o uunlink.o uumount.o mount_ramfs.o exectest.o init.o \
 	  upread.o upwrite.o _mount.o utruncate.o duptest.o mmaptest.o \
 	  $(foreach var,$(submakes),$(var)/telos_obj.o )
-targets = usr.a
-clean = $(objects) $(targets)
+clean = usr.a
 
-all: $(targets)
-
-include $(topdir)/rules.mk
+all: usr.a
 
 usr.a: $(objects)
 	$(call cmd,ar)

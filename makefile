@@ -18,46 +18,30 @@ ALLCFLAGS = $(CFLAGS) -fno-builtin -ffreestanding -std=gnu11 \
 CPPFLAGS  = -I $(incdir) -DVERSION=\"$(VERSION)\"
 LD        = $(CCPREFIX)ld -m elf_i386
 OBJCOPY   = $(CCPREFIX)objcopy
+MAKEFILES = $(topdir)/rules.mk
 
 export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS CPPFLAGS LD OBJCOPY
 
+# command to find all kernel object files
 findobj = find kernel dispatch drivers fs -name '*.o' | tr '\n' ' '
 
 submakes = dispatch drivers fs kernel usr lib
-clean = kernel.img kernel.bin boot/loader.o
-distclean = pad
+clean = kernel.bin boot/loader.o
 
-all: kernel.img
+all: kernel.bin
 
 include rules.mk
 
+# Generate the linker script to use when linking the kernel.
 quiet_cmd_ldgen  = GEN     linker.ld
       cmd_ldgen  = printf "INPUT ( %s )\n" \
 		   "boot/loader.o `$(findobj)` usr/usr.a lib/klib.a" \
 		   > linker.ld && cat sections.ld >> linker.ld
 
-quiet_cmd_padgen = GEN     $@
-      cmd_padgen = dd if=/dev/zero of=$@ bs=1 count=750 &> /dev/null
+# usr/usr.a depends on lib/klib.a
+usr: lib
 
-dispatch:
-	+$(call cmd,smake)
-
-drivers:
-	+$(call cmd,smake)
-
-fs:
-	+$(call cmd,smake)
-
-kernel:
-	+$(call cmd,smake)
-
-usr:
-	+$(call cmd,smake)
-
-lib:
-	+$(call cmd,smake)
-
-initrd:
+$(submakes) initrd:
 	+$(call cmd,smake)
 
 boot/loader.o: boot/loader.s
@@ -70,31 +54,11 @@ kernel.bin: linker.ld
 	$(call cmd,sld,linker.ld)
 	@objdump -D $@ > dump
 
+# Generate an initial RAM disk.
 initrd.img: initrd
 	./scripts/mkfs.sh initrd/initrd $@
 
-pad:
-	$(call cmd,padgen)
+initrdclean:
+	@$(MAKE) -C initrd clean
 
-# make a bootable floppy image with grub legacy
-kernel.img: boot/stage1 boot/stage2 pad kernel.bin
-	$(call cmd,cat)
-
-clean: topclean
-topclean:
-	@cd dispatch && $(MAKE) clean
-	@cd drivers && $(MAKE) clean
-	@cd fs && $(MAKE) clean
-	@cd kernel && $(MAKE) clean
-	@cd usr && $(MAKE) clean
-	@cd lib && $(MAKE) clean
-
-distclean: topdistclean
-topdistclean:
-	@cd dispatch && $(MAKE) distclean
-	@cd drivers && $(MAKE) distclean
-	@cd kernel && $(MAKE) distclean
-	@cd usr && $(MAKE) distclean
-	@cd lib && $(MAKE) distclean
-
-.PHONY: $(submakes) linker.ld topclean topdistclean initrd initrd.img
+.PHONY: $(submakes) linker.ld initrd initrdclean initrd.img

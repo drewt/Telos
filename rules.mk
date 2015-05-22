@@ -5,7 +5,11 @@
 #  files needed for the build before including this file.
 #
 #  $(clean) and $(distclean) should be set to the files to be removed on
-#  'make clean' and 'make distclean', respectively.
+#  'make clean' and 'make distclean', respectively.  The files given in
+#  $(objects) are automatically cleaned, and need not be added to $(clean).
+#
+#  $(submakes) should be a list of directories in which to recursively
+#  invoke make (including for the clean, etc. targets).
 #
 #  $(verbose) controls whether build commands are echoed verbatim, or in
 #  prettier "  PROG    FILE" format.  Set verbose=y for verbatim output.
@@ -24,10 +28,12 @@ else
 endif
 
 clean:
-	$(if $(clean), rm -f $(clean))
+	$(if $(objects) $(clean), rm -f $(objects) $(clean))
+	@$(foreach sub,$(submakes),$(MAKE) -C $(sub) clean &&) :
 
 distclean: clean
 	$(if $(distclean), rm -f $(distclean))
+	@$(foreach sub,$(submakes),$(MAKE) -C $(sub) distclean &&) :
 
 %.o: %.c
 	$(call cmd,cc)

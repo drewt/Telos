@@ -1,5 +1,7 @@
 devices = initrd/dev/cons0 initrd/dev/cons1 initrd/dev/mod0 initrd/dev/mod1
 
+clean = $(devices)
+
 all: directories $(devices)
 
 directories:
@@ -7,8 +9,6 @@ directories:
 	mkdir -p initrd/dev
 	mkdir -p initrd/mod
 	mkdir -p initrd/tmp
-
-$(devices):
 
 initrd/dev/cons0:
 	mknod $@ c 4 0
@@ -22,7 +22,4 @@ initrd/dev/mod0:
 initrd/dev/mod1:
 	mknod $@ b 5 1
 
-clean:
-	rm -f $(devices)
-
-.PHONY: directories clean
+.PHONY: directories
