@@ -67,7 +67,6 @@ _STRUCT_TIMESPEC_DEFN
 #endif
 
 #define S_IFMT   0xF000
-#define S_IFFUN  0xE000
 #define S_IFSOCK 0xC000
 #define S_IFLNK  0xA000
 #define S_IFREG  0x8000
@@ -79,7 +78,6 @@ _STRUCT_TIMESPEC_DEFN
 #define S_ISGID  0x0400
 #define S_ISVTX  0x0200
 
-#define S_ISFUN(m)	(((m) & S_IFMT) == S_IFFUN)
 #define S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
 #define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)

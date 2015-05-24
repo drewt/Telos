@@ -27,11 +27,11 @@
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
-#include <kernel/drivers/console.h>
 #include <sys/exec.h>
 #include <sys/fcntl.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <syscall.h>
 #include <string.h>
 
 extern void exit(int status);
@@ -135,7 +135,7 @@ static struct pcb *pcb_clone(struct pcb *src)
 #define DATA_FLAGS   (VM_READ | VM_WRITE | VM_KEEP)
 #define RODATA_FLAGS (VM_READ | VM_KEEP)
 #define HEAP_FLAGS   (VM_READ | VM_WRITE | VM_ZERO)
-#define USTACK_FLAGS (VM_READ | VM_WRITE | VM_EXEC | VM_ZERO | VM_KEEP)
+#define USTACK_FLAGS (VM_READ | VM_WRITE | VM_EXEC | VM_ZERO | VM_KEEP | VM_KEEPEXEC)
 
 struct vma *get_heap(struct mm_struct *mm)
 {
@@ -151,8 +151,6 @@ static int address_space_init(struct mm_struct *mm)
 	if (!vma_map(mm, HEAP_START, HEAP_SIZE, HEAP_FLAGS))
 		goto abort;
 	if (!vma_map(mm, STACK_START, STACK_SIZE, USTACK_FLAGS))
-		goto abort;
-	if (!vma_map(mm, urwstart, urwend - urwstart, DATA_FLAGS | VM_SHARE))
 		goto abort;
 	if (!vma_map(mm, urostart, uroend - urostart, RODATA_FLAGS))
 		goto abort;
@@ -194,7 +192,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 
 	p->esp = ((char*)KSTACK_END - KFRAME_ROOM);
 
-	put_iret_kframe(frame, (ulong)func);
+	put_iret_kframe(frame, (uintptr_t)func);
 	frame->stack[0] = (ulong) exit;
 	frame->stack[1] = (ulong) arg;
 	pm_copy_to(p->mm.pgdir, p->esp, frame, KFRAME_ROOM);
@@ -203,7 +201,32 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	return p->pid;
 }
 
-void create_init(void(*func)(void*))
+/*
+ * The init process: execs the real init at /bin/init.
+ *
+ * The reason for this stub is that the exec code assumes it has a running
+ * process--so create_init cannot use that code.  Instead, it creates a
+ * process with this function as the entry point.
+ */
+void __user init(void *arg)
+{
+	char name[] = "/bin/init";
+	struct _String argv[1] = {{ .str = name, .len = 9 }};
+	struct _String envp[1] = {{ .str = name, .len = 9 }};
+	struct exec_args e_args = {
+		.pathname = {
+			.str = name,
+			.len = 9
+		},
+		.argc = 1,
+		.envc = 1,
+		.argv = argv,
+		.envp = envp
+	};
+	syscall1(SYS_EXECVE, &e_args);
+}
+
+void create_init(void)
 {
 	int error;
 	long esp;
@@ -230,7 +253,7 @@ void create_init(void(*func)(void*))
 	current = p;
 	set_page_directory((void*)p->mm.pgdir);
 	esp = STACK_END - 16;
-	put_iret_uframe(p->esp, (ulong)func, esp);
+	put_iret_uframe(p->esp, (uintptr_t)init, esp);
 
 	ready(p);
 }
@@ -275,21 +298,15 @@ static size_t exec_mem_needed(struct exec_args *args)
 	return size;
 }
 
-static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
+/*
+ * Copy the argv and envp arrays into kernel memory, so they are not lost when
+ * the address space is unmapped.
+ */
+static int execve_copy_to_kernel(struct exec_args *args, void **ptr,
+		size_t *size_out)
 {
-	char *mem, *kmem;
-	char **argv;
-	char **envp;
-	struct vma *vma;
 	size_t size = exec_mem_needed(args);
-
-	vma = vma_create_high(&current->mm, user_base, kernel_base, size,
-			VM_READ | VM_WRITE | VM_ZERO);
-	if (!vma)
-		return -ENOMEM;
-
-	// copy args/env into kernel memory
-	kmem = kmalloc(size);
+	char *mem, *kmem = kmalloc(size);
 	if (!kmem)
 		return -ENOMEM;
 	mem = (char*) ((char**) kmem + args->argc + args->envc + 2);
@@ -301,6 +318,26 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 		memcpy(mem, args->envp[i].str, args->envp[i].len + 1);
 		mem += args->envp[i].len + 1;
 	}
+	*ptr = kmem;
+	*size_out = size;
+	return 0;
+}
+
+/*
+ * Copy the argv and envp arrays from kernel memory back into the process's
+ * address space.  A VMA is created for this purpose.
+ */
+static int execve_copy_to_user(struct exec_args *args, void *kmem, size_t size,
+		void **argv_out, void **envp_out)
+{
+	char *mem;
+	char **argv, **envp;
+	struct vma *vma;
+
+	vma = vma_create_high(&current->mm, user_base, kernel_base, size,
+			VM_READ | VM_WRITE | VM_ZERO);
+	if (!vma)
+		return -ENOMEM;
 
 	// copy back into user memory and populate argv/envp
 	memcpy((void*) vma->start, kmem, size);
@@ -318,10 +355,11 @@ static int execve_copy(struct exec_args *args, void **argv_loc, void **envp_loc)
 	}
 	envp[args->envc] = NULL;
 
-	*argv_loc = argv;
-	*envp_loc = envp;
+	*argv_out = argv;
+	*envp_out = envp;
 	kfree(kmem);
 	return 0;
+
 }
 
 static bool elf_header_valid(struct elf32_hdr *hdr)
@@ -433,6 +471,8 @@ static void *load_elf(struct inode *inode)
 long sys_execve(struct exec_args *args)
 {
 	int error;
+	size_t size;
+	void *ptr;
 	void *argv, *envp, *entry;
 	unsigned long esp;
 	unsigned long *main_args;
@@ -444,20 +484,18 @@ long sys_execve(struct exec_args *args)
 	error = namei(args->pathname.str, &inode);
 	if (error)
 		return error;
-	if (!S_ISFUN(inode->i_mode) && !S_ISREG(inode->i_mode))
+	if (!S_ISREG(inode->i_mode))
 		return -EACCES;
+	error = execve_copy_to_kernel(args, &ptr, &size);
+	if (error)
+		return error;
 	mm_exec(&current->mm);
-	error = execve_copy(args, &argv, &envp);
+	error = execve_copy_to_user(args, ptr, size, &argv, &envp);
 	if (error)
 		return error; // FIXME: all memory is unmapped at this point!
 
 	// load process image
-	if (S_ISFUN(inode->i_mode))
-		entry = inode->i_private;
-	else if (S_ISREG(inode->i_mode))
-		entry = load_elf(inode);
-	else
-		return -EINVAL;
+	entry = load_elf(inode);
 
 	if (!entry)
 		return -ENOMEM; // FIXME: wrong, will segfault (as above)
@@ -467,13 +505,12 @@ long sys_execve(struct exec_args *args)
 	current->esp = (char*) current->ifp - sizeof(struct ucontext);
 
 	esp = STACK_END - 16;
-	put_iret_uframe(current->esp, (unsigned long)entry, esp);
+	put_iret_uframe(current->esp, (uintptr_t)entry, esp);
 
 	main_args = (unsigned long*) esp;
-	main_args[0] = (unsigned long) exit;
-	main_args[1] = args->argc;
-	main_args[2] = (unsigned long) argv;
-	main_args[3] = (unsigned long) envp;
+	main_args[0] = args->argc;
+	main_args[1] = (unsigned long) argv;
+	main_args[2] = (unsigned long) envp;
 
 	return 0;
 }

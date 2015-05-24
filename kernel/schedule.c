@@ -21,8 +21,7 @@
 #include <kernel/wait.h>
 
 pid_t idle_pid;
-extern void init(void*);
-extern void create_init(void(*func)(void*));
+extern void create_init(void);
 
 static struct pcb dummy_init = {
 	.pid = -1,
@@ -43,7 +42,7 @@ static _Noreturn void idle_proc(void *unused)
 _Noreturn void sched_start(void)
 {
 	idle_pid = create_kernel_process(idle_proc, NULL, 0);
-	create_init(init);
+	create_init();
 	current = next();
 	switch_to(current);
 }

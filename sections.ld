@@ -7,28 +7,20 @@ SECTIONS
 
 	. = KERNEL_LOAD_ADDR;
 
-	loader ALIGN (0x1000) :
+	.loader ALIGN (0x1000) :
 	{
 		boot/loader.o(.text)
 	}
 
 	. += KERNEL_PAGE_OFFSET;
 
-	utext ALIGN (0x1000) : AT(ADDR(utext) - KERNEL_PAGE_OFFSET)
+	/* .text section for user-readable code/data */
+	.utext ALIGN (0x1000) : AT(ADDR(.utext) - KERNEL_PAGE_OFFSET)
 	{
 		_ustart = .;
 		_urostart = .;
-		usr/usr.a:*(.text .rodata)
-		lib/klib.a:*(.text .rodata)
+		*(.utext)
 		_uroend = .;
-	}
-
-	udata ALIGN (0x1000) : AT(ADDR(udata) - KERNEL_PAGE_OFFSET)
-	{
-		_urwstart = .;
-		usr/usr.a:*(.data .bss COMMON)
-		lib/klib.a:*(.data .bss COMMON)
-		_urwend = .;
 		_uend = .;
 	}
 

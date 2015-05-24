@@ -96,8 +96,6 @@ extern unsigned long _ustart;   // start of user-space
 extern unsigned long _uend;     // end of user-space
 extern unsigned long _urostart; // start of user-space read-only memory
 extern unsigned long _uroend;   // end of user-space read-only memory
-extern unsigned long _urwstart; // start of user-space read-write memory
-extern unsigned long _urwend;   // end of user-space read-write memory
 extern unsigned long _krostart; // start of kernel read-only memory
 extern unsigned long _kroend;   // end of kernel read-only memory
 extern unsigned long _krwstart; // start of kernel read-write memory
@@ -112,8 +110,6 @@ extern unsigned long _krwend;   // end of kernel read-write memory
 #define uend        ((unsigned long)&_uend)
 #define urostart    ((unsigned long)&_urostart)
 #define uroend      ((unsigned long)&_uroend)
-#define urwstart    ((unsigned long)&_urwstart)
-#define urwend      ((unsigned long)&_urwend)
 #define krostart    ((unsigned long)&_krostart)
 #define kroend      ((unsigned long)&_kroend)
 #define krwstart    ((unsigned long)&_krwstart)

@@ -45,7 +45,6 @@ static void do_mount(const char *source, const char *target,
 static void fs_init(void)
 {
 	// mount filesystems
-	do_mount(NULL, "/bin", "binfs", 0, NULL);
 	do_mount(NULL, "/mod", "modfs", 0, NULL);
 	do_mount(NULL, "/tmp", "ramfs", 0, NULL);
 }

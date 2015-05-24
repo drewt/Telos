@@ -1,6 +1,5 @@
 objects = buffer.o devices.o fcntl.o filesystems.o inode.o ioctl.o namei.o \
-	  open.o read_write.o stat.o super.o ramfs/ramfs.o binfs/binfs.o \
-	  modfs/modfs.o
+	  open.o read_write.o stat.o super.o ramfs/ramfs.o modfs/modfs.o
 submakes = ext2
 
 all: $(objects) $(submakes)

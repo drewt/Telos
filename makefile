@@ -25,7 +25,7 @@ export CCPREFIX AR ARFLAGS AS CC CFLAGS ALLCFLAGS CPPFLAGS LD OBJCOPY
 # command to find all kernel object files
 findobj = find kernel dispatch drivers fs -name '*.o' | tr '\n' ' '
 
-submakes = dispatch drivers fs kernel usr lib
+submakes = dispatch drivers fs kernel lib
 clean = kernel.bin boot/loader.o
 
 all: kernel.bin
@@ -35,11 +35,8 @@ include rules.mk
 # Generate the linker script to use when linking the kernel.
 quiet_cmd_ldgen  = GEN     linker.ld
       cmd_ldgen  = printf "INPUT ( %s )\n" \
-		   "boot/loader.o `$(findobj)` usr/usr.a lib/klib.a" \
+		   "boot/loader.o `$(findobj)` lib/klib.a" \
 		   > linker.ld && cat sections.ld >> linker.ld
-
-# usr/usr.a depends on lib/klib.a
-usr: lib
 
 $(submakes) initrd:
 	+$(call cmd,smake)
