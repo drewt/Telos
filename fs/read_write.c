@@ -23,8 +23,8 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <kernel/stat.h>
 #include <kernel/mm/vma.h>
+#include <sys/stat.h>
 #include <sys/fcntl.h>
 
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)

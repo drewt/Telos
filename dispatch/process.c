@@ -23,10 +23,10 @@
 #include <kernel/list.h>
 #include <kernel/fs.h>
 #include <kernel/signal.h>
-#include <kernel/stat.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
+#include <sys/stat.h>
 #include <sys/exec.h>
 #include <sys/fcntl.h>
 #include <sys/mman.h>

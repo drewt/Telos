@@ -23,7 +23,7 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <kernel/stat.h>
+#include <sys/stat.h>
 #include <sys/fcntl.h>
 
 int permission(struct inode *inode, int mask)

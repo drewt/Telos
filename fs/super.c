@@ -23,7 +23,7 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <kernel/stat.h>
+#include <sys/stat.h>
 #include <sys/major.h>
 #include <sys/mount.h>
 #include <string.h>

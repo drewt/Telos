@@ -18,10 +18,10 @@
 #include <kernel/list.h>
 #include <kernel/fs.h>
 #include <kernel/ramfs.h>
-#include <kernel/stat.h>
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
+#include <sys/stat.h>
 
 #include <string.h>
 
