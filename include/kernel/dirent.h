@@ -18,7 +18,7 @@
 #ifndef _KERNEL_DIRENT_H_
 #define _KERNEL_DIRENT_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _INO_T_DEFINED
 #define _INO_T_DEFINED

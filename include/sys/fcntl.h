@@ -19,7 +19,7 @@
 #define _SYS_FCNTL_H_
 
 #include <sys/stat.h> /* file modes */
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _MODE_T_DEFINED
 #define _MODE_T_DEFINED

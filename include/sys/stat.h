@@ -18,7 +18,7 @@
 #ifndef _SYS_STAT_H_
 #define _SYS_STAT_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _BLKCNT_T_DEFINED
 #define _BLKCNT_T_DEFINED

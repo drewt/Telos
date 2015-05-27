@@ -18,7 +18,7 @@
 #ifndef _SYS_TYPES_H_
 #define _SYS_TYPES_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef NULL
 #define NULL _NULL_DEFN

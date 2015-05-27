@@ -18,7 +18,7 @@
 #ifndef _SYS_SIGNAL_H_
 #define _SYS_SIGNAL_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _PTHREAD_T_DEFINED
 #define _PTHREAD_T_DEFINED

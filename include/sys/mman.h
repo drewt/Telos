@@ -18,7 +18,7 @@
 #ifndef _SYS_MMAN_H_
 #define _SYS_MMAN_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _MODE_T_DEFINED
 #define _MODE_T_DEFINED

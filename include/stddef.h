@@ -19,7 +19,7 @@
 #ifndef _STDDEF_H_
 #define _STDDEF_H_
 
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef NULL
 #define NULL _NULL_DEFN

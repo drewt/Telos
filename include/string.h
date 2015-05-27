@@ -20,7 +20,7 @@
 
 #include <stddef.h>
 #include <stdarg.h>
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef _LOCALE_T_DEFINED
 #define _LOCALE_T_DEFINED

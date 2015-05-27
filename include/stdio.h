@@ -21,7 +21,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-#include <sys/type_macros.h>
+#include <sys/type_defs.h>
 
 #ifndef EOF
 #define EOF _EOF_DEFN
