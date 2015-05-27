@@ -23,7 +23,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <kernel/compiler.h>
-#include <errnodefs.h>
+#include <sys/errno.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))

@@ -18,7 +18,7 @@
 #ifndef _ERRNO_H_
 #define _ERRNO_H_
 
-#include <errnodefs.h>
+#include <sys/errno.h>
 
 extern int errno;
 
