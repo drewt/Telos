@@ -19,7 +19,7 @@
 #ifndef _SIGNAL_H_
 #define _SIGNAL_H_
 
-#include <kernel/signal.h>
+#include <sys/signal.h>
 
 int kill(pid_t pid, int signal_number);
 //int killpg(pid_t, int);
