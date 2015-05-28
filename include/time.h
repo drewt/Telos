@@ -19,7 +19,7 @@
 #ifndef _TIME_H_
 #define _TIME_H_
 
-#include <kernel/time.h>
+#include <sys/telos_time.h>
 
 struct sigevent;
 
