@@ -87,102 +87,93 @@ struct sigaction {
 #define SIG_HOLD ((void(*)(int)) 3)
 #define SIG_IGN  ((void(*)(int)) 4)
 
-enum sig_nums {
-	SIGABRT   = 1,
-	SIGALRM   = 2,
-	SIGBUS    = 3,
-	SIGCHLD   = 4,
-	SIGCONT   = 5,
-	SIGFPE    = 6,
-	SIGHUP    = 7,
-	SIGILL    = 8,
-	SIGINT    = 9,
-	SIGPIPE   = 10,
-	SIGQUIT   = 11,
-	SIGSEGV   = 12,
-	SIGTERM   = 13,
-	SIGTSTP   = 14,
-	SIGTTIN   = 15,
-	SIGTTOU   = 16,
-	SIGUSR1   = 17,
-	SIGUSR2   = 18,
-	SIGPOLL   = 19,
-	SIGPROF   = 20,
-	SIGSYS    = 21,
-	SIGTRAP   = 22,
-	SIGURG    = 23,
-	SIGVTALRM = 24,
-	SIGXCPU   = 25,
-	SIGXFSZ   = 26,
-	SIGSTOP   = 27,
-	SIGKILL   = 28,
-	_TELOS_SIGMAX
-};
+#define SIGABRT       1
+#define SIGALRM       2
+#define SIGBUS        3
+#define SIGCHLD       4
+#define SIGCONT       5
+#define SIGFPE        6
+#define SIGHUP        7
+#define SIGILL        8
+#define SIGINT        9
+#define SIGPIPE       10
+#define SIGQUIT       11
+#define SIGSEGV       12
+#define SIGTERM       13
+#define SIGTSTP       14
+#define SIGTTIN       15
+#define SIGTTOU       16
+#define SIGUSR1       17
+#define SIGUSR2       18
+#define SIGPOLL       19
+#define SIGPROF       20
+#define SIGSYS        21
+#define SIGTRAP       22
+#define SIGURG        23
+#define SIGVTALRM     24
+#define SIGXCPU       25
+#define SIGXFSZ       26
+#define SIGSTOP       27
+#define SIGKILL       28
+#define _TELOS_SIGMAX 29
 
-enum {
-	SA_NOCLDSTOP = 1,
-	SA_ONSTACK   = 1 << 1,
-	SA_RESETHAND = 1 << 2,
-	SA_RESTART   = 1 << 3,
-	SA_SIGINFO   = 1 << 4,
-	SA_NOCLDWAIT = 1 << 5,
-	SA_NODEFER   = 1 << 6,
-};
+#define SA_NOCLDSTOP  1
+#define SA_ONSTACK    2
+#define SA_RESETHAND  4
+#define SA_RESTART    8
+#define SA_SIGINFO    16
+#define SA_NOCLDWAIT  32
+#define SA_NODEFER    64
 
-enum {
-	ILL_ILLOPC,
-	ILL_ILLOPN,
-	ILL_ILLADR,
-	ILL_ILLTRP,
-	ILL_PRVOPC,
-	ILL_PRVREG,
-	ILL_COPROC,
-	ILL_BADSTK,
-	FPE_INTDIV,
-	FPE_INTOVF,
-	FPE_FLTDIV,
-	FPE_FLTOVF,
-	FPE_FLTUND,
-	FPE_FLTRES,
-	FPE_FLTINV,
-	FPE_FLTSUB,
-	SEGV_MAPERR,
-	SEGV_ACCERR,
-	BUS_ADRALN,
-	BUS_ADRERR,
-	BUS_OBJERR,
-	TRAP_BRKPT,
-	TRAP_TRACE,
-	CLD_EXITED,
-	CLD_KILLED,
-	CLD_DUMPED,
-	CLD_TRAPED,
-	CLD_STOPPED,
-	CLD_CONTINUED,
-	POLL_IN,
-	POLL_OUT,
-	POLL_MSG,
-	POLL_ERR,
-	POLL_PRI,
-	POLL_HUP,
-	SI_USER,
-	SI_QUEUE,
-	SI_TIMER,
-	SI_ASYNCIO,
-	SI_MESGQ,
-};
+#define ILL_ILLOPC    1
+#define ILL_ILLOPN    2
+#define ILL_ILLADR    3
+#define ILL_ILLTRP    4
+#define ILL_PRVOPC    5
+#define ILL_PRVREG    6
+#define ILL_COPROC    7
+#define ILL_BADSTK    8
+#define FPE_INTDIV    9
+#define FPE_INTOVF    10
+#define FPE_FLTDIV    11
+#define FPE_FLTOVF    12
+#define FPE_FLTUND    13
+#define FPE_FLTRES    14
+#define FPE_FLTINV    15
+#define FPE_FLTSUB    16
+#define SEGV_MAPERR   17
+#define SEGV_ACCERR   18
+#define BUS_ADRALN    19
+#define BUS_ADRERR    20
+#define BUS_OBJERR    21
+#define TRAP_BRKPT    22
+#define TRAP_TRACE    23
+#define CLD_EXITED    24
+#define CLD_KILLED    25
+#define CLD_DUMPED    26
+#define CLD_TRAPED    27
+#define CLD_STOPPED   28
+#define CLD_CONTINUED 29
+#define POLL_IN       30
+#define POLL_OUT      31
+#define POLL_MSG      32
+#define POLL_ERR      33
+#define POLL_PRI      34
+#define POLL_HUP      35
 
-enum {
-	SIGEV_NONE,
-	SIGEV_SIGNAL,
-	SIGEV_THREAD,
-};
+#define SI_USER       1
+#define SI_QUEUE      2
+#define SI_TIMER      3
+#define SI_ASYNCIO    4
+#define SI_MESGQ      5
 
-enum {
-	SIG_BLOCK,
-	SIG_SETMASK,
-	SIG_UNBLOCK,
-};
+#define SIGEV_NONE   0
+#define SIGEV_SIGNAL 1
+#define SIGEV_THREAD 2
+
+#define SIG_BLOCK   0
+#define SIG_SETMASK 1
+#define SIG_UNBLOCK 2
 
 static inline int __signo_valid(int signo)
 {
