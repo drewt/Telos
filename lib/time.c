@@ -51,7 +51,13 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 
 time_t time(time_t *t)
 {
-	return syscall1(SYS_TIME, t);
+	time_t tm;
+	int rv = syscall1(SYS_TIME, &tm);
+	if (rv < 0)
+		return (time_t)-1;
+	if (t)
+		*t = tm;
+	return tm;
 }
 
 int clock_getres(clockid_t clockid, struct timespec *res)

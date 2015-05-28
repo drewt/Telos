@@ -99,13 +99,10 @@ long sys_alarm(unsigned long ticks)
 
 long sys_time(time_t *t)
 {
-	if (t != NULL) {
-		if (vm_verify(&current->mm, t, sizeof (*t), VM_WRITE))
-			return -EFAULT;
-		*t = system_clock;
-	}
-
-	return system_clock;
+	if (vm_verify(&current->mm, t, sizeof (*t), VM_WRITE))
+		return -EFAULT;
+	*t = system_clock;
+	return 0;
 }
 
 int posix_rtc_get(struct timespec *tp)
