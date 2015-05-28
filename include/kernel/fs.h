@@ -19,9 +19,9 @@
 #define _KERNEL_FS_H_
 
 #include <kernel/list.h>
-#include <kernel/dirent.h>
 #include <kernel/mm/slab.h>
 #include <kernel/wait.h>
+#include <sys/dirent.h>
 #include <sys/mount.h>
 
 enum {

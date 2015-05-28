@@ -19,7 +19,7 @@
 #ifndef _DIRENT_H_
 #define _DIRENT_H_
 
-#include <kernel/dirent.h>
+#include <sys/dirent.h>
 
 typedef struct {
 	int fd;
