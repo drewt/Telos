@@ -211,8 +211,8 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 void __user init(void *arg)
 {
 	char name[] = "/bin/init";
-	struct _String argv[1] = {{ .str = name, .len = 9 }};
-	struct _String envp[1] = {{ .str = name, .len = 9 }};
+	struct _Telos_string argv[1] = {{ .str = name, .len = 9 }};
+	struct _Telos_string envp[1] = {{ .str = name, .len = 9 }};
 	struct exec_args e_args = {
 		.pathname = {
 			.str = name,

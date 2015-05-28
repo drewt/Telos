@@ -34,8 +34,8 @@ pid_t fork(void)
 static int _execve(const char *pathname, char *const argv[], char *const envp[],
 		size_t argc, size_t envc)
 {
-	struct _String s_argv[argc];
-	struct _String s_envp[envc];
+	struct _Telos_string s_argv[argc];
+	struct _Telos_string s_envp[envc];
 	struct exec_args e_args = {
 		.pathname = {
 			.str = pathname,

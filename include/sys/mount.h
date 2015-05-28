@@ -18,7 +18,7 @@
 #ifndef _SYS_MOUNT_H_
 #define _SYS_MOUNT_H_
 
-#include <sys/string.h>
+#include <sys/telos_string.h>
 
 /*
  * fs-independent mount-flags
@@ -37,9 +37,9 @@ enum {
 };
 
 struct mount {
-	const struct _String dev;
-	const struct _String dir;
-	const struct _String type;
+	const struct _Telos_string dev;
+	const struct _Telos_string dir;
+	const struct _Telos_string type;
 	unsigned long flags;
 	const void *data;
 };

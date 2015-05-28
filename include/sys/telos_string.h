@@ -15,14 +15,13 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SYS_STRING_H_
-#define _SYS_STRING_H_
+#ifndef _SYS_TELOS_STRING_H_
+#define _SYS_TELOS_STRING_H_
 
 #define __need_size_t
 #include <stddef.h>
-#include <sys/type_defs.h>
 
-struct _String {
+struct _Telos_string {
 	size_t len;
 	const char *str;
 };

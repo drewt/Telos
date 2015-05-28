@@ -18,12 +18,12 @@
 #ifndef _SYS_EXEC_H_
 #define _SYS_EXEC_H_
 
-#include <sys/string.h>
+#include <sys/telos_string.h>
 
 struct exec_args {
-	struct _String pathname;
-	struct _String *argv;
-	struct _String *envp;
+	struct _Telos_string pathname;
+	struct _Telos_string *argv;
+	struct _Telos_string *envp;
 	size_t argc;
 	size_t envc;
 };
