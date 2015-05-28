@@ -23,11 +23,10 @@
 #include <stddef.h>
 #include <sys/type_defs.h>
 
-#ifndef _SSIZE_T
-#define _SSIZE_T
-typedef _SSIZE_T_TYPE ssize_t;
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+typedef _ssize_t ssize_t;
 #endif
-
 #ifndef _PID_T_DEFINED
 #define _PID_T_DEFINED
 typedef _PID_T_TYPE pid_t;

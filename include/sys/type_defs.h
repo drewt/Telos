@@ -18,6 +18,29 @@
 #ifndef _SYS_TYPE_MACROS_H_
 #define _SYS_TYPE_MACROS_H_
 
+/*
+ * Special case for ssize_t.  Since gcc is in charge of size_t (via stddef.h),
+ * we try to define ssize_t based on what gcc gives us.  Instead of defining
+ * _SSIZE_T_TYPE, we do a typedef for _ssize_t.  Any header needing ssize_t
+ * ssize_t can then do "typedef _ssize_t ssize_t;".
+ */
+#ifdef __SIZE_TYPE__
+/*
+ * If __SIZE_TYPE__ is defined (gcc) we define ssize_t based on size_t.
+ * We simply change "unsigned" to "signed" for this single definition
+ * to make sure ssize_t and size_t only differ by their signedness.
+ */
+#define unsigned signed
+typedef __SIZE_TYPE__ _ssize_t;
+#undef unsigned
+#else
+#if defined(__INT_MAX__) && __INT_MAX__ == 2147483647
+typedef int _ssize_t;
+#else
+typedef long _ssize_t;
+#endif
+#endif
+
 #define _EOF_DEFN (-1)
 
 #define _BLKCNT_T_TYPE long
@@ -31,7 +54,7 @@
 #define _ID_T_TYPE unsigned long
 #define _INO_T_TYPE unsigned long
 #define _INTPTR_T_TYPE long
-#define _KEY_T_TYPE TODO
+#define _KEY_T_TYPE long
 #define _MODE_T_TYPE unsigned long
 #define _NLINK_T_TYPE unsigned long
 #define _OFF_T_TYPE long
@@ -49,8 +72,7 @@
 #define _PTHREAD_RWLOCKATTR_T_TYPE TODO
 #define _PTHREAD_SPINLOCK_T_TYPE TODO
 #define _PTHREAD_T_TYPE TODO
-#define _SSIZE_T_TYPE int
-#define _SUSECONDS_T_TYPE TODO
+#define _SUSECONDS_T_TYPE long
 #define _TIME_T_TYPE unsigned long
 #define _TIMER_T_TYPE unsigned long
 #define _TRACE_ATTR_T_TYPE TODO
@@ -59,6 +81,7 @@
 #define _TRACE_ID_T_TYPE TODO
 #define _UID_T_TYPE unsigned long
 #define _UINTPTR_T_TYPE unsigned long
+#define _USECONDS_T_TYPE unsigned long
 
 #define _FPOS_T_TYPE unsigned long
 #define _LOCALE_T_TYPE unsigned long

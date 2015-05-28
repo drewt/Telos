@@ -37,7 +37,7 @@ typedef _OFF_T_TYPE off_t;
 #endif
 #ifndef _SSIZE_T_DEFINED
 #define _SSIZE_T_DEFINED
-typedef _SSIZE_T_TYPE ssize_t;
+typedef _ssize_t ssize_t;
 #endif
 
 typedef struct {

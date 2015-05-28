@@ -26,7 +26,7 @@
 
 #ifndef _SSIZE_T_DEFINED
 #define _SSIZE_T_DEFINED
-typedef _SSIZE_T_TYPE ssize_t;
+typedef _ssize_t ssize_t;
 #endif
 #ifndef _UID_T_DEFINED
 #define _UID_T_DEFINED
