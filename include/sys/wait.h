@@ -28,6 +28,10 @@ typedef _ID_T_TYPE id_t;
 #define _PID_T_DEFINED
 typedef _PID_T_TYPE pid_t;
 #endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
 #ifndef _UNION_SIGVAL_DEFINED
 #define _UNION_SIGVAL_DEFINED
 _UNION_SIGVAL_DEFN
