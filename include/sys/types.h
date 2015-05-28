@@ -18,16 +18,10 @@
 #ifndef _SYS_TYPES_H_
 #define _SYS_TYPES_H_
 
+#define __need_NULL
+#define __need_size_t
+#include <stddef.h>
 #include <sys/type_defs.h>
-
-#ifndef NULL
-#define NULL _NULL_DEFN
-#endif
-
-#ifndef _SIZE_T
-#define _SIZE_T
-typedef _SIZE_T_TYPE size_t;
-#endif
 
 #ifndef _SSIZE_T
 #define _SSIZE_T

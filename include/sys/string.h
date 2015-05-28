@@ -18,12 +18,9 @@
 #ifndef _SYS_STRING_H_
 #define _SYS_STRING_H_
 
+#define __need_size_t
+#include <stddef.h>
 #include <sys/type_defs.h>
-
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef _SIZE_T_TYPE size_t;
-#endif
 
 struct _String {
 	size_t len;

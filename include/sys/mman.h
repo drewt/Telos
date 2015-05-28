@@ -18,6 +18,8 @@
 #ifndef _SYS_MMAN_H_
 #define _SYS_MMAN_H_
 
+#define __need_size_t
+#include <stddef.h>
 #include <sys/type_defs.h>
 
 #ifndef _MODE_T_DEFINED
@@ -27,10 +29,6 @@ typedef _MODE_T_TYPE mode_t;
 #ifndef _OFF_T_DEFINED
 #define _OFF_T_DEFINED
 typedef _OFF_T_TYPE off_t;
-#endif
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef _SIZE_T_TYPE size_t;
 #endif
 
 enum {

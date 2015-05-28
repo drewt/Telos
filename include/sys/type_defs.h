@@ -18,31 +18,50 @@
 #ifndef _SYS_TYPE_MACROS_H_
 #define _SYS_TYPE_MACROS_H_
 
-#define _NULL_DEFN ((void*)0)
 #define _EOF_DEFN (-1)
 
-#define _PTRDIFF_T_TYPE long
-#define _SIZE_T_TYPE unsigned int
-#define _SSIZE_T_TYPE int
-#define _INTPTR_T_TYPE long
-#define _UINTPTR_T_TYPE unsigned long
-#define _FPOS_T_TYPE unsigned long
-#define _PID_T_TYPE int
+#define _BLKCNT_T_TYPE long
+#define _BLKSIZE_T_TYPE long
 #define _CLOCK_T_TYPE unsigned long
 #define _CLOCKID_T_TYPE int
-#define _TIMER_T_TYPE unsigned long
-#define _TIME_T_TYPE unsigned long
-#define _LOCALE_T_TYPE unsigned long
-#define _INO_T_TYPE unsigned long
-#define _MODE_T_TYPE unsigned long
-#define _NLINK_T_TYPE unsigned long
-#define _UID_T_TYPE unsigned long
+#define _DEV_T_TYPE unsigned long
+#define _FSBLKCNT_T_TYPE unsigned long
+#define _FSFILCNT_T_TYPE unsigned long
 #define _GID_T_TYPE unsigned long
 #define _ID_T_TYPE unsigned long
+#define _INO_T_TYPE unsigned long
+#define _INTPTR_T_TYPE long
+#define _KEY_T_TYPE TODO
+#define _MODE_T_TYPE unsigned long
+#define _NLINK_T_TYPE unsigned long
 #define _OFF_T_TYPE long
-#define _BLKSIZE_T_TYPE long
-#define _BLKCNT_T_TYPE long
-#define _DEV_T_TYPE unsigned long
+#define _PID_T_TYPE int
+#define _PTHREAD_ATTR_T_TYPE TODO
+#define _PTHREAD_BARRIER_T_TYPE TODO
+#define _PTHREAD_BARRIERATTR_T_TYPE TODO
+#define _PTHREAD_COND_T_TYPE TODO
+#define _PTHREAD_CONDATTR_T_TYPE TODO
+#define _PTHREAD_KEY_T_TYPE TODO
+#define _PTHREAD_MUTEX_T_TYPE TODO
+#define _PTHREAD_MUTEXATTR_T_TYPE TODO
+#define _PTHREAD_ONCE_T_TYPE TODO
+#define _PTHREAD_RWLOCK_T_TYPE TODO
+#define _PTHREAD_RWLOCKATTR_T_TYPE TODO
+#define _PTHREAD_SPINLOCK_T_TYPE TODO
+#define _PTHREAD_T_TYPE TODO
+#define _SSIZE_T_TYPE int
+#define _SUSECONDS_T_TYPE TODO
+#define _TIME_T_TYPE unsigned long
+#define _TIMER_T_TYPE unsigned long
+#define _TRACE_ATTR_T_TYPE TODO
+#define _TRACE_EVENT_ID_T_TYPE TODO
+#define _TRACE_EVENT_SET_T_TYPE TODO
+#define _TRACE_ID_T_TYPE TODO
+#define _UID_T_TYPE unsigned long
+#define _UINTPTR_T_TYPE unsigned long
+
+#define _FPOS_T_TYPE unsigned long
+#define _LOCALE_T_TYPE unsigned long
 #define _SIG_ATOMIC_T_TYPE int
 #define _SIGSET_T_TYPE unsigned long
 

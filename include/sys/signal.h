@@ -18,15 +18,13 @@
 #ifndef _SYS_SIGNAL_H_
 #define _SYS_SIGNAL_H_
 
+#define __need_size_t
+#include <stddef.h>
 #include <sys/type_defs.h>
 
 #ifndef _PTHREAD_T_DEFINED
 #define _PTHREAD_T_DEFINED
 /*typedef _PTHREAD_T_TYPE pthread_t;*/
-#endif
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef _SIZE_T_TYPE size_t;
 #endif
 #ifndef _UID_T_DEFINED
 #define _UID_T_DEFINED

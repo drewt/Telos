@@ -18,18 +18,14 @@
 #ifndef _KERNEL_TIME_H_
 #define _KERNEL_TIME_H_
 
+#define __need_NULL
+#define __need_size_t
+#include <stddef.h>
 #include <sys/type_defs.h>
 
-#ifndef NULL
-#define NULL _NULL_DEFN
-#endif
 #ifndef _CLOCK_T_DEFINED
 #define _CLOCK_T_DEFINED
 typedef _CLOCK_T_TYPE clock_t;
-#endif
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-typedef _SIZE_T_TYPE size_t;
 #endif
 #ifndef _TIME_T_DEFINED
 #define _TIME_T_DEFINED
