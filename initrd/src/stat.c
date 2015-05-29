@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	printf("%s:\n"
-			"\tdev   = %u\n"
+			"\tdev   = %lu\n"
 			"\tino   = %lu\n"
 			"\tmode  = %lx\n"
 			"\tnlink = %lu\n"

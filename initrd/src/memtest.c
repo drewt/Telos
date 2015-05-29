@@ -118,7 +118,7 @@ static void aligned_alloc_test(void)
 
 	#define run_test(alignment, size) \
 		if (aligned_alloc_test_alloc(alignment, size)) { \
-			printf("error: aligned_alloc(%lu, %lu) failed\n", \
+			printf("error: aligned_alloc(%u, %u) failed\n", \
 					alignment, size); \
 			return; \
 		}
@@ -133,7 +133,6 @@ static void aligned_alloc_test(void)
 
 int main(int argc, char *argv[])
 {
-	malloc_init();
 	sbrk_test();
 	malloc_test();
 	realloc_test();

@@ -138,14 +138,14 @@ static void clock_test(void)
 		return;
 	}
 
-	printf("CLOCK_MONOTONIC: %d\n", t.tv_sec);
+	printf("CLOCK_MONOTONIC: %lu\n", t.tv_sec);
 
 	if (clock_gettime(CLOCK_REALTIME, &t) < 0) {
 		printf("clock_gettime() failed\n");
 		return;
 	}
 
-	printf("CLOCK_REALTIME: %x\n", t.tv_sec);
+	printf("CLOCK_REALTIME: %lx\n", t.tv_sec);
 }
 
 #include <stdlib.h>
