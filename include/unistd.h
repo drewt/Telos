@@ -66,7 +66,6 @@ int execve(const char *pathname, char *const argv[], char *const env[]);
 unsigned int alarm(unsigned int seconds);
 pid_t getpid(void);
 unsigned int sleep(unsigned int seconds);
-int open(const char *pathname, int flags, ...);
 int close(int fd);
 ssize_t read(int fd, void *buf, size_t nbyte);
 ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset);
