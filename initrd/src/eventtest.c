@@ -54,12 +54,14 @@ static _Noreturn void nanosleep_proc(const struct timespec *how_long, char c)
 static void sleep_test(void)
 {
 	printf("Testing sleep... abc ?= ");
+	fflush(stdout);
 	if (!fork())
 		nanosleep_proc(&less_than_two, 'b');
 	if (!fork())
 		nanosleep_proc(&less_than_one, 'a');
 	nanosleep(&less_than_three, NULL);
 	puts("c");
+	fflush(stdout);
 }
 
 static void alarm_handler(int signo)
@@ -72,24 +74,29 @@ static void alarm_test(void)
 	sigset_t set;
 	signal(SIGALRM, alarm_handler);
 	printf("Testing alarm... alrm ?= ");
+	fflush(stdout);
 	alarm(1);
 	if (alarm(1) <= 0)
 		printf("error");
 	printf("al");
+	fflush(stdout);
 	sigfillset(&set);
 	sigdelset(&set, SIGALRM);
 	sigsuspend(&set);
 	printf("Testing alarm(0)... ");
+	fflush(stdout);
 	alarm(2);
 	if (alarm(0) > 0)
 		puts("okay");
 	else
 		puts("error");
+	fflush(stdout);
 }
 
 static void timer_action(int signo, siginfo_t *info, void *context)
 {
 	printf("1 ");
+	fflush(stdout);
 }
 
 static void timer_test(void)
@@ -113,11 +120,13 @@ static void timer_test(void)
 	}
 
 	printf("Testing timers...\nVerify ascending: ");
+	fflush(stdout);
 	if (timer_settime(tid, 0, &time, NULL) < 0) {
 		printf("timer_settime() failed\n");
 	}
 	sleep(200); /* should be interrupted */
 	puts("2");
+	fflush(stdout);
 }
 
 static void clock_test(void)

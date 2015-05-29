@@ -45,6 +45,7 @@ static void sigusr2_handler(int signo)
 	if (signo != SIGUSR2)
 		printf("sigusr2_handler: wrong signal: %d\n", signo);
 	printf("b");
+	fflush(stdout);
 }
 
 static void sigusr1_handler(int signo)
@@ -53,10 +54,12 @@ static void sigusr1_handler(int signo)
 	if (signo != SIGUSR1)
 		printf("sigusr1_handler: wrong signal: %d\n", signo);
 	printf("a");
+	fflush(stdout);
 	sigfillset(&set);
 	sigdelset(&set, SIGUSR2);
 	sigsuspend(&set);
 	puts("c");
+	fflush(stdout);
 }
 
 static _Noreturn void sig_proc(void)
@@ -94,6 +97,7 @@ static void priority_test(void)
 {
 	sigset_t set;
 	printf("Testing signal priority... abc ?= ");
+	fflush(stdout);
 	signal(SIGUSR1, sigusr1_handler);
 	signal(SIGUSR2, sigusr2_handler);
 	if (!fork())
@@ -148,6 +152,7 @@ static void child_proc(void)
 	printf("Kill m");
 	for (;;) {
 		putchar('e');
+		fflush(stdout);
 		nanosleep(&t, NULL);
 	}
 }
