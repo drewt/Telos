@@ -83,7 +83,7 @@ static inline int syscall0(int call)
 	"movl %%eax,   %[rc]	\n"
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [xnum] "i" (INTR_SYSCALL)
-	: "%eax"
+	: "%eax", "memory"
 	);
 	return rc;
 }
@@ -99,7 +99,7 @@ static inline int __syscall1(int call, unsigned long arg0)
 	"movl %%eax, %[rc]	\n"
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [xnum] "i" (INTR_SYSCALL)
-	: "%eax", "%ebx"
+	: "%eax", "%ebx", "memory"
 	);
 	return rc;
 }
@@ -118,7 +118,7 @@ static inline int __syscall2(int call, unsigned long arg0, unsigned long arg1)
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
 	  [xnum] "i" (INTR_SYSCALL)
-	: "%eax", "%ebx", "%ecx"
+	: "%eax", "%ebx", "%ecx", "memory"
 	);
 	return rc;
 }
@@ -140,7 +140,7 @@ static inline int __syscall3(int call, unsigned long arg0, unsigned long arg1,
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
 	  [arg2] "g" (arg2), [xnum] "i" (INTR_SYSCALL)
-	: "%eax", "%ebx", "%ecx", "%edx"
+	: "%eax", "%ebx", "%ecx", "%edx", "memory"
 	);
 	return rc;
 }
@@ -163,7 +163,7 @@ static inline int __syscall4(int call, unsigned long arg0, unsigned long arg1,
 	: [rc] "=g" (rc)
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
 	  [arg2] "g" (arg2), [arg3] "g" (arg3), [xnum] "i" (INTR_SYSCALL)
-	: "%eax", "%ebx", "%ecx", "%edx", "%edi"
+	: "%eax", "%ebx", "%ecx", "%edx", "%edi", "memory"
 	);
 	return rc;
 }
@@ -189,7 +189,7 @@ static inline int __syscall5(int call, unsigned long arg0, unsigned long arg1,
 	: [call] "g" (call), [arg0] "g" (arg0), [arg1] "g" (arg1),
 	  [arg2] "g" (arg2), [arg3] "g" (arg3), [arg4] "g" (arg4),
 	  [xnum] "i" (INTR_SYSCALL)
-	: "%eax", "%ebx", "%ecx", "%edx", "%edi", "%esi"
+	: "%eax", "%ebx", "%ecx", "%edx", "%edi", "%esi", "memory"
 	);
 	return rc;
 }
