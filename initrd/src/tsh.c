@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 #include <sys/wait.h>
 
 #include <telos/console.h>
