@@ -31,19 +31,15 @@ typedef _MODE_T_TYPE mode_t;
 typedef _OFF_T_TYPE off_t;
 #endif
 
-enum {
-	PROT_NONE  = 0,
-	PROT_EXEC  = 1,
-	PROT_WRITE = 2,
-	PROT_READ  = 4,
-};
+#define PROT_NONE  0
+#define PROT_EXEC  1
+#define PROT_WRITE 2
+#define PROT_READ  4
 
-enum {
-	MAP_PRIVATE   = 0,
-	MAP_SHARED    = 1,
-	MAP_FIXED     = 2,
-	MAP_ANONYMOUS = 4,
-};
+#define MAP_PRIVATE   0
+#define MAP_SHARED    1
+#define MAP_FIXED     2
+#define MAP_ANONYMOUS 4
 
 struct __mmap_args {
 	void *addr;
