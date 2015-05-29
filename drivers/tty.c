@@ -112,25 +112,23 @@ static ssize_t tty_read(struct file *f, char *buf, size_t len,
 	size_t bytes = 0;
 	struct tty *tty = file_tty(f);
 
-	while (bytes < len) {
-		struct tty_buffer *tty_buf;
-		while (list_empty(&tty->flushed)) {
-			if (wait_interruptible(&tty->wait))
-				return -EINTR;
-		}
+	struct tty_buffer *tty_buf;
+	while (list_empty(&tty->flushed)) {
+		if (wait_interruptible(&tty->wait))
+			return -EINTR;
+	}
 
-		tty_buf = list_first_entry(&tty->flushed, struct tty_buffer, chain);
-		if (tty_buffer_empty(tty_buf)) {
-			list_del(&tty_buf->chain);
-			free_tty_buffer(tty_buf);
-			return 0;
-		}
+	tty_buf = list_first_entry(&tty->flushed, struct tty_buffer, chain);
+	if (tty_buffer_empty(tty_buf)) {
+		list_del(&tty_buf->chain);
+		free_tty_buffer(tty_buf);
+		return 0;
+	}
 
-		bytes += tty_buffer_copy(tty_buf, buf + bytes, len - bytes);
-		if (tty_buffer_empty(tty_buf)) {
-			list_del(&tty_buf->chain);
-			free_tty_buffer(tty_buf);
-		}
+	bytes += tty_buffer_copy(tty_buf, buf + bytes, len - bytes);
+	if (tty_buffer_empty(tty_buf)) {
+		list_del(&tty_buf->chain);
+		free_tty_buffer(tty_buf);
 	}
 	return bytes;
 }
