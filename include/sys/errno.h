@@ -18,88 +18,86 @@
 #ifndef _SYS_ERRNO_H_
 #define _SYS_ERRNO_H_
 
-enum {
-	ENOSYS          = 1,
-	E2BIG           = 2,
-	EACCES          = 3,
-	EADDRINUSE      = 4,
-	EADDRNOTAVAIL   = 5,
-	EAFNOSUPPORT    = 6,
-	EAGAIN          = 7,
-	EALREADY        = 8,
-	EBADF           = 9,
-	EBADMSG         = 10,
-	EBUSY           = 11,
-	ECANCELED       = 12,
-	ECHILD          = 13,
-	ECONNABORTED    = 14,
-	ECONNREFUSED    = 15,
-	ECONNRESET      = 16,
-	EDEADLK         = 17,
-	EDESTADDRREQ    = 18,
-	EDOM            = 19,
-	EDQUOT          = 20,
-	EEXIST          = 21,
-	EFAULT          = 22,
-	EFBIG           = 23,
-	EHOSTUNREACH    = 24,
-	EIDRM           = 25,
-	EILSEQ          = 26,
-	EINPROGRESS     = 27,
-	EINTR           = 28,
-	EINVAL          = 29,
-	EIO             = 30,
-	EISCONN         = 31,
-	EISDIR          = 32,
-	ELOOP           = 33,
-	EMFILE          = 34,
-	EMLINK          = 35,
-	EMSGSIZE        = 36,
-	EMULTIHOP       = 37,
-	ENAMETOOLONG    = 38,
-	ENETDOWN        = 39,
-	ENETRESET       = 40,
-	ENETUNREACH     = 41,
-	ENFILE          = 42,
-	ENOBUFS         = 43,
-	ENODATA         = 44,
-	ENODEV          = 45,
-	ENOENT          = 46,
-	ENOEXEC         = 47,
-	ENOLCK          = 48,
-	ENOLINK         = 49,
-	ENOMEM          = 50,
-	ENOMSG          = 60,
-	ENOPROTOOPT     = 61,
-	ENOSPC          = 62,
-	ENOSR           = 63,
-	ENOSTR          = 64,
-	ENOTCONN        = 65,
-	ENOTDIR         = 66,
-	ENOTEMPTY       = 67,
-	ENOTSOCK        = 68,
-	ENOTSUP         = 69,
-	ENOTTY          = 70,
-	ENXIO           = 71,
-	EOPNOTSUPP      = 72,
-	EOVERFLOW       = 73,
-	EPERM           = 74,
-	EPIPE           = 75,
-	EPROTO          = 76,
-	EPROTONOSUPPORT = 77,
-	EPROTOTYPE      = 78,
-	ERANGE          = 79,
-	EROFS           = 80,
-	ESPIPE          = 81,
-	ESRCH           = 82,
-	ESTALE          = 83,
-	ETIME           = 84,
-	ETIMEDOUT       = 85,
-	ETXTBSY         = 86,
-	EWOULDBLOCK     = 87,
-	EXDEV           = 89,
-	ENOTBLK         = 90,
-	EFTYPE          = 91,
-};
+#define ENOSYS          1
+#define E2BIG           2
+#define EACCES          3
+#define EADDRINUSE      4
+#define EADDRNOTAVAIL   5
+#define EAFNOSUPPORT    6
+#define EAGAIN          7
+#define EALREADY        8
+#define EBADF           9
+#define EBADMSG         10
+#define EBUSY           11
+#define ECANCELED       12
+#define ECHILD          13
+#define ECONNABORTED    14
+#define ECONNREFUSED    15
+#define ECONNRESET      16
+#define EDEADLK         17
+#define EDESTADDRREQ    18
+#define EDOM            19
+#define EDQUOT          20
+#define EEXIST          21
+#define EFAULT          22
+#define EFBIG           23
+#define EHOSTUNREACH    24
+#define EIDRM           25
+#define EILSEQ          26
+#define EINPROGRESS     27
+#define EINTR           28
+#define EINVAL          29
+#define EIO             30
+#define EISCONN         31
+#define EISDIR          32
+#define ELOOP           33
+#define EMFILE          34
+#define EMLINK          35
+#define EMSGSIZE        36
+#define EMULTIHOP       37
+#define ENAMETOOLONG    38
+#define ENETDOWN        39
+#define ENETRESET       40
+#define ENETUNREACH     41
+#define ENFILE          42
+#define ENOBUFS         43
+#define ENODATA         44
+#define ENODEV          45
+#define ENOENT          46
+#define ENOEXEC         47
+#define ENOLCK          48
+#define ENOLINK         49
+#define ENOMEM          50
+#define ENOMSG          60
+#define ENOPROTOOPT     61
+#define ENOSPC          62
+#define ENOSR           63
+#define ENOSTR          64
+#define ENOTCONN        65
+#define ENOTDIR         66
+#define ENOTEMPTY       67
+#define ENOTSOCK        68
+#define ENOTSUP         69
+#define ENOTTY          70
+#define ENXIO           71
+#define EOPNOTSUPP      72
+#define EOVERFLOW       73
+#define EPERM           74
+#define EPIPE           75
+#define EPROTO          76
+#define EPROTONOSUPPORT 77
+#define EPROTOTYPE      78
+#define ERANGE          79
+#define EROFS           80
+#define ESPIPE          81
+#define ESRCH           82
+#define ESTALE          83
+#define ETIME           84
+#define ETIMEDOUT       85
+#define ETXTBSY         86
+#define EWOULDBLOCK     87
+#define EXDEV           89
+#define ENOTBLK         90
+#define EFTYPE          91
 
 #endif
