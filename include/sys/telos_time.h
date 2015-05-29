@@ -51,11 +51,11 @@ typedef _PID_T_TYPE pid_t;
 #define __TICKS_PER_SEC 100
 #define __NSEC_PER_TICK 10000000
 
-enum {
-	CLOCK_REALTIME,
-	CLOCK_MONOTONIC,
-	__NR_CLOCKS
-};
+#define CLOCK_REALTIME           0
+#define CLOCK_MONOTONIC          1
+#define CLOCK_PROCESS_CPUTIME_ID 2
+#define CLOCK_THREAD_CPUTIME_ID  3
+#define __NR_CLOCKS              4
 
 #ifndef _STRUCT_TIMESPEC_DEFINED
 #define _STRUCT_TIMESPEC_DEFINED
