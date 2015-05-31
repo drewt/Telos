@@ -18,7 +18,7 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/mm/vma.h>
-#include <sys/stat.h>
+#include <telos/stat.h>
 
 long sys_stat(const char *pathname, size_t name_len, struct stat *s)
 {

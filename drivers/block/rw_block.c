@@ -18,7 +18,7 @@
 #include <kernel/fs.h>
 #include <kernel/wait.h>
 #include <kernel/mm/kmalloc.h>
-#include <sys/major.h>
+#include <telos/major.h>
 #include <string.h>
 #include "block.h"
 

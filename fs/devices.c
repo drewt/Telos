@@ -24,7 +24,7 @@
  */
 
 #include <kernel/fs.h>
-#include <sys/major.h>
+#include <telos/major.h>
 #include <string.h>
 
 struct device_struct {

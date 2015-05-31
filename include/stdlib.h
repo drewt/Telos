@@ -20,7 +20,7 @@
 #define _STDLIB_H_
 
 #include <stddef.h>
-#include <sys/type_defs.h>
+#include <telos/type_defs.h>
 
 #ifndef _DIV_T_DEFINED
 #define _DIV_T_DEFINED

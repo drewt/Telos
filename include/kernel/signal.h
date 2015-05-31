@@ -19,9 +19,7 @@
 #define _KERNEL_SIGNAL_H_
 
 #include <kernel/bitops.h>
-#include <sys/signal.h>
-
-#define signo_valid __signo_valid
+#include <telos/signal.h>
 
 struct sig_struct {
 	sigset_t pending;
@@ -33,6 +31,40 @@ struct sig_struct {
 void sig_init(struct sig_struct *sig);
 void sig_clone(struct sig_struct *dst, struct sig_struct *src);
 void sig_exec(struct sig_struct *sig);
+
+static inline bool signo_valid(int signo)
+{
+	return __SIGNO_VALID(signo);
+}
+
+static inline int sigfillset(sigset_t *set)
+{
+	__SIGFILLSET(set);
+	return 0;
+}
+
+static inline int sigemptyset(sigset_t *set)
+{
+	__SIGEMPTYSET(set);
+	return 0;
+}
+
+static inline int sigaddset(sigset_t *set, int signo)
+{
+	__SIGADDSET(set, signo);
+	return 0;
+}
+
+static inline int sigdelset(sigset_t *set, int signo)
+{
+	__SIGDELSET(set, signo);
+	return 0;
+}
+
+static inline int sigismember(const sigset_t *set, int signo)
+{
+	return __SIGISMEMBER(set, signo);
+}
 
 static inline int signal_pending(struct sig_struct *sig)
 {

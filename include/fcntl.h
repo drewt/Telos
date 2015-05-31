@@ -19,7 +19,7 @@
 #ifndef _FNCTL_H_
 #define _FNCTL_H_
 
-#include <sys/fcntl.h>
+#include <telos/fcntl.h>
 
 //int creat(const char *, mode_t);
 int fcntl(int fd, int cmd, ...);

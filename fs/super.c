@@ -23,9 +23,9 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <sys/stat.h>
-#include <sys/major.h>
-#include <sys/mount.h>
+#include <telos/major.h>
+#include <telos/mount.h>
+#include <telos/stat.h>
 #include <string.h>
 
 #define SBT_SIZE 100

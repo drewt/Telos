@@ -18,8 +18,8 @@
 #include <kernel/fs.h>
 #include <kernel/hashtable.h>
 #include <kernel/mm/slab.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <telos/fcntl.h>
+#include <telos/stat.h>
 
 static DEFINE_HASHTABLE(inodes, 9);
 

@@ -21,7 +21,7 @@
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
-#include <sys/stat.h>
+#include <telos/stat.h>
 
 #include <string.h>
 

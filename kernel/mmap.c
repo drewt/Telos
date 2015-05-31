@@ -22,7 +22,7 @@
 #include <kernel/mm/paging.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vma.h>
-#include <sys/mman.h>
+#include <telos/mman.h>
 #include <string.h>
 
 struct mmap_private {

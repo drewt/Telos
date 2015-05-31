@@ -18,7 +18,7 @@
 #ifndef _ERRNO_H_
 #define _ERRNO_H_
 
-#include <sys/errno.h>
+#include <telos/errno.h>
 
 extern int errno;
 

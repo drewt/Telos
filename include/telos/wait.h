@@ -28,12 +28,72 @@
  * POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _TELOS_CONSOLE_H_
-#define _TELOS_CONSOLE_H_
+#ifndef _TELOS_WAIT_H_
+#define _TELOS_WAIT_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
-};
+#include <telos/type_defs.h>
 
+#ifndef _ID_T_DEFINED
+#define _ID_T_DEFINED
+typedef _ID_T_TYPE id_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
+#ifndef _UNION_SIGVAL_DEFINED
+#define _UNION_SIGVAL_DEFINED
+_UNION_SIGVAL_DEFN
+#endif
+#ifndef _SIGINFO_T_DEFINED
+#define _SIGINFO_T_DEFINED
+_SIGINFO_T_DEFN
+#endif
+
+#define WCONTINUED 1
+#define WEXITED    2
+#define WSIGNALLED 4
+#define WSTOPPED   8
+#define WNOHANG    16
+#define WUNTRACED  32
+#define WNOWAIT    64
+
+#define _WCONTINUED 0
+#define _WEXITED    1
+#define _WSIGNALED 2
+#define _WSTOPPED   3
+
+/*
+ * A status is made up of a 2-bit "how" value (one of _WCONTINUED, _WEXITED,
+ * _WSIGNALLED or _WSTOPPED) and a generic n-bit (however many bits are left)
+ * value, either the signal number or the exit status.
+ *
+ * val --> [...________][__] <-- how
+ */
+#define WEXITSTATUS(s)  (((s) & 0x3FC) >> 2)
+#define WIFCONTINUED(s) (((s) & 0x3) == _WCONTINUED)
+#define WIFEXITED(s)    (((s) & 0x3) == _WEXITED)
+#define WIFSIGNALED(s)  (((s) & 0x3) == _WSIGNALED)
+#define WIFSTOPPED(s)   (((s) & 0x3) == _WSTOPPED)
+#define WSTOPSIG(s)     ((unsigned)((s) & ~0x3) >> 2)
+#define WTERMSIG(s)     WSTOPSIG(s)
+
+typedef enum {
+	P_ALL,
+	P_PGID,
+	P_PID,
+} idtype_t;
+
+#ifdef __KERNEL__
+#define WHOW(s) ((s) & 0x3)
+#define WVALUE(s) WSTOPSIG(s)
+static inline int make_status(int how, int val)
+{
+	return (how & 0x3) | ((unsigned)val << 2);
+}
+#endif
 #endif

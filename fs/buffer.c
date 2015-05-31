@@ -18,7 +18,7 @@
 #include <kernel/fs.h>
 #include <kernel/hashtable.h>
 #include <kernel/mm/paging.h>
-#include <sys/major.h>
+#include <telos/major.h>
 
 /*
  * The buffer cache.

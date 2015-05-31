@@ -23,8 +23,8 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <telos/fcntl.h>
+#include <telos/stat.h>
 
 int permission(struct inode *inode, int mask)
 {

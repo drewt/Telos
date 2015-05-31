@@ -20,7 +20,7 @@
 #include <kernel/list.h>
 #include <kernel/tty.h>
 #include <kernel/mm/kmalloc.h>
-#include <sys/major.h>
+#include <telos/major.h>
 #include <string.h>
 
 struct tty tty_table[NR_TTYS];

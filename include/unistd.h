@@ -22,7 +22,7 @@
 #define __need_size_t
 #include <stddef.h>
 
-#include <sys/type_defs.h>
+#include <telos/type_defs.h>
 
 #ifndef _SSIZE_T_DEFINED
 #define _SSIZE_T_DEFINED

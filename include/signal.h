@@ -19,7 +19,42 @@
 #ifndef _SIGNAL_H_
 #define _SIGNAL_H_
 
-#include <sys/signal.h>
+#include <telos/signal.h>
+
+static inline int sigfillset(sigset_t *set)
+{
+	__SIGFILLSET(set);
+	return 0;
+}
+
+static inline int sigemptyset(sigset_t *set)
+{
+	__SIGEMPTYSET(set);
+	return 0;
+}
+
+static inline int sigaddset(sigset_t *set, int signo)
+{
+	if (!__SIGNO_VALID(signo))
+		return -1;
+	__SIGADDSET(set, signo);
+	return 0;
+}
+
+static inline int sigdelset(sigset_t *set, int signo)
+{
+	if (!__SIGNO_VALID(signo))
+		return -1;
+	__SIGDELSET(set, signo);
+	return 0;
+}
+
+static inline int sigismember(const sigset_t *set, int signo)
+{
+	if (!__SIGNO_VALID(signo))
+		return -1;
+	return __SIGISMEMBER(set, signo);
+}
 
 int kill(pid_t pid, int signal_number);
 //int killpg(pid_t, int);

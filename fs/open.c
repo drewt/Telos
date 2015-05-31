@@ -23,9 +23,8 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
-#include <sys/major.h>
+#include <telos/fcntl.h>
+#include <telos/major.h>
 #include <string.h>
 
 long sys_truncate(const char *pathname, size_t name_len, size_t length)

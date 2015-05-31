@@ -26,13 +26,12 @@
 #include <kernel/mm/kmalloc.h>
 #include <kernel/mm/paging.h>
 #include <kernel/mm/vma.h>
-#include <sys/stat.h>
-#include <sys/exec.h>
-#include <sys/fcntl.h>
-#include <sys/mman.h>
-#include <sys/wait.h>
 #include <syscall.h>
 #include <string.h>
+#include <telos/exec.h>
+#include <telos/fcntl.h>
+#include <telos/mman.h>
+#include <telos/wait.h>
 
 extern void exit(int status);
 

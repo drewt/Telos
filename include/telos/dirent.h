@@ -28,12 +28,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _TELOS_CONSOLE_H_
-#define _TELOS_CONSOLE_H_
+#ifndef _TELOS_DIRENT_H_
+#define _TELOS_DIRENT_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
+#include <telos/type_defs.h>
+
+#ifndef _INO_T_DEFINED
+#define _INO_T_DEFINED
+typedef _INO_T_TYPE ino_t;
+#endif
+
+#define NAME_MAX 255
+
+struct dirent {
+	ino_t d_ino;
+	unsigned long d_off;
+	char d_name[NAME_MAX+1];
 };
 
 #endif

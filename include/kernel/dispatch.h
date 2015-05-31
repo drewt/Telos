@@ -19,7 +19,7 @@
 #define _KERNEL_DISPATCH_H_
 
 #include <kernel/process.h>
-#include <sys/wait.h>
+#include <telos/wait.h>
 #include <syscall.h>
 
 struct sigaction;

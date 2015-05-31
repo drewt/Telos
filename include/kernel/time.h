@@ -18,7 +18,7 @@
 #ifndef _KERNEL_TIME_H_
 #define _KERNEL_TIME_H_
 
-#include <sys/telos_time.h>
+#include <telos/time.h>
 
 extern unsigned long tick_count;
 extern unsigned long system_clock;
@@ -40,6 +40,16 @@ static inline unsigned long tm_to_unix(struct tm *t)
 	return t->tm_sec + t->tm_min*60 + t->tm_hour*3600 + t->tm_yday*86400
 		+ (t->tm_year-70)*31536000 + ((t->tm_year-69)/4)*86400
 		- ((t->tm_year-1)/100)*86400 + ((t->tm_year+299)/400)*86400;
+}
+
+static inline unsigned long timespec_to_ticks(const struct timespec *t)
+{
+	return __TIMESPEC_TO_TICKS(t);
+}
+
+static inline void ticks_to_timespec(struct timespec *t, unsigned long ticks)
+{
+	__TICKS_TO_TIMESPEC(t, ticks);
 }
 
 #endif

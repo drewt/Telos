@@ -18,7 +18,7 @@
 #include <kernel/fs.h>
 #include <kernel/ramfs.h>
 #include <kernel/multiboot.h>
-#include <sys/stat.h>
+#include <telos/stat.h>
 #include <string.h>
 
 static int modfs_read(struct file *file, char *buf, size_t len,

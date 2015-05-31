@@ -40,10 +40,10 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 	if (req->tv_nsec < 0 || req->tv_nsec > 999999999)
 		return -1; /* EINVAL */
 
-	left = syscall1(SYS_SLEEP, __timespec_to_ticks(req));
+	left = syscall1(SYS_SLEEP, __TIMESPEC_TO_TICKS(req));
 
 	if (left != 0) {
-		__ticks_to_timespec(rem, left);
+		__TICKS_TO_TIMESPEC(rem, left);
 		return -1; /* EINTR */
 	}
 	return 0;

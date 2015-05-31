@@ -15,8 +15,9 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <string.h>
 #include <syscall.h>
 #include <unistd.h>
 #include <sys/mount.h>

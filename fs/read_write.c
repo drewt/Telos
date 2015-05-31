@@ -24,8 +24,8 @@
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
 #include <kernel/mm/vma.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <telos/fcntl.h>
+#include <telos/stat.h>
 
 long sys_readdir(unsigned int fd, struct dirent *dirent, unsigned int count)
 {

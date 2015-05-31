@@ -17,7 +17,7 @@
 
 #include <kernel/dispatch.h>
 #include <kernel/fs.h>
-#include <sys/fcntl.h>
+#include <telos/fcntl.h>
 
 static inline int dupfd(int oldfd, int newfd)
 {

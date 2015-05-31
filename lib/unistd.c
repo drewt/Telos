@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <syscall.h>
 #include <string.h>
-#include <sys/exec.h>
+#include <telos/exec.h>
 
 pid_t fork(void)
 {

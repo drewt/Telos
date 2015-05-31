@@ -21,7 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <syscall.h>
-#include <sys/mman.h>
+#include <telos/mman.h>
 
 #include <kernel/list.h> /* FIXME: shouldn't include kernel header */
 

@@ -19,7 +19,7 @@
 #ifndef _DIRENT_H_
 #define _DIRENT_H_
 
-#include <sys/dirent.h>
+#include <telos/dirent.h>
 
 typedef struct {
 	int fd;

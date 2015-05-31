@@ -28,12 +28,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _TELOS_CONSOLE_H_
-#define _TELOS_CONSOLE_H_
+#ifndef _TELOS_EXEC_H_
+#define _TELOS_EXEC_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
+#include <telos/string.h>
+
+struct exec_args {
+	struct _Telos_string pathname;
+	struct _Telos_string *argv;
+	struct _Telos_string *envp;
+	size_t argc;
+	size_t envc;
 };
 
 #endif

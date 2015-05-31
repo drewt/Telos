@@ -21,7 +21,7 @@
 #include <kernel/tty.h>
 #include <kernel/drivers/console.h>
 #include <kernel/drivers/keyboard.h>
-#include <sys/major.h>
+#include <telos/major.h>
 #include <string.h>
 
 #define NR_CONSOLES 2

@@ -28,12 +28,33 @@
  * POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _TELOS_CONSOLE_H_
-#define _TELOS_CONSOLE_H_
+#ifndef _TELOS_MOUNT_H_
+#define _TELOS_MOUNT_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
+#include <telos/string.h>
+
+/*
+ * fs-independent mount-flags
+ */
+enum {
+	MS_RDONLY  = 0x01, // mount read-only
+	MS_NOSUID  = 0x02, // ignore suid and sgid bits
+	MS_NODEV   = 0x04, // disallow access to device special files
+	MS_NOEXEC  = 0x08, // disallow program execution
+	MS_SYNC    = 0x10, // writes are synced at once
+	MS_REMOUNT = 0x20, // alter flags of a mounted FS
+	MS_MEMFS   = 0x40, // do not free inodes
+
+	MS_MOUNT_MASK = MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC
+		      | MS_SYNC,
+};
+
+struct mount {
+	const struct _Telos_string dev;
+	const struct _Telos_string dir;
+	const struct _Telos_string type;
+	unsigned long flags;
+	const void *data;
 };
 
 #endif

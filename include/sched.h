@@ -18,7 +18,7 @@
 #ifndef _SCHED_H_
 #define _SCHED_H_
 
-#include <sys/type_defs.h>
+#include <telos/type_defs.h>
 
 #ifndef _PID_T_DEFINED
 #define _PID_T_DEFINED

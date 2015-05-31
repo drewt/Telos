@@ -295,7 +295,7 @@ long sys_timer_settime(timer_t timerid, int flags,
 		return -EFAULT;
 
 	*v = *new_value;
-	ktimer_start(&pt->timer, __timespec_to_ticks(&v->it_value));
+	ktimer_start(&pt->timer, timespec_to_ticks(&v->it_value));
 	return 0;
 }
 

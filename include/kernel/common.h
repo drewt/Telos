@@ -21,9 +21,9 @@
 #define __KERNEL__
 
 #include <stdarg.h>
-#include <sys/types.h>
 #include <kernel/compiler.h>
-#include <sys/errno.h>
+#include <kernel/types.h>
+#include <telos/errno.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))

@@ -21,8 +21,8 @@
 #include <kernel/list.h>
 #include <kernel/mm/slab.h>
 #include <kernel/wait.h>
-#include <sys/dirent.h>
-#include <sys/mount.h>
+#include <telos/dirent.h>
+#include <telos/mount.h>
 
 enum {
 	SEEK_SET,

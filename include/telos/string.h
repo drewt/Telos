@@ -28,12 +28,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _TELOS_CONSOLE_H_
-#define _TELOS_CONSOLE_H_
+#ifndef _TELOS_STRING_H_
+#define _TELOS_STRING_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
+#define __need_size_t
+#include <stddef.h>
+
+struct _Telos_string {
+	size_t len;
+	const char *str;
 };
 
 #endif
