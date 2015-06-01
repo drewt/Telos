@@ -184,11 +184,8 @@ void int_keyboard(void)
 		goto end;
 	}
 
-	if (c != NOCHAR) {
-		console_putc(c, DEFAULT_ATTR, visible);
-		if (tty)
-			tty_insert_char(tty, c);
-	}
+	if (tty && c != NOCHAR)
+		tty_insert_char(tty, c);
 end:
 	pic_eoi();
 }

@@ -58,9 +58,13 @@ typedef long _ssize_t;
 
 #define _BLKCNT_T_TYPE long
 #define _BLKSIZE_T_TYPE long
+#define _CC_T_TYPE unsigned int
+#define _SPEED_T_TYPE unsigned int
+#define _TCFLAG_T_TYPE unsigned long
 #define _CLOCK_T_TYPE unsigned long
 #define _CLOCKID_T_TYPE int
 #define _DEV_T_TYPE unsigned long
+#define _FPOS_T_TYPE unsigned long
 #define _FSBLKCNT_T_TYPE unsigned long
 #define _FSFILCNT_T_TYPE unsigned long
 #define _GID_T_TYPE unsigned long
@@ -68,6 +72,7 @@ typedef long _ssize_t;
 #define _INO_T_TYPE unsigned long
 #define _INTPTR_T_TYPE long
 #define _KEY_T_TYPE long
+#define _LOCALE_T_TYPE unsigned long
 #define _MODE_T_TYPE unsigned long
 #define _NLINK_T_TYPE unsigned long
 #define _OFF_T_TYPE long
@@ -85,6 +90,8 @@ typedef long _ssize_t;
 #define _PTHREAD_RWLOCKATTR_T_TYPE TODO
 #define _PTHREAD_SPINLOCK_T_TYPE TODO
 #define _PTHREAD_T_TYPE TODO
+#define _SIG_ATOMIC_T_TYPE int
+#define _SIGSET_T_TYPE unsigned long
 #define _SUSECONDS_T_TYPE long
 #define _TIME_T_TYPE unsigned long
 #define _TIMER_T_TYPE unsigned long
@@ -95,11 +102,6 @@ typedef long _ssize_t;
 #define _UID_T_TYPE unsigned long
 #define _UINTPTR_T_TYPE unsigned long
 #define _USECONDS_T_TYPE unsigned long
-
-#define _FPOS_T_TYPE unsigned long
-#define _LOCALE_T_TYPE unsigned long
-#define _SIG_ATOMIC_T_TYPE int
-#define _SIGSET_T_TYPE unsigned long
 
 #define _STRUCT_TIMESPEC_DEFN \
 	struct timespec { \

@@ -20,6 +20,7 @@
 #include <kernel/list.h>
 #include <kernel/tty.h>
 #include <kernel/mm/kmalloc.h>
+#include <telos/ioctl.h>
 #include <telos/major.h>
 #include <string.h>
 
@@ -143,6 +144,26 @@ static ssize_t tty_write(struct file *f, const char *buf, size_t len,
 	return tty->driver->op->write(tty, buf, len);
 }
 
+/* TODO: fill this with sane values */
+static struct termios default_termios = {
+	.c_iflag = 0,
+	.c_oflag = 0,
+	.c_cflag = 0,
+	.c_lflag = ECHO | ECHOE,
+	.c_cc = {
+		[VEOF]   = 4,
+		[VEOL]   = '\n',
+		[VERASE] = '\b',
+		[VINTR]  = 0,
+		[VKILL]  = 0,
+		[VMIN]   = 0,
+		[VQUIT]  = 0,
+		[VSTART] = 0,
+		[VSTOP]  = 0,
+		[VSUSP]  = 0
+	}
+};
+
 static int tty_open(struct inode *inode, struct file *file)
 {
 	int rc;
@@ -165,6 +186,8 @@ static int tty_open(struct inode *inode, struct file *file)
 		if ((rc = tty->driver->op->open(tty, file)))
 			return rc;
 	tty->driver->ttys[index] = tty;
+	if (!tty->open)
+		tty->termios = default_termios;
 	tty->open++;
 	return 0;
 }
@@ -187,12 +210,21 @@ static int tty_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int tty_getattr(struct tty *tty, struct termios *termios)
+{
+	if (vm_verify(&current->mm, termios, sizeof(*termios), VM_WRITE))
+		return -EFAULT;
+	*termios = tty->termios;
+	return 0;
+}
+
 static int tty_ioctl(struct inode *inode, struct file *file,
 		unsigned int command, unsigned long arg)
 {
 	struct tty *tty = file_tty(file);
 	switch (command) {
-	// TODO: generic tty ioctls
+	case TCGETS:
+		return tty_getattr(tty, (struct termios*)arg);
 	default:
 		if (tty->driver->op->ioctl)
 			return tty->driver->op->ioctl(tty, command, arg);
@@ -225,31 +257,35 @@ static void tty_buffer_flush(struct tty *tty)
 	tty->buffer = alloc_tty_buffer();
 }
 
-static inline void _tty_insert_char(struct tty *tty, unsigned char c)
+static inline void _tty_insert_char(struct tty *tty, char c)
 {
 	tty->buffer->data[tty->buffer->pos++] = c;
+	if (!(tty->termios.c_lflag & ECHO))
+		return;
+	tty->driver->op->write(tty, &c, 1);
 }
 
 int tty_insert_char(struct tty *tty, unsigned char c)
 {
 	if (!tty->buffer && !(tty->buffer = alloc_tty_buffer()))
 		return -ENOMEM;
-	switch (c) {
-	case '\b':
+	if (c == tty->termios.c_cc[VERASE]) {
+		static const char bs = '\b';
 		if (tty->buffer->pos > 0)
 			tty->buffer->pos--;
-		break;
-	case '\n':
+		if (tty->termios.c_lflag & ECHOE)
+			tty->driver->op->write(tty, &bs, 1);
+	} else if (c == tty->termios.c_cc[VEOL]) {
 		_tty_insert_char(tty, c);
-		tty_buffer_flush(tty);
-		return 0;
-	case 4:
-		tty_buffer_flush(tty);
-		return 0;
-	default:
+		goto flush;
+	} else if (c == tty->termios.c_cc[VEOF]) {
+		goto flush;
+	} else {
 		_tty_insert_char(tty, c);
 	}
-	if (tty->buffer->pos >= TTY_BUFFER_SIZE)
-		tty_buffer_flush(tty);
+	if (tty->buffer->pos < TTY_BUFFER_SIZE)
+		return 0;
+flush:
+	tty_buffer_flush(tty);
 	return 0;
 }

@@ -21,6 +21,7 @@
 #include <kernel/list.h>
 #include <kernel/fs.h>
 #include <kernel/wait.h>
+#include <telos/termios.h>
 
 #define NR_TTYS 64
 #define TTY_BUFFER_SIZE 16
@@ -60,6 +61,7 @@ struct tty {
 	struct tty_buffer *buffer;
 	struct wait_queue wait;
 	struct list_head flushed;
+	struct termios termios;
 	void *tty_private;
 };
 
