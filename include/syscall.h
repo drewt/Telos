@@ -71,7 +71,8 @@ enum {
 	SYS_FCNTL         = 54,
 	SYS_FORK          = 55,
 	SYS_EXECVE        = 56,
-	SYSCALL_MAX       = 57
+	SYS_FSTAT         = 57,
+	SYSCALL_MAX       = 58
 };
 
 static inline int syscall0(int call)

@@ -20,20 +20,8 @@
 #include <kernel/mm/vma.h>
 #include <telos/stat.h>
 
-long sys_stat(const char *pathname, size_t name_len, struct stat *s)
+void do_stat(struct inode *inode, struct stat *s)
 {
-	int error;
-	struct inode *inode;
-
-	error = verify_user_string(pathname, name_len);
-	if (error)
-		return error;
-	if (vm_verify(&current->mm, s, sizeof(*s), VM_WRITE))
-		return -EFAULT;
-	error = namei(pathname, &inode);
-	if (error)
-		return error;
-
 	s->st_dev = inode->i_dev;
 	s->st_ino = inode->i_ino;
 	s->st_mode = inode->i_mode;
@@ -48,6 +36,35 @@ long sys_stat(const char *pathname, size_t name_len, struct stat *s)
 	s->st_blksize = 1024;
 	s->st_blocks = 0;
 	s->st_icount = inode->i_count - 1;
+}
+
+long sys_fstat(int fd, struct stat *s)
+{
+	struct inode *inode;
+	if (vm_verify(&current->mm, s, sizeof(*s), VM_WRITE))
+		return -EFAULT;
+	if (fd >= NR_FILES || !current->filp[fd]
+			|| !(inode = current->filp[fd]->f_inode))
+		return -EBADF;
+	do_stat(inode, s);
+	return 0;
+}
+
+long sys_stat(const char *pathname, size_t name_len, struct stat *s)
+{
+	int error;
+	struct inode *inode;
+
+	error = verify_user_string(pathname, name_len);
+	if (error)
+		return error;
+	if (vm_verify(&current->mm, s, sizeof(*s), VM_WRITE))
+		return -EFAULT;
+	error = namei(pathname, &inode);
+	if (error)
+		return error;
+
+	do_stat(inode, s);
 	iput(inode);
 	return 0;
 }
