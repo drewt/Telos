@@ -31,75 +31,6 @@
 #ifndef _TELOS_SIGNAL_H_
 #define _TELOS_SIGNAL_H_
 
-#define __need_size_t
-#include <stddef.h>
-#include <telos/type_defs.h>
-
-#ifndef _PTHREAD_T_DEFINED
-#define _PTHREAD_T_DEFINED
-/*typedef _PTHREAD_T_TYPE pthread_t;*/
-#endif
-#ifndef _UID_T_DEFINED
-#define _UID_T_DEFINED
-typedef _UID_T_TYPE uid_t;
-#endif
-#ifndef _SIG_ATOMIC_T_DEFINED
-#define _SIG_ATOMIC_T_DEFINED
-typedef _SIG_ATOMIC_T_TYPE sig_atomic_t;
-#endif
-#ifndef _SIGSET_T_DEFINED
-#define _SIGSET_T_DEFINED
-typedef _SIGSET_T_TYPE sigset_t;
-#endif
-#ifndef _PID_T_DEFINED
-#define _PID_T_DEFINED
-typedef _PID_T_TYPE pid_t;
-#endif
-#ifndef _TIME_T_DEFINED
-#define _TIME_T_DEFINED
-typedef _TIME_T_TYPE time_t;
-#endif
-#ifndef _STRUCT_TIMESPEC_DEFINED
-#define _STRUCT_TIMESPEC_DEFINED
-_STRUCT_TIMESPEC_DEFN
-#endif
-#ifndef _UNION_SIGVAL_DEFINED
-#define _UNION_SIGVAL_DEFINED
-_UNION_SIGVAL_DEFN
-#endif
-#ifndef _SIGINFO_T_DEFINED
-#define _SIGINFO_T_DEFINED
-_SIGINFO_T_DEFN
-#endif
-
-typedef struct sigstack {
-	int	ss_onstack; /* non-zero when signal stack is in use */
-	void	*ss_sp;     /* stack base or pointer */
-	size_t	ss_size;    /* stack size */
-	int	ss_flags;   /* flags */
-} stack_t;
-
-struct sigevent {
-	int		sigev_notify;
-	int		sigev_signo;
-	union sigval	sigev_value;
-	void(*sigev_notify_function)(union sigval);
-};
-
-struct sigaction {
-	union {
-		void(*sa_handler)(int);
-		void(*sa_sigaction)(int,siginfo_t*,void*);
-	};
-	sigset_t	sa_mask;
-	int		sa_flags;
-};
-
-#define SIG_DFL  ((void(*)(int)) 1)
-#define SIG_ERR  ((void(*)(int)) 2)
-#define SIG_HOLD ((void(*)(int)) 3)
-#define SIG_IGN  ((void(*)(int)) 4)
-
 #define SIGABRT       1
 #define SIGALRM       2
 #define SIGBUS        3
@@ -188,6 +119,83 @@ struct sigaction {
 #define SIG_SETMASK 1
 #define SIG_UNBLOCK 2
 
+#ifdef __ASSEMBLER__
+#define SIG_DFL  1
+#define SIG_ERR  2
+#define SIG_HOLD 3
+#define SIG_IGN  4
+#else
+#define SIG_DFL  ((void(*)(int)) 1)
+#define SIG_ERR  ((void(*)(int)) 2)
+#define SIG_HOLD ((void(*)(int)) 3)
+#define SIG_IGN  ((void(*)(int)) 4)
+#endif
+
+#ifndef __ASSEMBLER__
+#define __need_size_t
+#include <stddef.h>
+#include <telos/type_defs.h>
+
+#ifndef _PTHREAD_T_DEFINED
+#define _PTHREAD_T_DEFINED
+/*typedef _PTHREAD_T_TYPE pthread_t;*/
+#endif
+#ifndef _UID_T_DEFINED
+#define _UID_T_DEFINED
+typedef _UID_T_TYPE uid_t;
+#endif
+#ifndef _SIG_ATOMIC_T_DEFINED
+#define _SIG_ATOMIC_T_DEFINED
+typedef _SIG_ATOMIC_T_TYPE sig_atomic_t;
+#endif
+#ifndef _SIGSET_T_DEFINED
+#define _SIGSET_T_DEFINED
+typedef _SIGSET_T_TYPE sigset_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
+typedef _TIME_T_TYPE time_t;
+#endif
+#ifndef _STRUCT_TIMESPEC_DEFINED
+#define _STRUCT_TIMESPEC_DEFINED
+_STRUCT_TIMESPEC_DEFN
+#endif
+#ifndef _UNION_SIGVAL_DEFINED
+#define _UNION_SIGVAL_DEFINED
+_UNION_SIGVAL_DEFN
+#endif
+#ifndef _SIGINFO_T_DEFINED
+#define _SIGINFO_T_DEFINED
+_SIGINFO_T_DEFN
+#endif
+
+typedef struct sigstack {
+	int	ss_onstack; /* non-zero when signal stack is in use */
+	void	*ss_sp;     /* stack base or pointer */
+	size_t	ss_size;    /* stack size */
+	int	ss_flags;   /* flags */
+} stack_t;
+
+struct sigevent {
+	int		sigev_notify;
+	int		sigev_signo;
+	union sigval	sigev_value;
+	void(*sigev_notify_function)(union sigval);
+};
+
+struct sigaction {
+	union {
+		void(*sa_handler)(int);
+		void(*sa_sigaction)(int,siginfo_t*,void*);
+	};
+	sigset_t	sa_mask;
+	int		sa_flags;
+};
+
 #define __SIGNO_VALID(signo)      ((signo) > 0 && (signo) < _TELOS_SIGMAX)
 #define __SIGFILLSET(set)         (*(set) = ~0)
 #define __SIGEMPTYSET(set)        (*(set) = 0)
@@ -195,4 +203,5 @@ struct sigaction {
 #define __SIGDELSET(set, signo)   (*(set) &= ~(1 << ((signo)-1)))
 #define __SIGISMEMBER(set, signo) (*(set) & (1 << ((signo)-1)))
 
+#endif /* !__ASSEMBLER__ */
 #endif

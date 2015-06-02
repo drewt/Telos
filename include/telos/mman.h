@@ -31,6 +31,23 @@
 #ifndef _TELOS_MMAN_H_
 #define _TELOS_MMAN_H_
 
+#define PROT_NONE  0
+#define PROT_EXEC  1
+#define PROT_WRITE 2
+#define PROT_READ  4
+
+#define MAP_PRIVATE   0
+#define MAP_SHARED    1
+#define MAP_FIXED     2
+#define MAP_ANONYMOUS 4
+
+#ifdef __ASSEMBLER__
+#define MAP_FAILED (-1)
+#else
+#define MAP_FAILED ((void*)-1)
+#endif
+
+#ifndef __ASSEMBLER__
 #define __need_size_t
 #include <stddef.h>
 #include <telos/type_defs.h>
@@ -44,18 +61,6 @@ typedef _MODE_T_TYPE mode_t;
 typedef _OFF_T_TYPE off_t;
 #endif
 
-#define PROT_NONE  0
-#define PROT_EXEC  1
-#define PROT_WRITE 2
-#define PROT_READ  4
-
-#define MAP_PRIVATE   0
-#define MAP_SHARED    1
-#define MAP_FIXED     2
-#define MAP_ANONYMOUS 4
-
-#define MAP_FAILED ((void*)-1)
-
 struct __mmap_args {
 	void *addr;
 	size_t len;
@@ -65,4 +70,5 @@ struct __mmap_args {
 	off_t off;
 };
 
+#endif /* !__ASSEMBLER__ */
 #endif

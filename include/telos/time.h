@@ -31,6 +31,16 @@
 #ifndef _TELOS_TIME_H_
 #define _TELOS_TIME_H_
 
+#define CLOCK_REALTIME           0
+#define CLOCK_MONOTONIC          1
+#define CLOCK_PROCESS_CPUTIME_ID 2
+#define CLOCK_THREAD_CPUTIME_ID  3
+#define __NR_CLOCKS              4
+
+#define __TICKS_PER_SEC 100
+#define __NSEC_PER_TICK 10000000
+
+#ifndef __ASSEMBLER__
 #define __need_NULL
 #define __need_size_t
 #include <stddef.h>
@@ -61,12 +71,6 @@ typedef _LOCALE_T_TYPE locale_t;
 typedef _PID_T_TYPE pid_t;
 #endif
 
-#define CLOCK_REALTIME           0
-#define CLOCK_MONOTONIC          1
-#define CLOCK_PROCESS_CPUTIME_ID 2
-#define CLOCK_THREAD_CPUTIME_ID  3
-#define __NR_CLOCKS              4
-
 #ifndef _STRUCT_TIMESPEC_DEFINED
 #define _STRUCT_TIMESPEC_DEFINED
 _STRUCT_TIMESPEC_DEFN
@@ -89,9 +93,6 @@ struct tm {
 	int tm_isdst;
 };
 
-#define __TICKS_PER_SEC 100
-#define __NSEC_PER_TICK 10000000
-
 #define __TIMESPEC_TO_TICKS(t) \
 	((t)->tv_sec * __TICKS_PER_SEC + (t)->tv_nsec / __NSEC_PER_TICK)
 
@@ -101,4 +102,5 @@ struct tm {
 		(ts)->tv_nsec = ((ticks) % __TICKS_PER_SEC) * __NSEC_PER_TICK;\
 	} while (0)
 
+#endif /* !__ASSEMBLER__ */
 #endif

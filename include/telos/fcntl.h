@@ -32,20 +32,6 @@
 #define _TELOS_FCNTL_H_
 
 #include <telos/stat.h> /* file modes */
-#include <telos/type_defs.h>
-
-#ifndef _MODE_T_DEFINED
-#define _MODE_T_DEFINED
-typedef _MODE_T_TYPE mode_t;
-#endif
-#ifndef _OFF_T_DEFINED
-#define _OFF_T_DEFINED
-typedef _OFF_T_TYPE off_t;
-#endif
-#ifndef _PID_T_DEFINED
-#define _PID_T_DEFINED
-typedef _PID_T_TYPE pid_t;
-#endif
 
 #define F_DUPFD         1
 #define F_DUP2FD        2
@@ -110,6 +96,22 @@ typedef _PID_T_TYPE pid_t;
 #define POSIX_FADV_SEQUENTIAL 5
 #define POSIX_FADV_WILLNEED   6
 
+#ifndef __ASSEMBLER__
+#include <telos/type_defs.h>
+
+#ifndef _MODE_T_DEFINED
+#define _MODE_T_DEFINED
+typedef _MODE_T_TYPE mode_t;
+#endif
+#ifndef _OFF_T_DEFINED
+#define _OFF_T_DEFINED
+typedef _OFF_T_TYPE off_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+
 struct flock {
 	short l_type;
 	short l_whence;
@@ -121,6 +123,6 @@ struct flock {
 #ifdef __KERNEL__
 #define O_READ  O_RDONLY
 #define O_WRITE O_WRONLY
-#endif
-
+#endif /* __KERNEL__ */
+#endif /* !__ASSEMBLER__ */
 #endif

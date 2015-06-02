@@ -31,9 +31,7 @@
 #ifndef _TELOS_CONSOLE_H_
 #define _TELOS_CONSOLE_H_
 
-enum console_ioctl {
-	CONSOLE_IOCTL_SWITCH,
-	CONSOLE_IOCTL_CLEAR
-};
+#define CONSOLE_IOCTL_SWITCH 0
+#define CONSOLE_IOCTL_CLEAR  1
 
 #endif

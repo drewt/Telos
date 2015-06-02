@@ -34,6 +34,15 @@
 #define MAX_CHRDEV 32
 #define MAX_BLKDEV 32
 
+#define UNNAMED_MAJOR 0
+#define MEM_MAJOR     1
+#define FLOPPY_MAJOR  2
+#define HD_MAJOR      3
+#define TTY_MAJOR     4
+#define MOD_MAJOR     5
+
+#ifndef __ASSEMBLER__
+#include <telos/type_defs.h>
 #ifndef makedev
 #define makedev _MAKEDEV_DEFN
 #endif
@@ -43,14 +52,5 @@
 #ifndef minor
 #define minor _MINOR_DEFN
 #endif
-
-enum {
-	UNNAMED_MAJOR	= 0,
-	MEM_MAJOR	= 1,
-	FLOPPY_MAJOR	= 2,
-	HD_MAJOR	= 3,
-	TTY_MAJOR	= 4,
-	MOD_MAJOR       = 5,
-};
-
+#endif /* !__ASSEMBLER__ */
 #endif

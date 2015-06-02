@@ -31,25 +31,6 @@
 #ifndef _TELOS_TERMIOS_H_
 #define _TELOS_TERMIOS_H_
 
-#include <telos/type_defs.h>
-
-#ifndef _CC_T_DEFINED
-#define _CC_T_DEFINED
-typedef _CC_T_TYPE cc_t;
-#endif
-#ifndef _SPEED_T_DEFINED
-#define _SPEED_T_DEFINED
-typedef _SPEED_T_TYPE speed_t;
-#endif
-#ifndef _TCFLAG_T_DEFINED
-#define _TCFLAG_T_DEFINED
-typedef _TCFLAG_T_TYPE tcflag_t;
-#endif
-#ifndef _PID_T_DEFINED
-#define _PID_T_DEFINED
-typedef _PID_T_TYPE pid_t;
-#endif
-
 #define VEOF   0
 #define VEOL   1
 #define VERASE 2
@@ -164,6 +145,26 @@ typedef _PID_T_TYPE pid_t;
 #define TCOOFF    6 /* suspend output */
 #define TCOON     7 /* restart output */
 
+#ifndef __ASSEMBLER__
+#include <telos/type_defs.h>
+
+#ifndef _CC_T_DEFINED
+#define _CC_T_DEFINED
+typedef _CC_T_TYPE cc_t;
+#endif
+#ifndef _SPEED_T_DEFINED
+#define _SPEED_T_DEFINED
+typedef _SPEED_T_TYPE speed_t;
+#endif
+#ifndef _TCFLAG_T_DEFINED
+#define _TCFLAG_T_DEFINED
+typedef _TCFLAG_T_TYPE tcflag_t;
+#endif
+#ifndef _PID_T_DEFINED
+#define _PID_T_DEFINED
+typedef _PID_T_TYPE pid_t;
+#endif
+
 struct termios {
 	tcflag_t c_iflag;
 	tcflag_t c_oflag;
@@ -172,4 +173,5 @@ struct termios {
 	cc_t c_cc[NCCS];
 };
 
+#endif /* !__ASSEMBLER__ */
 #endif

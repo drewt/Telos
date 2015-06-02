@@ -31,6 +31,20 @@
 #ifndef _TELOS_WAIT_H_
 #define _TELOS_WAIT_H_
 
+#define WCONTINUED 1
+#define WEXITED    2
+#define WSIGNALLED 4
+#define WSTOPPED   8
+#define WNOHANG    16
+#define WUNTRACED  32
+#define WNOWAIT    64
+
+#define _WCONTINUED 0
+#define _WEXITED    1
+#define _WSIGNALED  2
+#define _WSTOPPED   3
+
+#ifndef __ASSEMBLER__
 #include <telos/type_defs.h>
 
 #ifndef _ID_T_DEFINED
@@ -53,19 +67,6 @@ _UNION_SIGVAL_DEFN
 #define _SIGINFO_T_DEFINED
 _SIGINFO_T_DEFN
 #endif
-
-#define WCONTINUED 1
-#define WEXITED    2
-#define WSIGNALLED 4
-#define WSTOPPED   8
-#define WNOHANG    16
-#define WUNTRACED  32
-#define WNOWAIT    64
-
-#define _WCONTINUED 0
-#define _WEXITED    1
-#define _WSIGNALED 2
-#define _WSTOPPED   3
 
 /*
  * A status is made up of a 2-bit "how" value (one of _WCONTINUED, _WEXITED,
@@ -95,5 +96,6 @@ static inline int make_status(int how, int val)
 {
 	return (how & 0x3) | ((unsigned)val << 2);
 }
-#endif
+#endif /* __KERNEL__ */
+#endif /* !__ASSEMBLER__ */
 #endif

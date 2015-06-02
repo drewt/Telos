@@ -31,23 +31,21 @@
 #ifndef _TELOS_MOUNT_H_
 #define _TELOS_MOUNT_H_
 
-#include <telos/string.h>
-
 /*
  * fs-independent mount-flags
  */
-enum {
-	MS_RDONLY  = 0x01, // mount read-only
-	MS_NOSUID  = 0x02, // ignore suid and sgid bits
-	MS_NODEV   = 0x04, // disallow access to device special files
-	MS_NOEXEC  = 0x08, // disallow program execution
-	MS_SYNC    = 0x10, // writes are synced at once
-	MS_REMOUNT = 0x20, // alter flags of a mounted FS
-	MS_MEMFS   = 0x40, // do not free inodes
+#define MS_RDONLY  0x01 /* mount read-only */
+#define MS_NOSUID  0x02 /* ignore suid and sgid bits */
+#define MS_NODEV   0x04 /* disallow access to device special files */
+#define MS_NOEXEC  0x08 /* disallow program execution */
+#define MS_SYNC    0x10 /* writes are synced at once */
+#define MS_REMOUNT 0x20 /* alter flags of a mounted FS */
+#define MS_MEMFS   0x40 /* do not free inodes */
 
-	MS_MOUNT_MASK = MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC
-		      | MS_SYNC,
-};
+#define MS_MOUNT_MASK (MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_SYNC)
+
+#ifndef __ASSEMBLER__
+#include <telos/string.h>
 
 struct mount {
 	const struct _Telos_string dev;
@@ -57,4 +55,5 @@ struct mount {
 	const void *data;
 };
 
+#endif /* !__ASSEMBLER__ */
 #endif
