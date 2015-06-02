@@ -18,7 +18,7 @@
 
 #include <time.h>
 #include <errno.h>
-#include <syscall.h>
+#include <telos/syscall.h>
 
 #include <stdio.h>
 

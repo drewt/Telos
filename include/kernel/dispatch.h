@@ -20,7 +20,6 @@
 
 #include <kernel/process.h>
 #include <telos/wait.h>
-#include <syscall.h>
 
 struct sigaction;
 struct sigevent;

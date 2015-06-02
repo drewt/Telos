@@ -15,8 +15,8 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <syscall.h>
 #include <signal.h>
+#include <telos/syscall.h>
 
 int sigaction(int sig, struct sigaction *restrict act,
 		struct sigaction *restrict oact)

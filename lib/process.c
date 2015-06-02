@@ -15,11 +15,11 @@
  *  with Telos.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <syscall.h>
+#include <sched.h>
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <sched.h>
+#include <telos/syscall.h>
 
 pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options)
 {

@@ -19,9 +19,9 @@
 #include <stdarg.h>
 #include <time.h>
 #include <unistd.h>
-#include <syscall.h>
 #include <string.h>
 #include <telos/exec.h>
+#include <telos/syscall.h>
 
 pid_t fork(void)
 {

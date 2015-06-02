@@ -20,8 +20,8 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <syscall.h>
 #include <telos/mman.h>
+#include <telos/syscall.h>
 
 #include <kernel/list.h> /* FIXME: shouldn't include kernel header */
 

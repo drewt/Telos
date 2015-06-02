@@ -18,10 +18,10 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <string.h>
-#include <syscall.h>
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <telos/syscall.h>
 
 #define NR_DIRS 8
 

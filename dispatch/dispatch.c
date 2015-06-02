@@ -16,7 +16,7 @@
  */
 
 #include <kernel/dispatch.h>
-#include <syscall.h>
+#include <telos/syscall.h>
 
 const int NR_SYSCALLS = SYSCALL_MAX;
 
