@@ -9,8 +9,6 @@ binnames = cat date duptest echo eventtest exectest exntest init jmptest link \
 	   sigtest stat strtest truncate tsh umount unlink
 binaries = $(foreach name,$(binnames),initrd/bin/$(name))
 
-progdep = lib/crt0.o telos.ld
-
 clean = $(devices) $(binaries)
 
 all: directories $(devices) $(binaries)
@@ -35,7 +33,7 @@ initrd/dev/mod0:
 initrd/dev/mod1:
 	mknod $@ b 5 1
 
-initrd/bin/%: src/%.o $(progdep)
+initrd/bin/%: src/%.o
 	$(call cmd,telos_ld,$<)
 
 .PHONY: directories

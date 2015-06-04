@@ -6,17 +6,17 @@ export topdir incdir
 
 VERSION := $(shell git rev-parse --verify --short HEAD 2>/dev/null)-git
 
-CCPREFIX  = #i586-elf-
+CCPREFIX  = i386-telos-
 AR        = $(CCPREFIX)ar
 ARFLAGS   = rcs
-AS        = $(CCPREFIX)as --32
-CC        = $(CCPREFIX)gcc -m32 -march=i386
+AS        = $(CCPREFIX)as
+CC        = $(CCPREFIX)gcc
 CFLAGS    = -Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	    -Wno-attributes
 ALLCFLAGS = $(CFLAGS) -fno-builtin -ffreestanding -std=gnu11 \
 	    -include 'kernel/common.h'
 CPPFLAGS  = -I $(incdir) -DVERSION=\"$(VERSION)\"
-LD        = $(CCPREFIX)ld -m elf_i386
+LD        = $(CCPREFIX)ld
 OBJCOPY   = $(CCPREFIX)objcopy
 MAKEFILES = $(topdir)/rules.mk
 
