@@ -23,7 +23,12 @@ Telos is a simple x86 kernel, supporting:
 Building
 --------
 
-You'll need a recent version of gcc with support for the i386 target.
+You'll need the i386-telos toolchain.  It can be obtained by checking out the
+[telos-build repository](https://github.com/drewt/telos-build "telos-build")
+and following the instructions in the README.
+
+Once the toolchain is installed, the kernel may be built by running `make` in
+this directory.
 
     $ make
 
