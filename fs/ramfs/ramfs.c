@@ -147,7 +147,7 @@ static int grow_file(struct inode *inode, size_t amount)
 	return 0;
 }
 
-int ramfs_read(struct file *file, char *buf, size_t len, unsigned long *pos)
+ssize_t ramfs_read(struct file *file, char *buf, size_t len, unsigned long *pos)
 {
 	char *fbuf;
 	struct pf_info *frame;
@@ -226,7 +226,7 @@ static void zero_fill(struct inode *inode, unsigned long start, size_t len)
 	}
 }
 
-int ramfs_write(struct file *file, const char *buf, size_t len,
+ssize_t ramfs_write(struct file *file, const char *buf, size_t len,
 		unsigned long *pos)
 {
 	int error, rc;

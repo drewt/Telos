@@ -21,7 +21,7 @@
 #include <telos/stat.h>
 #include <string.h>
 
-static int modfs_read(struct file *file, char *buf, size_t len,
+static ssize_t modfs_read(struct file *file, char *buf, size_t len,
 		unsigned long *pos)
 {
 	struct multiboot_mod_list *mod = file->f_inode->i_private;
