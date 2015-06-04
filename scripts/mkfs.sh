@@ -25,7 +25,7 @@ then
 fi
 
 # calculate size of disk image
-FUDGE=1000
+FUDGE=10000
 SIZE=`du "$1" | awk '{ print $1 }'`
 SIZE=`echo "$SIZE $FUDGE + p" | dc`
 
