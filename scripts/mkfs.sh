@@ -31,8 +31,8 @@ SIZE=`echo "$SIZE $FUDGE + p" | dc`
 
 dd if=/dev/zero of="$2" count=$SIZE \
 	&& mkfs.ext2 -r 0 "$2" \
-	&& mount -o loop "$2" mnt \
-	&& cp -r "$1"/* mnt/
+	&& mount -o loop "$2" scripts/mnt \
+	&& cp -r "$1"/* scripts/mnt/
 
 sleep 1
-umount mnt/
+umount scripts/mnt/
