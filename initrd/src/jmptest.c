@@ -33,7 +33,7 @@ void f0(void)
 	puts("ERROR: returning from f0");
 }
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	printf("testing longjmp()... ");
 

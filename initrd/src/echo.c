@@ -17,11 +17,11 @@
 
 #include <stdio.h>
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	if (argc < 2) {
 		puts("usage: echo <args ...>");
-		return;
+		return 1;
 	}
 
 	printf("%s", argv[1]);
