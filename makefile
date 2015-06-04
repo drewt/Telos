@@ -55,7 +55,8 @@ kernel.bin: linker.ld
 initrd.img: initrd
 	./scripts/mkfs.sh initrd/initrd $@
 
-initrdclean:
+initrd-clean:
 	@$(MAKE) -C initrd clean
+	rm -f initrd.img
 
 .PHONY: $(submakes) linker.ld initrd initrdclean initrd.img
