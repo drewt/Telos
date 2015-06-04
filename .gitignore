@@ -1,0 +1,16 @@
+*.o
+*.a
+
+*.d
+*.swp
+*.swo
+
+.syntastic_c_config
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+
+dump
+linker.ld
+kernel.bin
+kernel.img
+initrd.img
