@@ -1,7 +1,7 @@
-objects = itoa.o mem.o kbtoa.o string.o stdio.o unistd.o signal.o \
-	  process.o vsprintf.o kstrtox.o time.o setjmp.o fs.o
+objects = itoa.o kbtoa.o string.o vsprintf.o kstrtox.o
+clean = libk.a
 
-all: klib.a
+all: libk.a
 
-klib.a: $(objects)
+libk.a: $(objects)
 	$(call cmd,ar)

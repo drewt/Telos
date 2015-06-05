@@ -33,8 +33,6 @@
 #include <telos/syscall.h>
 #include <telos/wait.h>
 
-extern void exit(int status);
-
 struct pcb proctab[PT_SIZE];
 
 struct proc_status {
@@ -158,6 +156,12 @@ abort:
 	return -ENOMEM;
 }
 
+_Noreturn void kproc_exit(int status)
+{
+	syscall1(SYS_EXIT, status);
+	__builtin_unreachable();
+}
+
 #define KFRAME_ROOM (sizeof(struct kcontext) + 16)
 
 int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
@@ -192,7 +196,7 @@ int create_kernel_process(void(*func)(void*), void *arg, ulong flags)
 	p->esp = ((char*)KSTACK_END - KFRAME_ROOM);
 
 	put_iret_kframe(frame, (uintptr_t)func);
-	frame->stack[0] = (ulong) exit;
+	frame->stack[0] = (ulong) kproc_exit;
 	frame->stack[1] = (ulong) arg;
 	pm_copy_to(p->mm.pgdir, p->esp, frame, KFRAME_ROOM);
 

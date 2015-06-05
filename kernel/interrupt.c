@@ -21,7 +21,6 @@
 #include <kernel/dispatch.h>
 #include <kernel/signal.h>
 #include <string.h>
-#include <klib.h>
 
 static void dump_registers(struct gp_regs *reg)
 {

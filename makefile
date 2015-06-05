@@ -35,7 +35,7 @@ include rules.mk
 # Generate the linker script to use when linking the kernel.
 quiet_cmd_ldgen  = GEN     linker.ld
       cmd_ldgen  = printf "INPUT ( %s )\n" \
-		   "boot/loader.o `$(findobj)` lib/klib.a" \
+		   "boot/loader.o `$(findobj)` lib/libk.a" \
 		   > linker.ld && cat sections.ld >> linker.ld
 
 $(submakes):

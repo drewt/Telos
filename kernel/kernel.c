@@ -19,7 +19,6 @@
 #include <kernel/elf.h>
 #include <kernel/fs.h>
 #include <kernel/i386.h>
-#include <kernel/kernel.h>
 #include <kernel/mmap.h>
 #include <kernel/multiboot.h>
 #include <kernel/time.h>
