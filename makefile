@@ -38,7 +38,7 @@ quiet_cmd_ldgen  = GEN     linker.ld
 		   "boot/loader.o `$(findobj)` lib/klib.a" \
 		   > linker.ld && cat sections.ld >> linker.ld
 
-$(submakes) initrd:
+$(submakes):
 	+$(call cmd,smake)
 
 boot/loader.o: boot/loader.s
@@ -51,12 +51,4 @@ kernel.bin: linker.ld
 	$(call cmd,sld,linker.ld)
 	@objdump -D $@ > dump
 
-# Generate an initial RAM disk.
-initrd.img: initrd
-	./scripts/mkfs.sh initrd/initrd $@
-
-initrd-clean:
-	@$(MAKE) -C initrd clean
-	rm -f initrd.img
-
-.PHONY: $(submakes) linker.ld initrd initrdclean initrd.img
+.PHONY: $(submakes) linker.ld
