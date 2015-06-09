@@ -18,6 +18,8 @@
 #ifndef _KERNEL_MM_KMALLOC_H_
 #define _KERNEL_MM_KMALLOC_H_
 
+#include <kernel/list.h>
+
 /* mem_headers should align on 16 byte boundaries */
 struct mem_header {
 	struct list_head	chain;	// chain for free/allocated lists

@@ -84,7 +84,8 @@
 #define SYS_FORK          55
 #define SYS_EXECVE        56
 #define SYS_FSTAT         57
-#define SYSCALL_MAX       58
+#define SYS_PIPE          58
+#define SYSCALL_MAX       59
 
 #ifndef __ASSEMBLER__
 static inline int syscall0(int call)

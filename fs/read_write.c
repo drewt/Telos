@@ -92,8 +92,7 @@ long sys_read(unsigned int fd, char *buf, size_t count)
 
 	if (vm_verify(&current->mm, buf, count, VM_WRITE))
 		return -EFAULT;
-	if (fd >= NR_FILES || !(file = current->filp[fd]) 
-			|| !file->f_inode)
+	if (fd >= NR_FILES || !(file = current->filp[fd]))
 		return -EBADF;
 	return do_read(file, buf, count, &file->f_pos);
 }
@@ -127,12 +126,9 @@ static long do_write(struct file *file, char *buf, size_t count,
 long sys_write(unsigned int fd, char * buf, size_t count)
 {
 	struct file *file;
-	struct inode *inode;
-
 	if (vm_verify(&current->mm, buf, count, VM_READ))
 		return -EFAULT;
-	if (fd >= NR_FILES || !(file = current->filp[fd])
-			|| !(inode = file->f_inode))
+	if (fd >= NR_FILES || !(file = current->filp[fd]))
 		return -EBADF;
 	return do_write(file, buf, count, &file->f_pos);
 }

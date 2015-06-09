@@ -71,4 +71,5 @@ syscall_t systab[SYSCALL_MAX] = {
 	[SYS_SBRK]          = sys_sbrk,
 	[SYS_MMAP]          = sys_mmap,
 	[SYS_MUNMAP]        = sys_munmap,
+	[SYS_PIPE]          = sys_pipe,
 };
